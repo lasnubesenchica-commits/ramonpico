@@ -899,7 +899,6 @@ async function loadProducts() {
         download: true,
         header: true,
         skipEmptyLines: true,
-        downloadRequestHeaders: { 'Cache-Control': 'no-cache' },
         complete: resolve,
         error: reject,
       });
