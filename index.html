@@ -892,16 +892,34 @@ function getCategory(title) {
 }
 
 // ── CARGAR DATOS ──────────────────────────────────────────────
+// URL del sheet publicado como JSON (no tiene problema de CORS)
+const SHEET_ID = '2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh';
+const SHEET_GID = '811045373';
+const SHEET_JSON_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${SHEET_GID}&single=true&output=csv`;
+
 async function loadProducts() {
   try {
-    const result = await new Promise((resolve, reject) => {
-      Papa.parse(SHEET_CSV_URL, {
-        download: true,
-        header: true,
-        skipEmptyLines: true,
-        complete: resolve,
-        error: reject,
-      });
+    // Usar fetch directamente — Google Sheets pub permite CORS en algunos casos
+    // Si falla, usamos el endpoint de visualización que siempre tiene CORS
+    let csvText = null;
+
+    try {
+      const res = await fetch(SHEET_JSON_URL);
+      if (res.ok) csvText = await res.text();
+    } catch(e) {}
+
+    if (!csvText) {
+      // Fallback: Google Visualization API — siempre tiene CORS habilitado
+      const visUrl = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
+      const res2 = await fetch(visUrl);
+      if (res2.ok) csvText = await res2.text();
+    }
+
+    if (!csvText) throw new Error('No se pudo cargar el CSV');
+
+    const result = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
     });
 
     allProducts = result.data
@@ -917,10 +935,13 @@ async function loadProducts() {
         category:     getCategory(r.title || ''),
       }));
 
+    if (allProducts.length === 0) throw new Error('Sin productos');
+
     document.getElementById('heroProductCount').textContent = allProducts.length;
     filtered = [...allProducts];
     renderGrid(filtered);
     updateCount(filtered.length);
+
   } catch(e) {
     console.error('Error cargando CSV:', e);
     renderSampleData();
