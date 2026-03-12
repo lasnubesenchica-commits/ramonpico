@@ -863,7 +863,7 @@ footer {
 
 <script>
 // ── CONFIGURACIÓN ──────────────────────────────────────────────
-const SHEET_CSV_URL = '/.netlify/functions/csv-proxy';
+const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh/pub?gid=811045373&single=true&output=csv';
 
 // Número de WhatsApp (formato internacional sin + ni espacios)
 const WHATSAPP_NUM = '50766724615';
@@ -899,6 +899,7 @@ async function loadProducts() {
         download: true,
         header: true,
         skipEmptyLines: true,
+        downloadRequestHeaders: { 'Cache-Control': 'no-cache' },
         complete: resolve,
         error: reject,
       });
