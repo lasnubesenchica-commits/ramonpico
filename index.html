@@ -397,7 +397,7 @@ nav {
 }
 .spinner {
   width: 40px; height: 40px;
-  border: 2px solid rgba(255,255,255,0.1);
+  border: 2px solid rgba(0,0,0,0.08);
   border-top-color: var(--orange);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -588,11 +588,12 @@ footer {
 .wa-float svg { width: 28px; height: 28px; fill: white; }
 .wa-tooltip {
   position: absolute; right: calc(100% + 0.75rem);
-  background: var(--steel); border: 1px solid rgba(255,255,255,0.1);
+  background: var(--steel); border: 1px solid rgba(0,0,0,0.1);
   border-radius: 8px; padding: 0.5rem 0.9rem;
   font-size: 0.8rem; white-space: nowrap;
   opacity: 0; transform: translateX(8px);
   transition: all 0.2s; pointer-events: none;
+  color: #0A0A0A;
 }
 .wa-float:hover .wa-tooltip { opacity: 1; transform: translateX(0); }
 
@@ -621,6 +622,13 @@ footer {
   .search-wrap { width: 100%; }
   .search-input { width: 100%; }
   .filter-bar { gap: 0.4rem; }
+
+  .hero {
+    min-height: unset;
+    padding-top: calc(64px + 0.75rem);
+    padding-bottom: 2.5rem;
+    justify-content: flex-start;
+  }
 }
 @media (max-width: 480px) {
   .product-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
@@ -794,7 +802,7 @@ footer {
     <a href="https://wa.me/50766724615?text=Hola,%20quiero%20cotizar%20equipos" target="_blank" class="btn-primary">
       📲 Cotizar por WhatsApp
     </a>
-    <a href="/cdn-cgi/l/email-protection#d0a6b5bea4b1a390a2b1bdbfbea0b9b3bffeb3bfbd" class="btn-secondary">
+    <a href="mailto:ventas@ramonpico.com" class="btn-secondary">
       ✉️ Enviar correo
     </a>
   </div>
@@ -819,7 +827,7 @@ footer {
         <div class="footer-col">
           <h4>Contacto</h4>
           <a href="https://wa.me/50766724615" target="_blank">WhatsApp</a>
-          <a href="/cdn-cgi/l/email-protection#e197848f958092a193808c8e8f9188828ecf828e8c">Email</a>
+          <a href="mailto:ventas@ramonpico.com">Email</a>
           <a href="#">Panamá, Rep. de Panamá</a>
         </div>
       </div>
@@ -861,30 +869,33 @@ footer {
   </div>
 </div>
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ── CONFIGURACIÓN ──────────────────────────────────────────────
-const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh/pub?gid=1702971403&single=true&output=csv';
+// Sheet publicado como CSV
+const PUBLISHED_ID = '2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh';
+const SHEET_GID    = '1702971403';
+const SHEET_CSV_URL = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_ID}/pub?gid=${SHEET_GID}&single=true&output=csv`;
 
 // Número de WhatsApp (formato internacional sin + ni espacios)
-const WHATSAPP_NUM = '50766724615'; // ← Reemplaza con el número real
+const WHATSAPP_NUM = '50766724615';
 
 // ── ESTADO ────────────────────────────────────────────────────
-let allProducts = [];
-let filtered    = [];
+let allProducts  = [];
+let filtered     = [];
 let activeFilter = 'all';
 
 // ── CATEGORÍAS ────────────────────────────────────────────────
 const CATEGORIES = {
-  herramienta: ['taladro','esmeril','motosierra','sierra','llave','rotomartillo','combo','caja de herramienta','soplador','hidrolavadora','aspiradora','fumigadora','cortagrama'],
+  herramienta: ['taladro','esmeril','motosierra','sierra','llave','rotomartillo','combo','caja de herramienta','soplador','hidrolavadora','aspiradora','fumigadora','cortagrama','winche','tecle','grua','amoladora','pulidora','lijadora','cepillo','cortador','cortadora','nivel','destornillador','alicate','pinza','martillo','cincel'],
   generador:   ['generador','planta electrica','inverter'],
   compresor:   ['compresor','comprensor'],
-  soldar:      ['soldar','soldadura','electrodo'],
-  cocina:      ['freidora','estufa','calentador','sopa','hielo','congelador','fregador','barbacoa'],
-  motor:       ['motor','gasolina','bomba'],
+  soldar:      ['soldar','soldadura','electrodo','mig','tig','mma','soldad'],
+  cocina:      ['freidora','estufa','calentador','sopa','hielo','congelador','fregador','barbacoa','horno','plancha','vitrina','cocina','cafetera','batidora','licuadora'],
+  motor:       ['motor','gasolina','bomba','diesel'],
 };
 
 function getCategory(title) {
-  const t = title.toLowerCase();
+  const t = (title || '').toLowerCase();
   for (const [cat, keywords] of Object.entries(CATEGORIES)) {
     if (keywords.some(k => t.includes(k))) return cat;
   }
@@ -893,115 +904,76 @@ function getCategory(title) {
 
 // ── CARGAR DATOS ──────────────────────────────────────────────
 async function loadProducts() {
-  // Intentar cargar directo primero, luego via proxy si falla
-  // Intento 1: URL publicada directa
   try {
-    const pubUrl = `https://docs.google.com/spreadsheets/d/e/2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh/pub?gid=1702971403&single=true&output=csv`;
-    const r1 = await fetch(pubUrl);
-    if (r1.ok) {
-      const t = await r1.text();
-      if (!t.trim().startsWith('<')) {
-        const parsed = Papa.parse(t, { header: true, skipEmptyLines: true });
-        allProducts = parsed.data.filter(r => r.title && r.title.trim()).map(r => ({
-          id: r.id||'', title: r.title||'', description: r.description||'',
-          price: r.price||'', image: r.image_link||'', availability: r.availability||'in stock',
-          link: r.link||'', category: getCategory(r.title||'')
-        }));
-        if (allProducts.length > 0) {
-          document.getElementById('heroProductCount').textContent = allProducts.length;
-          filtered = [...allProducts]; renderGrid(filtered); updateCount(filtered.length); return;
-        }
-      }
-    }
-  } catch(e) {}
+    let csvText = null;
 
-  // Intento 2: Google Visualization API (siempre tiene CORS)
-  try {
-    const visUrl = `https://docs.google.com/spreadsheets/d/1ZI5vC0zNzfCJhLSQ3aMt1mHtJQ2Fwmx1vd1nIxMhKig/gviz/tq?tqx=out:csv&gid=1702971403`;
-    const r2 = await fetch(visUrl);
-    if (r2.ok) {
-      const t2 = await r2.text();
-      const parsed2 = Papa.parse(t2, { header: true, skipEmptyLines: true });
-      allProducts = parsed2.data.filter(r => r.title && r.title.trim()).map(r => ({
-        id: r.id||'', title: r.title||'', description: r.description||'',
-        price: r.price||'', image: r.image_link||'', availability: r.availability||'in stock',
-        link: r.link||'', category: getCategory(r.title||'')
-      }));
-      if (allProducts.length > 0) {
-        document.getElementById('heroProductCount').textContent = allProducts.length;
-        filtered = [...allProducts]; renderGrid(filtered); updateCount(filtered.length); return;
-      }
-    }
-  } catch(e) {}
-
-  renderSampleData();
-}
-
-// LEGACY (no usado - mantenido para referencia)
-function _legacyProxies() {
-  const proxies = [
-    SHEET_CSV_URL,
-    `https://corsproxy.io/?${encodeURIComponent(SHEET_CSV_URL)}`,
-    `https://api.allorigins.win/raw?url=${encodeURIComponent(SHEET_CSV_URL)}`,
-  ];
-
-  for (const url of proxies) {
+    // Intento 1: URL publicada directamente
     try {
-      const result = await new Promise((resolve, reject) => {
-        Papa.parse(url, {
-          download: true,
-          header: true,
-          skipEmptyLines: true,
-          complete: resolve,
-          error: reject,
-        });
+      const res = await fetch(SHEET_CSV_URL);
+      if (res.ok) csvText = await res.text();
+    } catch(e) {
+      console.warn('Fetch directo falló, intentando fallback...', e);
+    }
+
+    if (!csvText) throw new Error('No se pudo cargar el CSV');
+
+    const result = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+    });
+
+    // Log primeras filas para debug
+    console.log('Columnas detectadas:', result.meta.fields);
+    console.log('Primera fila:', result.data[0]);
+
+    allProducts = result.data
+      .filter(r => {
+        // Aceptar cualquier columna que parezca título
+        const title = r.title || r.Title || r.TITLE || r['title'] || '';
+        return title.trim() !== '';
+      })
+      .map(r => {
+        const title = r.title || r.Title || r.TITLE || '';
+        return {
+          id:           r.id || r.ID || '',
+          title:        title,
+          description:  r.description || r.Description || r.DESCRIPTION || '',
+          price:        r.price || r.Price || r.PRICE || r['sale price'] || r['Sale Price'] || '',
+          image:        r.image_link || r['image link'] || r.image || r.Image || r.IMAGE || '',
+          availability: r.availability || r.Availability || 'in stock',
+          link:         r.link || r.Link || '',
+          category:     getCategory(title),
+        };
       });
 
-      if (result.data && result.data.length > 0) {
-        allProducts = result.data
-          .filter(r => r.title && r.title.trim() !== '')
-          .map(r => ({
-            id:           r.id || '',
-            title:        r.title || '',
-            description:  r.description || '',
-            price:        r.price || '',
-            image:        r.image_link || '',
-            availability: r.availability || 'in stock',
-            link:         r.link || '',
-            category:     getCategory(r.title || ''),
-          }));
+    if (allProducts.length === 0) throw new Error('Sin productos tras parseo');
 
-        if (allProducts.length > 0) {
-          document.getElementById('heroProductCount').textContent = allProducts.length;
-          filtered = [...allProducts];
-          renderGrid(filtered);
-          updateCount(filtered.length);
-          return; // éxito — salir del loop
-        }
-      }
-    } catch(e) {
-      console.warn('Falló proxy:', url, e);
-    }
+    document.getElementById('heroProductCount').textContent = allProducts.length;
+    filtered = [...allProducts];
+    renderGrid(filtered);
+    updateCount(filtered.length);
+
+  } catch(e) {
+    console.error('Error cargando productos:', e);
+    renderSampleData();
   }
-
-  // Si todos fallaron, mostrar datos de muestra
-  renderSampleData();
 }
 
 function renderSampleData() {
-  // Datos de muestra mientras se configura la URL del CSV
+  // Datos de muestra si el sheet no está accesible
   allProducts = [
-    { id:'demo-1', title:'Winche Tecle 500K', description:'Winche Tecle Eléctrico Grua 1000W Carga Max 500Kg', price:'150.00 USD', image:'', availability:'in stock', category:'herramienta' },
-    { id:'demo-2', title:'Generador Inverter 2000W', description:'Generador 2000 Watts Inverter de Gasolina 110-120V', price:'390.00 USD', image:'', availability:'in stock', category:'generador' },
-    { id:'demo-3', title:'Máquina De Soldar', description:'Máquina De Soldar Inverter MAG MIG MMA TIG 160A', price:'258.00 USD', image:'', availability:'in stock', category:'soldar' },
-    { id:'demo-4', title:'Compresor De Aire 50L', description:'Compresor De Aire 50L 1200W 110V Sin Aceite', price:'160.00 USD', image:'', availability:'in stock', category:'compresor' },
-    { id:'demo-5', title:'Freidora Eléctrica', description:'Freidora Electrica 17L 5+5KW Temperature 60-200°C', price:'300.00 USD', image:'', availability:'in stock', category:'cocina' },
-    { id:'demo-6', title:'Motor A Gasolina 15HP', description:'Motor A Gasolina 15HP 4 Tiempos 25.4Mm', price:'235.00 USD', image:'', availability:'in stock', category:'motor' },
+    { id:'demo-1', title:'Winche Tecle 500K', description:'Winche Tecle Eléctrico Grua 1000W Carga Max 500Kg', price:'150.00', image:'', availability:'in stock', category:'herramienta' },
+    { id:'demo-2', title:'Generador Inverter 2000W', description:'Generador 2000 Watts Inverter de Gasolina 110-120V', price:'390.00', image:'', availability:'in stock', category:'generador' },
+    { id:'demo-3', title:'Máquina De Soldar', description:'Máquina De Soldar Inverter MAG MIG MMA TIG 160A', price:'258.00', image:'', availability:'in stock', category:'soldar' },
+    { id:'demo-4', title:'Compresor De Aire 50L', description:'Compresor De Aire 50L 1200W 110V Sin Aceite', price:'160.00', image:'', availability:'in stock', category:'compresor' },
+    { id:'demo-5', title:'Freidora Eléctrica', description:'Freidora Electrica 17L 5+5KW Temperature 60-200°C', price:'300.00', image:'', availability:'in stock', category:'cocina' },
+    { id:'demo-6', title:'Motor A Gasolina 15HP', description:'Motor A Gasolina 15HP 4 Tiempos 25.4Mm', price:'235.00', image:'', availability:'in stock', category:'motor' },
   ];
-  document.getElementById('heroProductCount').textContent = '65+';
+  document.getElementById('heroProductCount').textContent = '—';
   filtered = [...allProducts];
   renderGrid(filtered);
   updateCount(filtered.length);
+  console.warn('Mostrando datos de muestra. Verifica la URL del CSV en la consola.');
 }
 
 // ── RENDER GRID ───────────────────────────────────────────────
@@ -1022,24 +994,31 @@ function renderGrid(products) {
          style="animation-delay:${Math.min(i * 0.04, 0.6)}s">
       <div class="card-img-wrap">
         ${p.image
-          ? `<img src="${p.image}" alt="${p.title}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=card-img-placeholder>⚙️</div>'">`
+          ? `<img src="${p.image}" alt="${escHtml(p.title)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=card-img-placeholder>⚙️</div>'">`
           : '<div class="card-img-placeholder">⚙️</div>'
         }
         <div class="card-badge">${categoryLabel(p.category)}</div>
       </div>
       <div class="card-body">
-        <div class="card-title">${p.title}</div>
-        <div class="card-desc">${p.description || 'Consultar descripción'}</div>
+        <div class="card-title">${escHtml(p.title)}</div>
+        <div class="card-desc">${escHtml(p.description || 'Consultar descripción')}</div>
         <div class="card-footer">
           <div>
             <div class="card-price-label">PRECIO</div>
             <div class="card-price">${formatPrice(p.price)}</div>
           </div>
-          <button class="card-btn" onclick="event.stopPropagation();cotizar('${p.title}')">→</button>
+          <button class="card-btn" onclick="event.stopPropagation();cotizar('${escAttr(p.title)}')">→</button>
         </div>
       </div>
     </div>
   `).join('');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s).replace(/'/g,"\\'");
 }
 
 function categoryLabel(cat) {
@@ -1053,8 +1032,8 @@ function categoryLabel(cat) {
 
 function formatPrice(price) {
   if (!price) return 'Consultar';
-  const num = parseFloat(price.replace(/[^0-9.]/g, ''));
-  if (isNaN(num)) return 'Consultar';
+  const num = parseFloat(String(price).replace(/[^0-9.]/g, ''));
+  if (isNaN(num) || num === 0) return 'Consultar';
   return '$' + num.toLocaleString('es-PA', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
@@ -1077,8 +1056,8 @@ document.getElementById('searchInput').addEventListener('input', applyFilters);
 function applyFilters() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
   filtered = allProducts.filter(p => {
-    const matchCat  = activeFilter === 'all' || p.category === activeFilter;
-    const matchSearch = !q || p.title.toLowerCase().includes(q) || p.description.toLowerCase().includes(q);
+    const matchCat    = activeFilter === 'all' || p.category === activeFilter;
+    const matchSearch = !q || p.title.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
     return matchCat && matchSearch;
   });
   renderGrid(filtered);
@@ -1094,13 +1073,13 @@ function openModal(idx) {
   document.getElementById('modalDesc').textContent  = p.description || 'Consulta con nuestro equipo para más información sobre este producto.';
   document.getElementById('modalPrice').textContent = formatPrice(p.price);
 
-  const img = document.getElementById('modalImg');
+  const imgEl = document.getElementById('modalImg');
   if (p.image) {
-    img.src = p.image;
-    img.alt = p.title;
-    img.parentElement.style.display = 'block';
+    imgEl.src = p.image;
+    imgEl.alt = p.title;
+    imgEl.parentElement.style.display = 'block';
   } else {
-    img.parentElement.style.display = 'none';
+    imgEl.parentElement.style.display = 'none';
   }
 
   document.getElementById('modalActions').innerHTML = `
@@ -1136,4 +1115,8 @@ function toggleMenu() {
   document.getElementById('mobileMenu').classList.toggle('open');
 }
 
-// ── INIT ───�
+// ── INIT ──────────────────────────────────────────────────────
+loadProducts();
+</script>
+</body>
+</html>
