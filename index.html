@@ -621,13 +621,6 @@ footer {
   .search-wrap { width: 100%; }
   .search-input { width: 100%; }
   .filter-bar { gap: 0.4rem; }
-
-  .hero {
-    min-height: unset;
-    padding-top: calc(64px + 0.75rem);
-    padding-bottom: 2.5rem;
-    justify-content: flex-start;
-  }
 }
 @media (max-width: 480px) {
   .product-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
@@ -801,7 +794,7 @@ footer {
     <a href="https://wa.me/50766724615?text=Hola,%20quiero%20cotizar%20equipos" target="_blank" class="btn-primary">
       📲 Cotizar por WhatsApp
     </a>
-    <a href="mailto:ventas@ramonpico.com" class="btn-secondary">
+    <a href="/cdn-cgi/l/email-protection#d0a6b5bea4b1a390a2b1bdbfbea0b9b3bffeb3bfbd" class="btn-secondary">
       ✉️ Enviar correo
     </a>
   </div>
@@ -826,7 +819,7 @@ footer {
         <div class="footer-col">
           <h4>Contacto</h4>
           <a href="https://wa.me/50766724615" target="_blank">WhatsApp</a>
-          <a href="mailto:ventas@ramonpico.com">Email</a>
+          <a href="/cdn-cgi/l/email-protection#e197848f958092a193808c8e8f9188828ecf828e8c">Email</a>
           <a href="#">Panamá, Rep. de Panamá</a>
         </div>
       </div>
@@ -868,12 +861,12 @@ footer {
   </div>
 </div>
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ── CONFIGURACIÓN ──────────────────────────────────────────────
 const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh/pub?gid=1702971403&single=true&output=csv';
 
 // Número de WhatsApp (formato internacional sin + ni espacios)
-const WHATSAPP_NUM = '50766724615';
+const WHATSAPP_NUM = '50766724615'; // ← Reemplaza con el número real
 
 // ── ESTADO ────────────────────────────────────────────────────
 let allProducts = [];
@@ -899,61 +892,100 @@ function getCategory(title) {
 }
 
 // ── CARGAR DATOS ──────────────────────────────────────────────
-// URL del sheet publicado como JSON (no tiene problema de CORS)
-const SHEET_ID = '2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh';
-const REAL_SHEET_ID = '1ZI5vC0zNzfCJhLSQ3aMt1mHtJQ2Fwmx1vd1nIxMhKig';
-const SHEET_GID = '1940735358';
-const SHEET_JSON_URL = `https://docs.google.com/spreadsheets/d/e/${SHEET_ID}/pub?gid=${SHEET_GID}&single=true&output=csv`;
-
 async function loadProducts() {
+  // Intentar cargar directo primero, luego via proxy si falla
+  // Intento 1: URL publicada directa
   try {
-    // Usar fetch directamente — Google Sheets pub permite CORS en algunos casos
-    // Si falla, usamos el endpoint de visualización que siempre tiene CORS
-    let csvText = null;
-
-    try {
-      const res = await fetch(SHEET_JSON_URL);
-      if (res.ok) csvText = await res.text();
-    } catch(e) {}
-
-    if (!csvText) {
-      // Fallback: Google Visualization API — siempre tiene CORS habilitado
-      const visUrl = `https://docs.google.com/spreadsheets/d/${REAL_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
-      const res2 = await fetch(visUrl);
-      if (res2.ok) csvText = await res2.text();
+    const pubUrl = `https://docs.google.com/spreadsheets/d/e/2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh/pub?gid=1702971403&single=true&output=csv`;
+    const r1 = await fetch(pubUrl);
+    if (r1.ok) {
+      const t = await r1.text();
+      if (!t.trim().startsWith('<')) {
+        const parsed = Papa.parse(t, { header: true, skipEmptyLines: true });
+        allProducts = parsed.data.filter(r => r.title && r.title.trim()).map(r => ({
+          id: r.id||'', title: r.title||'', description: r.description||'',
+          price: r.price||'', image: r.image_link||'', availability: r.availability||'in stock',
+          link: r.link||'', category: getCategory(r.title||'')
+        }));
+        if (allProducts.length > 0) {
+          document.getElementById('heroProductCount').textContent = allProducts.length;
+          filtered = [...allProducts]; renderGrid(filtered); updateCount(filtered.length); return;
+        }
+      }
     }
+  } catch(e) {}
 
-    if (!csvText) throw new Error('No se pudo cargar el CSV');
-
-    const result = Papa.parse(csvText, {
-      header: true,
-      skipEmptyLines: true,
-    });
-
-    allProducts = result.data
-      .filter(r => r.title && r.title.trim() !== '')
-      .map(r => ({
-        id:           r.id || '',
-        title:        r.title || '',
-        description:  r.description || '',
-        price:        r.price || '',
-        image:        r.image_link || '',
-        availability: r.availability || 'in stock',
-        link:         r.link || '',
-        category:     getCategory(r.title || ''),
+  // Intento 2: Google Visualization API (siempre tiene CORS)
+  try {
+    const visUrl = `https://docs.google.com/spreadsheets/d/1ZI5vC0zNzfCJhLSQ3aMt1mHtJQ2Fwmx1vd1nIxMhKig/gviz/tq?tqx=out:csv&gid=1702971403`;
+    const r2 = await fetch(visUrl);
+    if (r2.ok) {
+      const t2 = await r2.text();
+      const parsed2 = Papa.parse(t2, { header: true, skipEmptyLines: true });
+      allProducts = parsed2.data.filter(r => r.title && r.title.trim()).map(r => ({
+        id: r.id||'', title: r.title||'', description: r.description||'',
+        price: r.price||'', image: r.image_link||'', availability: r.availability||'in stock',
+        link: r.link||'', category: getCategory(r.title||'')
       }));
+      if (allProducts.length > 0) {
+        document.getElementById('heroProductCount').textContent = allProducts.length;
+        filtered = [...allProducts]; renderGrid(filtered); updateCount(filtered.length); return;
+      }
+    }
+  } catch(e) {}
 
-    if (allProducts.length === 0) throw new Error('Sin productos');
+  renderSampleData();
+}
 
-    document.getElementById('heroProductCount').textContent = allProducts.length;
-    filtered = [...allProducts];
-    renderGrid(filtered);
-    updateCount(filtered.length);
+// LEGACY (no usado - mantenido para referencia)
+function _legacyProxies() {
+  const proxies = [
+    SHEET_CSV_URL,
+    `https://corsproxy.io/?${encodeURIComponent(SHEET_CSV_URL)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(SHEET_CSV_URL)}`,
+  ];
 
-  } catch(e) {
-    console.error('Error cargando CSV:', e);
-    renderSampleData();
+  for (const url of proxies) {
+    try {
+      const result = await new Promise((resolve, reject) => {
+        Papa.parse(url, {
+          download: true,
+          header: true,
+          skipEmptyLines: true,
+          complete: resolve,
+          error: reject,
+        });
+      });
+
+      if (result.data && result.data.length > 0) {
+        allProducts = result.data
+          .filter(r => r.title && r.title.trim() !== '')
+          .map(r => ({
+            id:           r.id || '',
+            title:        r.title || '',
+            description:  r.description || '',
+            price:        r.price || '',
+            image:        r.image_link || '',
+            availability: r.availability || 'in stock',
+            link:         r.link || '',
+            category:     getCategory(r.title || ''),
+          }));
+
+        if (allProducts.length > 0) {
+          document.getElementById('heroProductCount').textContent = allProducts.length;
+          filtered = [...allProducts];
+          renderGrid(filtered);
+          updateCount(filtered.length);
+          return; // éxito — salir del loop
+        }
+      }
+    } catch(e) {
+      console.warn('Falló proxy:', url, e);
+    }
   }
+
+  // Si todos fallaron, mostrar datos de muestra
+  renderSampleData();
 }
 
 function renderSampleData() {
@@ -1104,8 +1136,4 @@ function toggleMenu() {
   document.getElementById('mobileMenu').classList.toggle('open');
 }
 
-// ── INIT ──────────────────────────────────────────────────────
-loadProducts();
-</script>
-</body>
-</html>
+// ── INIT ───�
