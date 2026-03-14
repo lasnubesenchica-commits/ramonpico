@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Ramon Pico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<style>
+:root {
+  --orange:  #E05A00;
+  --orange2: #CC5200;
+  --bg:      #F5F5F7;
+  --bg2:     #EBEBED;
+  --bg3:     #E0E0E3;
+  --border:  rgba(0,0,0,0.09);
+  --text:    #0A0A0A;
+  --muted:   #6C6C70;
+  --chrome:  #AEAEB2;
+  --white:   #FFFFFF;
+  --green:   #2E7D32;
+  --green-bg:#E8F5E9;
+  --yellow-bg:#FFF9C4;
+  --blue-bg: #E3F2FD;
+  --red:     #C62828;
+  --red-bg:  #FFEBEE;
+  --r:       8px;
+  --r2:      12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+a{text-decoration:none;color:inherit}
+button{font-family:'DM Sans',sans-serif;cursor:pointer;border:none;background:none}
+
+/* ── LOGIN ── */
+#loginScreen{
+  position:fixed;inset:0;z-index:1000;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+}
+.login-card{
+  background:var(--white);border:1px solid var(--border);
+  border-radius:20px;padding:2.5rem;width:360px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.08);
+}
+.login-logo{
+  font-family:'Bebas Neue',sans-serif;font-size:2rem;
+  letter-spacing:.08em;margin-bottom:.25rem;
+}
+.login-logo span{color:var(--orange)}
+.login-sub{font-size:.8rem;color:var(--muted);margin-bottom:2rem}
+.login-label{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:.4rem}
+.login-input{
+  width:100%;background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--r);padding:.75rem 1rem;font-family:'DM Sans',sans-serif;
+  font-size:.95rem;outline:none;transition:border-color .2s;margin-bottom:1rem;
+}
+.login-input:focus{border-color:var(--orange)}
+.login-btn{
+  width:100%;background:var(--orange);color:#fff;font-weight:600;
+  font-size:.95rem;padding:.85rem;border-radius:var(--r);
+  border:none;cursor:pointer;transition:background .2s;
+}
+.login-btn:hover{background:var(--orange2)}
+.login-error{font-size:.8rem;color:var(--red);margin-top:.5rem;display:none}
+
+/* ── APP ── */
+#app{display:none}
+
+/* ── TOP NAV ── */
+.topnav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(245,245,247,0.95);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2rem;height:60px;
+}
+.topnav-logo{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;letter-spacing:.08em}
+.topnav-logo span{color:var(--orange)}
+.topnav-badge{
+  font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.08em;
+  text-transform:uppercase;background:rgba(224,90,0,.1);color:var(--orange);
+  border:1px solid rgba(224,90,0,.25);border-radius:100px;padding:.2rem .7rem;
+}
+.topnav-right{display:flex;align-items:center;gap:1rem}
+.topnav-refresh{
+  display:flex;align-items:center;gap:.4rem;font-size:.8rem;
+  color:var(--muted);background:var(--bg2);border:1px solid var(--border);
+  border-radius:100px;padding:.35rem .9rem;cursor:pointer;transition:all .2s;
+}
+.topnav-refresh:hover{border-color:var(--orange);color:var(--orange)}
+.topnav-logout{font-size:.8rem;color:var(--chrome);cursor:pointer;transition:color .2s}
+.topnav-logout:hover{color:var(--red)}
+
+/* ── STATS BAR ── */
+.stats-bar{
+  display:flex;gap:1rem;padding:1.25rem 2rem;flex-wrap:wrap;
+  border-bottom:1px solid var(--border);background:var(--white);
+}
+.stat-pill{
+  display:flex;align-items:center;gap:.6rem;
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:100px;padding:.4rem 1rem;font-size:.82rem;
+}
+.stat-pill-num{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;line-height:1}
+.stat-pill-num.orange{color:var(--orange)}
+.stat-pill-num.green{color:var(--green)}
+.stat-pill-num.blue{color:#1565C0}
+.stat-pill-label{font-size:.72rem;color:var(--muted)}
+
+/* ── FILTER BAR ── */
+.filter-bar{
+  display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+  padding:1rem 2rem;border-bottom:1px solid var(--border);
+  background:var(--white);
+}
+.filter-btn{
+  font-size:.78rem;font-weight:500;padding:.35rem .9rem;
+  border-radius:100px;border:1px solid var(--border);
+  background:var(--bg);color:var(--muted);cursor:pointer;transition:all .2s;
+}
+.filter-btn:hover{border-color:rgba(0,0,0,.25);color:var(--text)}
+.filter-btn.active{background:var(--orange);border-color:var(--orange);color:#fff;font-weight:600}
+.filter-search{
+  margin-left:auto;background:var(--bg);border:1px solid var(--border);
+  border-radius:100px;padding:.4rem .9rem .4rem 2.2rem;font-family:'DM Sans',sans-serif;
+  font-size:.82rem;outline:none;width:200px;transition:border-color .2s;
+  position:relative;
+}
+.filter-search:focus{border-color:var(--orange)}
+.search-wrap{position:relative}
+.search-icon{position:absolute;left:.75rem;top:50%;transform:translateY(-50%);font-size:.78rem;pointer-events:none}
+
+/* ── REGISTRAR PAGOS BTN ── */
+.registrar-btn{
+  display:flex;align-items:center;gap:.5rem;
+  background:var(--orange);color:#fff;font-weight:600;font-size:.82rem;
+  padding:.45rem 1.1rem;border-radius:var(--r);border:none;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.registrar-btn:hover{background:var(--orange2)}
+.registrar-btn:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── TABLE ── */
+.table-wrap{padding:1.5rem 2rem;overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:900px}
+thead tr{background:var(--bg2)}
+th{
+  font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);font-weight:500;
+  padding:.65rem 1rem;text-align:left;border-bottom:1px solid var(--border);
+  white-space:nowrap;
+}
+td{
+  padding:.75rem 1rem;border-bottom:1px solid var(--border);
+  font-size:.83rem;vertical-align:middle;
+}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,0,0,.015)}
+
+/* ── STATUS BADGES ── */
+.badge{
+  display:inline-flex;align-items:center;gap:.3rem;
+  font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.06em;
+  text-transform:uppercase;font-weight:500;
+  padding:.25rem .6rem;border-radius:4px;white-space:nowrap;
+}
+.badge-nueva     {background:var(--blue-bg);color:#1565C0}
+.badge-confirmada{background:var(--green-bg);color:var(--green)}
+.badge-entregada {background:#E8F5E9;color:#1B5E20}
+.badge-cancelada {background:var(--red-bg);color:var(--red)}
+.badge-yappy     {background:var(--yellow-bg);color:#795548}
+.badge-cod       {background:var(--blue-bg);color:#1565C0}
+
+/* PAGO STATUS */
+.pago-badge{
+  display:inline-flex;align-items:center;gap:.3rem;
+  font-size:.7rem;font-weight:600;padding:.2rem .5rem;border-radius:4px;
+}
+.pago-completo{background:var(--green-bg);color:var(--green)}
+.pago-parcial {background:var(--yellow-bg);color:#795548}
+.pago-sinpago {background:var(--red-bg);color:var(--red)}
+.pago-pending {background:var(--bg2);color:var(--chrome)}
+
+/* ── ACTIONS ── */
+.action-btns{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
+.btn-xs{
+  font-size:.72rem;font-weight:600;padding:.3rem .65rem;
+  border-radius:5px;border:none;cursor:pointer;transition:all .2s;
+  white-space:nowrap;display:inline-flex;align-items:center;gap:.25rem;
+}
+.btn-vision {background:#EDE7F6;color:#4527A0}
+.btn-vision:hover{background:#D1C4E9}
+.btn-vision:disabled{opacity:.4;cursor:not-allowed}
+.btn-wa    {background:#E8F5E9;color:#2E7D32}
+.btn-wa:hover{background:#C8E6C9}
+.btn-confirm{background:var(--green-bg);color:var(--green)}
+.btn-confirm:hover{background:#C8E6C9}
+.btn-cancel{background:var(--red-bg);color:var(--red)}
+.btn-cancel:hover{background:#FFCDD2}
+.btn-deliver{background:var(--blue-bg);color:#1565C0}
+.btn-deliver:hover{background:#BBDEFB}
+
+/* ── VOUCHER THUMB ── */
+.voucher-thumb{
+  width:36px;height:36px;border-radius:6px;overflow:hidden;
+  border:1px solid var(--border);cursor:pointer;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg3);font-size:.9rem;
+}
+.voucher-thumb img{width:100%;height:100%;object-fit:cover}
+
+/* ── LOADING / EMPTY ── */
+.table-loading,.table-empty{
+  text-align:center;padding:4rem 2rem;color:var(--muted);
+  display:flex;flex-direction:column;align-items:center;gap:1rem;
+}
+.spinner{
+  width:32px;height:32px;border:2px solid var(--bg3);
+  border-top-color:var(--orange);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MODAL DETALLE ── */
+.modal-overlay{
+  position:fixed;inset:0;z-index:300;
+  background:rgba(0,0,0,.45);backdrop-filter:blur(10px);
+  display:flex;align-items:center;justify-content:center;
+  padding:1.5rem;opacity:0;pointer-events:none;transition:opacity .3s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal-box{
+  background:var(--white);border:1px solid var(--border);border-radius:16px;
+  width:100%;max-width:620px;max-height:90vh;overflow-y:auto;
+  transform:translateY(16px);transition:transform .3s;position:relative;
+}
+.modal-overlay.open .modal-box{transform:translateY(0)}
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);
+}
+.modal-title{font-family:'Bebas Neue',sans-serif;font-size:1.5rem;letter-spacing:.04em}
+.modal-close{
+  width:32px;height:32px;border-radius:50%;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;cursor:pointer;border:none;transition:background .2s;
+}
+.modal-close:hover{background:var(--bg2)}
+.modal-body{padding:1.5rem}
+.modal-section{margin-bottom:1.25rem}
+.modal-section-label{
+  font-family:'DM Mono',monospace;font-size:.65rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--orange);margin-bottom:.6rem;
+}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem}
+.modal-field{display:flex;flex-direction:column;gap:.2rem}
+.modal-field label{font-size:.68rem;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+.modal-field input,.modal-field select{
+  background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:'DM Sans',sans-serif;font-size:.85rem;
+  padding:.5rem .75rem;outline:none;transition:border-color .2s;
+}
+.modal-field input:focus,.modal-field select:focus{border-color:var(--orange)}
+.modal-field.full{grid-column:1/-1}
+.modal-voucher-preview{
+  width:100%;max-height:200px;object-fit:contain;border-radius:8px;
+  border:1px solid var(--border);margin-top:.5rem;cursor:pointer;
+}
+.modal-actions{
+  display:flex;gap:.6rem;flex-wrap:wrap;
+  padding:1rem 1.5rem;border-top:1px solid var(--border);
+}
+.btn-primary{
+  display:inline-flex;align-items:center;gap:.5rem;
+  background:var(--orange);color:#fff;font-weight:600;font-size:.85rem;
+  padding:.65rem 1.4rem;border-radius:var(--r);border:none;cursor:pointer;
+  transition:all .2s;
+}
+.btn-primary:hover{background:var(--orange2)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.btn-secondary{
+  display:inline-flex;align-items:center;gap:.5rem;
+  border:1px solid var(--border);color:var(--text);font-weight:500;
+  font-size:.85rem;padding:.65rem 1.4rem;border-radius:var(--r);
+  background:none;cursor:pointer;transition:all .2s;
+}
+.btn-secondary:hover{border-color:rgba(0,0,0,.3);background:var(--bg)}
+
+/* VISION RESULT CARD */
+.vision-card{
+  background:#F3E5F5;border:1px solid #CE93D8;border-radius:var(--r2);
+  padding:1rem;margin-top:.75rem;display:none;
+}
+.vision-card.show{display:block}
+.vision-analyzing{display:flex;align-items:center;gap:.75rem;font-size:.82rem;color:#4527A0}
+.vision-done{font-size:.78rem;color:var(--muted);margin-top:.5rem}
+
+/* TOAST */
+.toast{
+  position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(60px);
+  background:var(--text);color:#fff;padding:.65rem 1.4rem;border-radius:100px;
+  font-size:.82rem;font-weight:500;z-index:500;transition:transform .3s;white-space:nowrap;
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .stats-bar,.filter-bar,.table-wrap{padding-left:1rem;padding-right:1rem}
+  .topnav{padding:0 1rem}
+  .modal-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">Ramon<span>.</span>Pico</div>
+    <div class="login-sub">Panel de administración</div>
+    <label class="login-label">Contraseña</label>
+    <input type="password" class="login-input" id="loginPwd" placeholder="••••••••"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="loginError">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- ═══════════ APP ═══════════ -->
+<div id="app">
+
+  <!-- TOP NAV -->
+  <nav class="topnav">
+    <div style="display:flex;align-items:center;gap:.75rem">
+      <div class="topnav-logo">Ramon<span>.</span>Pico</div>
+      <div class="topnav-badge">Admin</div>
+    </div>
+    <div class="topnav-right">
+      <button class="topnav-refresh" onclick="loadOrdenes()">↻ Actualizar</button>
+      <span class="topnav-logout" onclick="logout()">Salir →</span>
+    </div>
+  </nav>
+
+  <!-- STATS BAR -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-pill"><div class="stat-pill-num orange" id="statTotal">—</div><div class="stat-pill-label">Total órdenes</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#1565C0" id="statNuevas">—</div><div class="stat-pill-label">Nuevas</div></div>
+    <div class="stat-pill"><div class="stat-pill-num green" id="statConfirmadas">—</div><div class="stat-pill-label">Confirmadas</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#795548" id="statYappy">—</div><div class="stat-pill-label">Yappy pendiente</div></div>
+    <div class="stat-pill"><div class="stat-pill-num orange" id="statMonto">—</div><div class="stat-pill-label">Facturado</div></div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all">Todas</button>
+    <button class="filter-btn" data-filter="Nueva">Nuevas</button>
+    <button class="filter-btn" data-filter="Confirmada">Confirmadas</button>
+    <button class="filter-btn" data-filter="Entregada">Entregadas</button>
+    <button class="filter-btn" data-filter="Cancelada">Canceladas</button>
+    <button class="filter-btn" data-filter="yappy">Yappy</button>
+
+    <button class="registrar-btn" id="registrarBtn" onclick="registrarPagosYappy()">
+      ✦ Registrar pagos Yappy
+    </button>
+
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="filter-search" id="searchOrdenes" placeholder="Buscar orden, cliente...">
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap">
+    <table id="ordenesTable">
+      <thead>
+        <tr>
+          <th>Orden</th>
+          <th>Fecha</th>
+          <th>Cliente</th>
+          <th>Pago</th>
+          <th>Total</th>
+          <th>Estado pago</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="ordenesBody">
+        <tr><td colspan="8">
+          <div class="table-loading"><div class="spinner"></div><span>Cargando órdenes...</span></div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ═══════════ MODAL DETALLE ═══════════ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOutside(event)">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Orden #</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Datos cliente -->
+      <div class="modal-section">
+        <div class="modal-section-label">Cliente</div>
+        <div class="modal-grid">
+          <div class="modal-field full"><label>Nombre</label><input type="text" id="mNombre" readonly></div>
+          <div class="modal-field"><label>Cédula / RUC</label><input type="text" id="mRuc" readonly></div>
+          <div class="modal-field"><label>Teléfono</label><input type="text" id="mTelefono" readonly></div>
+          <div class="modal-field full"><label>Email</label><input type="text" id="mEmail" readonly></div>
+          <div class="modal-field full"><label>Dirección</label><input type="text" id="mDireccion" readonly></div>
+          <div class="modal-field full"><label>Notas</label><input type="text" id="mNotas" readonly></div>
+        </div>
+      </div>
+
+      <!-- Productos -->
+      <div class="modal-section">
+        <div class="modal-section-label">Productos</div>
+        <div id="mProductos" style="font-size:.83rem;line-height:1.8;background:var(--bg);border-radius:var(--r);padding:.75rem 1rem"></div>
+        <div style="text-align:right;font-family:'Bebas Neue',sans-serif;font-size:1.4rem;color:var(--orange);padding:.5rem 0" id="mTotal"></div>
+      </div>
+
+      <!-- Pago Yappy -->
+      <div class="modal-section" id="yappySection">
+        <div class="modal-section-label">Datos del pago Yappy</div>
+
+        <!-- Voucher preview -->
+        <div id="voucherPreviewWrap" style="display:none;margin-bottom:.75rem">
+          <img id="voucherPreviewImg" class="modal-voucher-preview" src="" alt="Voucher"
+            onclick="window.open(this.src,'_blank')">
+          <div style="font-size:.72rem;color:var(--chrome);margin-top:.3rem">Clic para ver en tamaño completo</div>
+        </div>
+        <div id="noVoucherMsg" style="font-size:.82rem;color:var(--chrome);margin-bottom:.75rem;display:none">
+          ⚠️ No se subió voucher para esta orden
+        </div>
+
+        <!-- Vision card -->
+        <div class="vision-card" id="visionCard">
+          <div class="vision-analyzing" id="visionAnalyzing">
+            <div class="spinner" style="width:18px;height:18px;border-width:2px"></div>
+            Claude Vision analizando voucher...
+          </div>
+          <div class="vision-done" id="visionDone" style="display:none">
+            ✦ Análisis completado — revisa y corrige si es necesario
+          </div>
+        </div>
+
+        <div class="modal-grid" style="margin-top:.75rem">
+          <div class="modal-field"><label>Monto pagado (USD)</label><input type="text" id="mMonto" placeholder="0.00"></div>
+          <div class="modal-field"><label>Código de transacción</label><input type="text" id="mCodigo" placeholder="—"></div>
+          <div class="modal-field full"><label>Nombre del pagador</label><input type="text" id="mPagador" placeholder="—"></div>
+          <div class="modal-field full"><label>Fecha del pago</label><input type="text" id="mFechaPago" placeholder="—"></div>
+          <div class="modal-field full">
+            <label>Estado del pago</label>
+            <select id="mEstadoPago">
+              <option value="">— sin definir —</option>
+              <option value="completo">✅ Pago completo</option>
+              <option value="parcial">⚡ Abono parcial</option>
+              <option value="sinpago">❌ Sin pago</option>
+            </select>
+          </div>
+          <div class="modal-field full" id="saldoField" style="display:none">
+            <label>Saldo pendiente (USD)</label>
+            <input type="text" id="mSaldo" placeholder="0.00">
+          </div>
+        </div>
+      </div>
+
+      <!-- Estado orden -->
+      <div class="modal-section">
+        <div class="modal-section-label">Estado de la orden</div>
+        <select id="mEstadoOrden" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:.6rem .9rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%;transition:border-color .2s">
+          <option value="Nueva">Nueva</option>
+          <option value="Confirmada">Confirmada</option>
+          <option value="Entregada">Entregada</option>
+          <option value="Cancelada">Cancelada</option>
+        </select>
+      </div>
+
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" id="btnAnalizarVision" onclick="analizarVisionModal()">✦ Analizar voucher</button>
+      <button class="btn-primary" id="btnGuardar" onclick="guardarCambios()" style="background:var(--green)">💾 Guardar cambios</button>
+      <button class="btn-secondary" onclick="abrirWhatsApp()">📲 WhatsApp</button>
+      <button class="btn-secondary" onclick="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════════════════
+const ADMIN_PASSWORD = 'ramonpico2025';   // ← cambia esto
+
+const GAS_URL        = 'https://script.google.com/macros/s/AKfycbwsQ2Aob4xsRtHi8r-OoAuGhGH3LKdSPerT1o9SlotkO_0tWGUdHYasgCqjOMJsTYZu/exec';
+const CLAUDE_API_KEY = 'TU_CLAUDE_API_KEY_AQUI';   // ← tu sk-ant-...
+const WHATSAPP_NUM   = '50766724615';
+
+// Sheet publicado (misma hoja Ordenes)
+const PUBLISHED_ID   = '2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh';
+// ⚠️ Necesitas publicar la hoja "Ordenes" también.
+// En el Sheet: Archivo → Compartir → Publicar en la web → Hoja "Ordenes" → CSV
+// Copia el GID de la URL y ponlo aquí:
+const ORDENES_GID    = 'TU_ORDENES_GID_AQUI';
+const ORDENES_CSV    = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_ID}/pub?gid=${ORDENES_GID}&single=true&output=csv`;
+
+// ══════════════════════════════════════════════════
+//  COLUMNAS (mismo orden que el GAS)
+// ══════════════════════════════════════════════════
+const COL = {
+  ORDEN_NUM:0, FECHA:1, ESTADO:2,
+  NOMBRE:3, RUC:4, TELEFONO:5, EMAIL:6,
+  DIRECCION:7, NOTAS:8, PAGO:9,
+  TOTAL_STR:10, TOTAL_NUM:11,
+  PRODUCTOS:12, VOUCHER:13,
+  MONTO_PAGADO:14, ESTADO_PAGO:15, SALDO_PEND:16,
+  CODIGO_TRANS:17, PAGADOR:18, FECHA_PAGO:19,
+  INGRESO_ID:20,
+};
+
+// ══════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════
+let ordenes       = [];
+let ordenesFilter = [];
+let activeFilter  = 'all';
+let currentOrden  = null;
+
+// ══════════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════════
+function doLogin() {
+  const pwd = document.getElementById('loginPwd').value;
+  if (pwd === ADMIN_PASSWORD) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadOrdenes();
+  } else {
+    document.getElementById('loginError').style.display = 'block';
+    document.getElementById('loginPwd').value = '';
+  }
+}
+function logout() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('loginPwd').value = '';
+}
+document.getElementById('loginPwd').addEventListener('keydown', e => {
+  if (e.key === 'Enter') doLogin();
+});
+
+// ══════════════════════════════════════════════════
+//  CARGAR ÓRDENES DESDE CSV
+// ══════════════════════════════════════════════════
+async function loadOrdenes() {
+  document.getElementById('ordenesBody').innerHTML =
+    '<tr><td colspan="8"><div class="table-loading"><div class="spinner"></div><span>Cargando órdenes...</span></div></td></tr>';
+
+  try {
+    // Cargar via GAS (tiene acceso al sheet privado)
+    const url = GAS_URL + '?action=getOrdenes';
+    const res = await fetch(url, { mode: 'no-cors' });
+
+    // no-cors devuelve opaque — usamos el CSV publicado como alternativa
+    // Para que funcione sin publicar el sheet, usamos el GAS como proxy
+    // El GAS tiene la función getOrdenes que devuelve JSON
+    // Pero con no-cors no podemos leer la respuesta...
+    // Solución: GAS retorna JSONP o usamos el CSV publicado de Ordenes
+
+    throw new Error('use_csv'); // forzar fallback a CSV publicado
+
+  } catch(e) {
+    // Fallback: CSV publicado de la hoja Ordenes
+    try {
+      if (ORDENES_GID === 'TU_ORDENES_GID_AQUI') {
+        showDemoData();
+        return;
+      }
+      const res = await fetch(ORDENES_CSV);
+      if (!res.ok) throw new Error('CSV fetch failed');
+      const csv = await res.text();
+      const result = Papa.parse(csv, { header: false, skipEmptyLines: true });
+      // Saltar la fila de headers
+      const rows = result.data.slice(1);
+      ordenes = rows.map(r => r);
+      renderTable(ordenes);
+      updateStats(ordenes);
+    } catch(err) {
+      console.error(err);
+      showDemoData();
+    }
+  }
+}
+
+function showDemoData() {
+  // Datos demo para previsualizar el panel
+  ordenes = [
+    ['RP-001234','15/03/2025 10:30','Nueva','Juan García','8-123-456','6000-1234','juan@email.com','Ciudad de Panamá','','Yappy','$150','150','[{"titulo":"Compresor 50L","cantidad":1,"precio":"$150"}]','https://drive.google.com/file/d/example','150','','','TXN-001','Juan García','15/03/2025 10:15',''],
+    ['RP-001235','15/03/2025 11:45','Confirmada','María López','4-567-890','6111-2222','maria@email.com','Chorrera','Entrega urgente','Contra entrega','$390','390','[{"titulo":"Generador 2000W","cantidad":1,"precio":"$390"}]','','','','','','','','ING-RP-001'],
+    ['RP-001236','16/03/2025 09:00','Nueva','Carlos Ruiz','8-999-111','6333-4444','carlos@email.com','San Miguelito','','Yappy','$258','258','[{"titulo":"Máquina Soldar 160A","cantidad":1,"precio":"$258"}]','https://drive.google.com/file/d/example2','','','','','',''],
+  ];
+  renderTable(ordenes);
+  updateStats(ordenes);
+  showToast('⚠️ Mostrando datos de ejemplo — configura ORDENES_GID');
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER TABLE
+// ══════════════════════════════════════════════════
+function renderTable(rows) {
+  const tbody = document.getElementById('ordenesBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay órdenes</span></div></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map((r, i) => {
+    const estado      = r[COL.ESTADO]      || '';
+    const pago        = r[COL.PAGO]        || '';
+    const estadoPago  = r[COL.ESTADO_PAGO] || '';
+    const voucherUrl  = r[COL.VOUCHER]     || '';
+    const ingresoId   = r[COL.INGRESO_ID]  || '';
+
+    const estadoBadge = {
+      'Nueva':     '<span class="badge badge-nueva">● Nueva</span>',
+      'Confirmada':'<span class="badge badge-confirmada">● Confirmada</span>',
+      'Entregada': '<span class="badge badge-entregada">● Entregada</span>',
+      'Cancelada': '<span class="badge badge-cancelada">● Cancelada</span>',
+    }[estado] || `<span class="badge">${estado}</span>`;
+
+    const pagoBadge = pago === 'Yappy'
+      ? '<span class="badge badge-yappy">📱 Yappy</span>'
+      : '<span class="badge badge-cod">🚚 COD</span>';
+
+    let estadoPagoBadge = '';
+    if (pago === 'Yappy') {
+      estadoPagoBadge = {
+        'completo': '<span class="pago-badge pago-completo">✅ Completo</span>',
+        'parcial':  '<span class="pago-badge pago-parcial">⚡ Parcial</span>',
+        'sinpago':  '<span class="pago-badge pago-sinpago">❌ Sin pago</span>',
+      }[estadoPago] || '<span class="pago-badge pago-pending">⏳ Pendiente</span>';
+    }
+
+    const needsVision = pago === 'Yappy' && !estadoPago && voucherUrl;
+
+    return `<tr>
+      <td><span style="font-family:'DM Mono',monospace;font-size:.75rem;font-weight:600">${esc(r[COL.ORDEN_NUM]||'')}</span></td>
+      <td style="color:var(--muted);white-space:nowrap">${esc(r[COL.FECHA]||'').substring(0,16)}</td>
+      <td>
+        <div style="font-weight:600;font-size:.83rem">${esc(r[COL.NOMBRE]||'')}</div>
+        <div style="font-size:.72rem;color:var(--muted)">${esc(r[COL.TELEFONO]||'')}</div>
+      </td>
+      <td>${pagoBadge}</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--orange)">${esc(r[COL.TOTAL_STR]||'—')}</td>
+      <td>${estadoPagoBadge}</td>
+      <td>${estadoBadge}${ingresoId?'<br><span style="font-size:.65rem;color:var(--green);font-family:DM Mono,monospace">✓ CF</span>':''}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-xs" onclick="openModal(${i})" style="background:var(--bg2);color:var(--text)">Ver</button>
+          ${needsVision?`<button class="btn-xs btn-vision" onclick="openModal(${i});setTimeout(analizarVisionModal,300)" title="Analizar voucher con IA">✦ IA</button>`:''}
+          ${estado==='Nueva'?`<button class="btn-xs btn-confirm" onclick="cambiarEstado(${i},'Confirmada')">✓ Confirmar</button>`:''}
+          ${estado==='Confirmada'?`<button class="btn-xs btn-deliver" onclick="cambiarEstado(${i},'Entregada')">📦 Entregar</button>`:''}
+          <button class="btn-xs btn-wa" onclick="waCliente(${i})">📲</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateStats(rows) {
+  document.getElementById('statTotal').textContent       = rows.length;
+  document.getElementById('statNuevas').textContent      = rows.filter(r=>r[COL.ESTADO]==='Nueva').length;
+  document.getElementById('statConfirmadas').textContent = rows.filter(r=>r[COL.ESTADO]==='Confirmada').length;
+  document.getElementById('statYappy').textContent       = rows.filter(r=>r[COL.PAGO]==='Yappy'&&!r[COL.ESTADO_PAGO]).length;
+  const total = rows.reduce((s,r)=>s+(parseFloat(String(r[COL.TOTAL_NUM]||'0').replace(/[^0-9.]/g,''))||0),0);
+  document.getElementById('statMonto').textContent       = total > 0 ? '$'+total.toLocaleString('es-PA',{minimumFractionDigits:0}) : '—';
+}
+
+// ══════════════════════════════════════════════════
+//  FILTROS
+// ══════════════════════════════════════════════════
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.filter;
+    applyFilters();
+  });
+});
+document.getElementById('searchOrdenes').addEventListener('input', applyFilters);
+
+function applyFilters() {
+  const q = document.getElementById('searchOrdenes').value.toLowerCase().trim();
+  let rows = ordenes;
+  if (activeFilter !== 'all') {
+    if (activeFilter === 'yappy') rows = rows.filter(r => r[COL.PAGO]==='Yappy');
+    else rows = rows.filter(r => r[COL.ESTADO] === activeFilter);
+  }
+  if (q) rows = rows.filter(r =>
+    (r[COL.ORDEN_NUM]||'').toLowerCase().includes(q) ||
+    (r[COL.NOMBRE]||'').toLowerCase().includes(q) ||
+    (r[COL.EMAIL]||'').toLowerCase().includes(q) ||
+    (r[COL.TELEFONO]||'').includes(q)
+  );
+  renderTable(rows);
+}
+
+// ══════════════════════════════════════════════════
+//  REGISTRAR PAGOS YAPPY (batch)
+//  Analiza todos los Yappy sin estado de pago
+// ══════════════════════════════════════════════════
+async function registrarPagosYappy() {
+  const pendientes = ordenes.filter(r => r[COL.PAGO]==='Yappy' && !r[COL.ESTADO_PAGO] && r[COL.VOUCHER]);
+  if (!pendientes.length) {
+    showToast('✓ No hay pagos Yappy pendientes de analizar');
+    return;
+  }
+  const btn = document.getElementById('registrarBtn');
+  btn.disabled = true;
+  btn.textContent = `Analizando ${pendientes.length} voucher(s)...`;
+
+  let procesados = 0;
+  for (const orden of pendientes) {
+    try {
+      await analizarYGuardarOrden(orden);
+      procesados++;
+      btn.textContent = `Procesando ${procesados}/${pendientes.length}...`;
+    } catch(e) {
+      console.error('Error procesando orden:', orden[COL.ORDEN_NUM], e);
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = '✦ Registrar pagos Yappy';
+  showToast(`✅ ${procesados} pago(s) Yappy analizados`);
+  loadOrdenes();
+}
+
+// ══════════════════════════════════════════════════
+//  CLAUDE VISION — analizar voucher desde Drive URL
+// ══════════════════════════════════════════════════
+async function analizarYGuardarOrden(orden) {
+  const voucherUrl = orden[COL.VOUCHER];
+  if (!voucherUrl) throw new Error('Sin voucher URL');
+
+  // Obtener imagen desde Drive via GAS proxy
+  // El GAS tiene la función fetchImageBase64 que descarga el archivo de Drive
+  // y lo devuelve como base64 via JSONP
+  const imageData = await fetchVoucherBase64ViaGAS(orden[COL.ORDEN_NUM], voucherUrl);
+  if (!imageData) throw new Error('No se pudo obtener imagen');
+
+  // Llamar a Claude Vision
+  const resultado = await callClaudeVision(imageData.base64, imageData.mimeType);
+  if (!resultado) throw new Error('Vision falló');
+
+  // Calcular estado del pago
+  const totalOrden  = parseFloat(String(orden[COL.TOTAL_NUM]||'0').replace(/[^0-9.]/g,'')) || 0;
+  const montoPagado = parseFloat(String(resultado.monto||'0').replace(/[^0-9.]/g,'')) || 0;
+  let estadoPago = '';
+  if (montoPagado > 0 && totalOrden > 0) {
+    estadoPago = montoPagado >= totalOrden ? 'completo' : 'parcial';
+  }
+  const saldo = estadoPago === 'parcial' ? Math.max(0, totalOrden - montoPagado).toFixed(2) : '';
+
+  // Guardar en GAS/Sheet
+  await enviarActualizacionGAS({
+    action:         'updateYappy',
+    orderNumber:    orden[COL.ORDEN_NUM],
+    montoPagado:    resultado.monto    || '',
+    codigo:         resultado.codigo   || '',
+    pagador:        resultado.pagador  || '',
+    fechaPago:      resultado.fecha    || '',
+    estadoPago:     estadoPago,
+    saldoPendiente: saldo,
+  });
+
+  return resultado;
+}
+
+async function fetchVoucherBase64ViaGAS(orderNumber, voucherUrl) {
+  // El GAS expone una función que descarga el archivo de Drive y devuelve base64
+  // Usamos un callback JSONP-style para evitar CORS
+  return new Promise((resolve) => {
+    const callbackName = '_cb_' + Date.now();
+    window[callbackName] = function(data) {
+      delete window[callbackName];
+      const script = document.getElementById('_jsonp_script');
+      if (script) script.remove();
+      resolve(data);
+    };
+
+    const script = document.createElement('script');
+    script.id  = '_jsonp_script';
+    script.src = GAS_URL + '?action=getVoucherBase64&orderNumber=' + encodeURIComponent(orderNumber) + '&callback=' + callbackName;
+    script.onerror = () => { resolve(null); };
+    document.body.appendChild(script);
+
+    // Timeout 15s
+    setTimeout(() => {
+      if (window[callbackName]) { delete window[callbackName]; resolve(null); }
+    }, 15000);
+  });
+}
+
+async function callClaudeVision(base64, mimeType) {
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'x-api-key':     CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model:      'claude-sonnet-4-20250514',
+        max_tokens: 400,
+        messages: [{
+          role: 'user',
+          content: [
+            { type:'image', source:{ type:'base64', media_type: mimeType||'image/jpeg', data: base64 } },
+            { type:'text',  text: `Analiza este voucher/comprobante de pago de Yappy (Panamá).
+Responde SOLO con JSON válido, sin texto adicional ni markdown:
+{"monto":"monto en números con decimales ej: 150.00","codigo":"código o número de transacción","pagador":"nombre completo de quien pagó","fecha":"fecha y hora del pago","receptor":"quien recibió"}
+Si un campo no es visible usa null.` }
+          ]
+        }]
+      })
+    });
+    const data  = await resp.json();
+    const text  = data.content?.find(b=>b.type==='text')?.text || '{}';
+    const clean = text.replace(/```json|```/g,'').trim();
+    return JSON.parse(clean);
+  } catch(e) {
+    console.error('Claude Vision error:', e);
+    return null;
+  }
+}
+
+async function enviarActualizacionGAS(payload) {
+  await fetch(GAS_URL, {
+    method:  'POST',
+    mode:    'no-cors',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body:    JSON.stringify(payload),
+  });
+}
+
+// ══════════════════════════════════════════════════
+//  MODAL DETALLE
+// ══════════════════════════════════════════════════
+function openModal(idx) {
+  currentOrden = ordenes[idx];
+  const r = currentOrden;
+
+  document.getElementById('modalTitle').textContent = r[COL.ORDEN_NUM] || 'Orden';
+  document.getElementById('mNombre').value    = r[COL.NOMBRE]    || '';
+  document.getElementById('mRuc').value       = r[COL.RUC]       || '';
+  document.getElementById('mTelefono').value  = r[COL.TELEFONO]  || '';
+  document.getElementById('mEmail').value     = r[COL.EMAIL]     || '';
+  document.getElementById('mDireccion').value = r[COL.DIRECCION] || '';
+  document.getElementById('mNotas').value     = r[COL.NOTAS]     || '';
+  document.getElementById('mTotal').textContent = r[COL.TOTAL_STR] || '';
+  document.getElementById('mEstadoOrden').value = r[COL.ESTADO]  || 'Nueva';
+
+  // Productos
+  try {
+    const prods = JSON.parse(r[COL.PRODUCTOS] || '[]');
+    document.getElementById('mProductos').innerHTML = prods.map(p=>
+      `<div>• ${esc(p.titulo||'')} ×${p.cantidad||1} — <strong>${esc(p.precio||'')}</strong></div>`
+    ).join('') || '<span style="color:var(--chrome)">—</span>';
+  } catch(e) {
+    document.getElementById('mProductos').textContent = r[COL.PRODUCTOS] || '—';
+  }
+
+  // Sección Yappy
+  const isYappy = r[COL.PAGO] === 'Yappy';
+  document.getElementById('yappySection').style.display = isYappy ? 'block' : 'none';
+
+  if (isYappy) {
+    document.getElementById('mMonto').value     = r[COL.MONTO_PAGADO] || '';
+    document.getElementById('mCodigo').value    = r[COL.CODIGO_TRANS] || '';
+    document.getElementById('mPagador').value   = r[COL.PAGADOR]      || '';
+    document.getElementById('mFechaPago').value = r[COL.FECHA_PAGO]   || '';
+    document.getElementById('mEstadoPago').value= r[COL.ESTADO_PAGO]  || '';
+    document.getElementById('mSaldo').value     = r[COL.SALDO_PEND]   || '';
+    document.getElementById('saldoField').style.display = r[COL.ESTADO_PAGO]==='parcial' ? 'flex' : 'none';
+
+    // Voucher preview
+    const vurl = r[COL.VOUCHER];
+    if (vurl) {
+      // Para imágenes en Drive, usamos el thumbnail URL
+      const thumbUrl = vurl.replace('/view','/preview').replace('open?id=','uc?id=');
+      document.getElementById('voucherPreviewImg').src = thumbUrl;
+      document.getElementById('voucherPreviewWrap').style.display = 'block';
+      document.getElementById('noVoucherMsg').style.display = 'none';
+      document.getElementById('btnAnalizarVision').disabled = false;
+    } else {
+      document.getElementById('voucherPreviewWrap').style.display = 'none';
+      document.getElementById('noVoucherMsg').style.display = 'block';
+      document.getElementById('btnAnalizarVision').disabled = true;
+    }
+
+    document.getElementById('visionCard').classList.remove('show');
+    document.getElementById('visionAnalyzing').style.display = 'flex';
+    document.getElementById('visionDone').style.display = 'none';
+  }
+
+  document.getElementById('modalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function closeModalOutside(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+// Estado pago — mostrar/ocultar saldo
+document.getElementById('mEstadoPago').addEventListener('change', function() {
+  document.getElementById('saldoField').style.display = this.value === 'parcial' ? 'flex' : 'none';
+  if (this.value === 'parcial') {
+    const total  = parseFloat(String(currentOrden?.[COL.TOTAL_NUM]||'0').replace(/[^0-9.]/g,'')) || 0;
+    const pagado = parseFloat(document.getElementById('mMonto').value) || 0;
+    if (total > 0 && pagado > 0) document.getElementById('mSaldo').value = Math.max(0,total-pagado).toFixed(2);
+  }
+});
+
+// ── ANALIZAR VOUCHER DESDE MODAL ──
+async function analizarVisionModal() {
+  if (!currentOrden) return;
+  const vurl = currentOrden[COL.VOUCHER];
+  if (!vurl) return;
+
+  const card = document.getElementById('visionCard');
+  card.classList.add('show');
+  document.getElementById('visionAnalyzing').style.display = 'flex';
+  document.getElementById('visionDone').style.display = 'none';
+  document.getElementById('btnAnalizarVision').disabled = true;
+
+  try {
+    const imageData = await fetchVoucherBase64ViaGAS(currentOrden[COL.ORDEN_NUM], vurl);
+    if (!imageData) throw new Error('No se pudo obtener imagen de Drive');
+
+    const resultado = await callClaudeVision(imageData.base64, imageData.mimeType);
+    if (!resultado) throw new Error('Vision no devolvió datos');
+
+    // Llenar campos
+    if (resultado.monto)   document.getElementById('mMonto').value     = resultado.monto;
+    if (resultado.codigo)  document.getElementById('mCodigo').value    = resultado.codigo;
+    if (resultado.pagador) document.getElementById('mPagador').value   = resultado.pagador;
+    if (resultado.fecha)   document.getElementById('mFechaPago').value = resultado.fecha;
+
+    // Auto-estado
+    const total  = parseFloat(String(currentOrden[COL.TOTAL_NUM]||'0').replace(/[^0-9.]/g,'')) || 0;
+    const pagado = parseFloat(String(resultado.monto||'0').replace(/[^0-9.]/g,'')) || 0;
+    if (pagado > 0 && total > 0) {
+      const ep = pagado >= total ? 'completo' : 'parcial';
+      document.getElementById('mEstadoPago').value = ep;
+      if (ep === 'parcial') {
+        document.getElementById('saldoField').style.display = 'flex';
+        document.getElementById('mSaldo').value = Math.max(0,total-pagado).toFixed(2);
+      }
+    }
+
+    document.getElementById('visionAnalyzing').style.display = 'none';
+    document.getElementById('visionDone').style.display = 'block';
+    showToast('✅ Voucher analizado correctamente');
+  } catch(err) {
+    document.getElementById('visionAnalyzing').style.display = 'none';
+    document.getElementById('visionCard').classList.remove('show');
+    showToast('⚠️ ' + err.message);
+    console.error(err);
+  }
+
+  document.getElementById('btnAnalizarVision').disabled = false;
+}
+
+// ── GUARDAR CAMBIOS ──
+async function guardarCambios() {
+  if (!currentOrden) return;
+  const btn = document.getElementById('btnGuardar');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  const payload = {
+    action:         'updateOrden',
+    orderNumber:    currentOrden[COL.ORDEN_NUM],
+    estado:         document.getElementById('mEstadoOrden').value,
+    montoPagado:    document.getElementById('mMonto').value     || '',
+    codigo:         document.getElementById('mCodigo').value    || '',
+    pagador:        document.getElementById('mPagador').value   || '',
+    fechaPago:      document.getElementById('mFechaPago').value || '',
+    estadoPago:     document.getElementById('mEstadoPago').value|| '',
+    saldoPendiente: document.getElementById('mSaldo').value     || '',
+  };
+
+  await enviarActualizacionGAS(payload);
+
+  btn.disabled = false;
+  btn.textContent = '💾 Guardar cambios';
+  showToast('✅ Cambios guardados');
+  closeModal();
+  setTimeout(loadOrdenes, 1500);
+}
+
+// ── CAMBIAR ESTADO DIRECTO ──
+async function cambiarEstado(idx, nuevoEstado) {
+  const orden = ordenes[idx];
+  await enviarActualizacionGAS({
+    action:      'updateOrden',
+    orderNumber: orden[COL.ORDEN_NUM],
+    estado:      nuevoEstado,
+  });
+  showToast(`✅ Orden ${orden[COL.ORDEN_NUM]} → ${nuevoEstado}`);
+  setTimeout(loadOrdenes, 1200);
+}
+
+// ── WHATSAPP ──
+function abrirWhatsApp() {
+  if (!currentOrden) return;
+  const tel = (currentOrden[COL.TELEFONO]||'').replace(/\D/g,'');
+  window.open(`https://wa.me/507${tel}`, '_blank');
+}
+function waCliente(idx) {
+  const orden = ordenes[idx];
+  const tel   = (orden[COL.TELEFONO]||'').replace(/\D/g,'');
+  const msg   = `Hola ${orden[COL.NOMBRE]||''}, te contactamos sobre tu orden ${orden[COL.ORDEN_NUM]||''}.`;
+  window.open(`https://wa.me/507${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ══════════════════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════════════════
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
