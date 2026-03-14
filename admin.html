@@ -504,14 +504,11 @@ tr:hover td{background:rgba(0,0,0,.015)}
 const ADMIN_PASSWORD = 'ramonpico2025';   // ← cambia esto
 
 const GAS_URL        = 'https://script.google.com/macros/s/AKfycbwsQ2Aob4xsRtHi8r-OoAuGhGH3LKdSPerT1o9SlotkO_0tWGUdHYasgCqjOMJsTYZu/exec';
-const CLAUDE_API_KEY = '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';   // ← tu sk-ant-...
+// ✅ Sin API key aquí — Claude Vision corre en el servidor GAS
 const WHATSAPP_NUM   = '50766724615';
 
 // Sheet publicado (misma hoja Ordenes)
-const PUBLISHED_ID   = '2PACX-1vR2DGzKBJpSVRqYLd7AGNxXDetNsmrboUDIyqAv0OCu8lF5L0l58NFfYiCZVtrOkkSFFCMGACIH0Ojh';
-// ⚠️ Necesitas publicar la hoja "Ordenes" también.
-// En el Sheet: Archivo → Compartir → Publicar en la web → Hoja "Ordenes" → CSV
-// Copia el GID de la URL y ponlo aquí:
+const PUBLISHED_ID   = '2PACX-1vTnL-QaQXzBzpoH8lesm-Wg7KPFHIB9ftj7ILjCW3ysBCxSj_Xlt62FlTmKtJohhEeougX-AFn0exbo';
 const ORDENES_GID    = '1303470644';
 const ORDENES_CSV    = `https://docs.google.com/spreadsheets/d/e/${PUBLISHED_ID}/pub?gid=${ORDENES_GID}&single=true&output=csv`;
 
@@ -568,38 +565,19 @@ async function loadOrdenes() {
     '<tr><td colspan="8"><div class="table-loading"><div class="spinner"></div><span>Cargando órdenes...</span></div></td></tr>';
 
   try {
-    // Cargar via GAS (tiene acceso al sheet privado)
-    const url = GAS_URL + '?action=getOrdenes';
-    const res = await fetch(url, { mode: 'no-cors' });
-
-    // no-cors devuelve opaque — usamos el CSV publicado como alternativa
-    // Para que funcione sin publicar el sheet, usamos el GAS como proxy
-    // El GAS tiene la función getOrdenes que devuelve JSON
-    // Pero con no-cors no podemos leer la respuesta...
-    // Solución: GAS retorna JSONP o usamos el CSV publicado de Ordenes
-
-    throw new Error('use_csv'); // forzar fallback a CSV publicado
-
-  } catch(e) {
-    // Fallback: CSV publicado de la hoja Ordenes
-    try {
-      if (ORDENES_GID === 'TU_ORDENES_GID_AQUI') {
-        showDemoData();
-        return;
-      }
-      const res = await fetch(ORDENES_CSV);
-      if (!res.ok) throw new Error('CSV fetch failed');
-      const csv = await res.text();
-      const result = Papa.parse(csv, { header: false, skipEmptyLines: true });
-      // Saltar la fila de headers
-      const rows = result.data.slice(1);
-      ordenes = rows.map(r => r);
-      renderTable(ordenes);
-      updateStats(ordenes);
-    } catch(err) {
-      console.error(err);
-      showDemoData();
-    }
+    const res = await fetch(ORDENES_CSV);
+    if (!res.ok) throw new Error('CSV fetch falló: ' + res.status);
+    const csv    = await res.text();
+    const result = Papa.parse(csv, { header: false, skipEmptyLines: true });
+    // Fila 0 = headers, datos desde fila 1
+    ordenes = result.data.slice(1);
+    renderTable(ordenes);
+    updateStats(ordenes);
+  } catch(err) {
+    console.error('Error cargando órdenes:', err);
+    showToast('⚠️ Error cargando órdenes: ' + err.message);
+    document.getElementById('ordenesBody').innerHTML =
+      '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">⚠️</span><span>' + err.message + '</span></div></td></tr>';
   }
 }
 
@@ -754,24 +732,9 @@ async function analizarYGuardarOrden(orden) {
   const voucherUrl = orden[COL.VOUCHER];
   if (!voucherUrl) throw new Error('Sin voucher URL');
 
-  // Obtener imagen desde Drive via GAS proxy
-  // El GAS tiene la función fetchImageBase64 que descarga el archivo de Drive
-  // y lo devuelve como base64 via JSONP
-  const imageData = await fetchVoucherBase64ViaGAS(orden[COL.ORDEN_NUM], voucherUrl);
-  if (!imageData) throw new Error('No se pudo obtener imagen');
-
-  // Llamar a Claude Vision
-  const resultado = await callClaudeVision(imageData.base64, imageData.mimeType);
-  if (!resultado) throw new Error('Vision falló');
-
-  // Calcular estado del pago
-  const totalOrden  = parseFloat(String(orden[COL.TOTAL_NUM]||'0').replace(/[^0-9.]/g,'')) || 0;
-  const montoPagado = parseFloat(String(resultado.monto||'0').replace(/[^0-9.]/g,'')) || 0;
-  let estadoPago = '';
-  if (montoPagado > 0 && totalOrden > 0) {
-    estadoPago = montoPagado >= totalOrden ? 'completo' : 'parcial';
-  }
-  const saldo = estadoPago === 'parcial' ? Math.max(0, totalOrden - montoPagado).toFixed(2) : '';
+  // GAS descarga el voucher de Drive y llama a Claude Vision
+  const resultado = await analyzeVoucherViaGAS(orden[COL.ORDEN_NUM]);
+  if (!resultado) throw new Error('El análisis no devolvió datos');
 
   // Guardar en GAS/Sheet
   await enviarActualizacionGAS({
@@ -781,71 +744,52 @@ async function analizarYGuardarOrden(orden) {
     codigo:         resultado.codigo   || '',
     pagador:        resultado.pagador  || '',
     fechaPago:      resultado.fecha    || '',
-    estadoPago:     estadoPago,
-    saldoPendiente: saldo,
+    estadoPago:     resultado.estadoPago  || '',
+    saldoPendiente: resultado.saldo       || '',
   });
 
   return resultado;
 }
 
-async function fetchVoucherBase64ViaGAS(orderNumber, voucherUrl) {
-  // El GAS expone una función que descarga el archivo de Drive y devuelve base64
-  // Usamos un callback JSONP-style para evitar CORS
-  return new Promise((resolve) => {
-    const callbackName = '_cb_' + Date.now();
-    window[callbackName] = function(data) {
+// ── CLAUDE VISION via GAS (server-side, sin API key en el browser) ──
+// El GAS descarga el voucher de Drive y llama a Claude Vision.
+// Resultado llega via JSONP para evitar CORS.
+function analyzeVoucherViaGAS(orderNumber) {
+  return new Promise((resolve, reject) => {
+    const callbackName = '_gasCb_' + Date.now();
+
+    window[callbackName] = function(result) {
+      // Limpiar
       delete window[callbackName];
-      const script = document.getElementById('_jsonp_script');
-      if (script) script.remove();
-      resolve(data);
+      const el = document.getElementById('_jsonp_' + callbackName);
+      if (el) el.remove();
+
+      if (result.error) reject(new Error(result.error));
+      else resolve(result.data);
     };
 
-    const script = document.createElement('script');
-    script.id  = '_jsonp_script';
-    script.src = GAS_URL + '?action=getVoucherBase64&orderNumber=' + encodeURIComponent(orderNumber) + '&callback=' + callbackName;
-    script.onerror = () => { resolve(null); };
+    const script  = document.createElement('script');
+    script.id     = '_jsonp_' + callbackName;
+    script.src    = GAS_URL
+      + '?action=analyzeVoucher'
+      + '&orderNumber=' + encodeURIComponent(orderNumber)
+      + '&callback='    + callbackName;
+
+    script.onerror = () => {
+      delete window[callbackName];
+      reject(new Error('No se pudo conectar con el servidor'));
+    };
+
     document.body.appendChild(script);
 
-    // Timeout 15s
+    // Timeout 30s (Vision puede tardar)
     setTimeout(() => {
-      if (window[callbackName]) { delete window[callbackName]; resolve(null); }
-    }, 15000);
+      if (window[callbackName]) {
+        delete window[callbackName];
+        reject(new Error('Tiempo de espera agotado (30s)'));
+      }
+    }, 30000);
   });
-}
-
-async function callClaudeVision(base64, mimeType) {
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'x-api-key':     CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model:      'claude-sonnet-4-20250514',
-        max_tokens: 400,
-        messages: [{
-          role: 'user',
-          content: [
-            { type:'image', source:{ type:'base64', media_type: mimeType||'image/jpeg', data: base64 } },
-            { type:'text',  text: `Analiza este voucher/comprobante de pago de Yappy (Panamá).
-Responde SOLO con JSON válido, sin texto adicional ni markdown:
-{"monto":"monto en números con decimales ej: 150.00","codigo":"código o número de transacción","pagador":"nombre completo de quien pagó","fecha":"fecha y hora del pago","receptor":"quien recibió"}
-Si un campo no es visible usa null.` }
-          ]
-        }]
-      })
-    });
-    const data  = await resp.json();
-    const text  = data.content?.find(b=>b.type==='text')?.text || '{}';
-    const clean = text.replace(/```json|```/g,'').trim();
-    return JSON.parse(clean);
-  } catch(e) {
-    console.error('Claude Vision error:', e);
-    return null;
-  }
 }
 
 async function enviarActualizacionGAS(payload) {
@@ -952,11 +896,9 @@ async function analizarVisionModal() {
   document.getElementById('btnAnalizarVision').disabled = true;
 
   try {
-    const imageData = await fetchVoucherBase64ViaGAS(currentOrden[COL.ORDEN_NUM], vurl);
-    if (!imageData) throw new Error('No se pudo obtener imagen de Drive');
-
-    const resultado = await callClaudeVision(imageData.base64, imageData.mimeType);
-    if (!resultado) throw new Error('Vision no devolvió datos');
+    // GAS descarga el voucher de Drive y llama a Claude Vision server-side
+    const resultado = await analyzeVoucherViaGAS(currentOrden[COL.ORDEN_NUM]);
+    if (!resultado) throw new Error('Sin datos del análisis');
 
     // Llenar campos
     if (resultado.monto)   document.getElementById('mMonto').value     = resultado.monto;
@@ -964,15 +906,12 @@ async function analizarVisionModal() {
     if (resultado.pagador) document.getElementById('mPagador').value   = resultado.pagador;
     if (resultado.fecha)   document.getElementById('mFechaPago').value = resultado.fecha;
 
-    // Auto-estado
-    const total  = parseFloat(String(currentOrden[COL.TOTAL_NUM]||'0').replace(/[^0-9.]/g,'')) || 0;
-    const pagado = parseFloat(String(resultado.monto||'0').replace(/[^0-9.]/g,'')) || 0;
-    if (pagado > 0 && total > 0) {
-      const ep = pagado >= total ? 'completo' : 'parcial';
-      document.getElementById('mEstadoPago').value = ep;
-      if (ep === 'parcial') {
+    // Estado de pago (calculado en el GAS)
+    if (resultado.estadoPago) {
+      document.getElementById('mEstadoPago').value = resultado.estadoPago;
+      if (resultado.estadoPago === 'parcial') {
         document.getElementById('saldoField').style.display = 'flex';
-        document.getElementById('mSaldo').value = Math.max(0,total-pagado).toFixed(2);
+        document.getElementById('mSaldo').value = resultado.saldo || '';
       }
     }
 
