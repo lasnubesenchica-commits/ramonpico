@@ -736,7 +736,7 @@ async function analizarYGuardarOrden(orden) {
   const resultado = await analyzeVoucherViaGAS(orden[COL.ORDEN_NUM]);
   if (!resultado) throw new Error('El análisis no devolvió datos');
 
-  // Guardar en GAS/Sheet — si pago completo, confirmar la orden automáticamente
+  // Construir payload — si pago completo y orden en Nueva, auto-confirmar
   const payload = {
     action:         'updateYappy',
     orderNumber:    orden[COL.ORDEN_NUM],
@@ -747,11 +747,10 @@ async function analizarYGuardarOrden(orden) {
     estadoPago:     resultado.estadoPago  || '',
     saldoPendiente: resultado.saldo       || '',
   };
-  if (resultado.estadoPago === 'completo' && orden[COL.ESTADO] === 'Nueva') {
+  if (resultado.estadoPago === 'completo' && String(orden[COL.ESTADO]||'').trim() === 'Nueva') {
     payload.estado = 'Confirmada';
   }
   await enviarActualizacionGAS(payload);
-
   return resultado;
 }
 
@@ -848,9 +847,15 @@ function openModal(idx) {
     // Voucher preview
     const vurl = r[COL.VOUCHER];
     if (vurl) {
-      // Para imágenes en Drive, usamos el thumbnail URL
-      const thumbUrl = vurl.replace('/view','/preview').replace('open?id=','uc?id=');
+      // Extraer fileId y usar el thumbnail endpoint de Drive (funciona sin auth adicional)
+      const fileIdMatch = vurl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                          vurl.match(/id=([a-zA-Z0-9_-]+)/) ||
+                          vurl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      const thumbUrl = fileIdMatch
+        ? `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w600`
+        : vurl;
       document.getElementById('voucherPreviewImg').src = thumbUrl;
+      document.getElementById('voucherPreviewImg').onclick = () => window.open(vurl, '_blank');
       document.getElementById('voucherPreviewWrap').style.display = 'block';
       document.getElementById('noVoucherMsg').style.display = 'none';
       document.getElementById('btnAnalizarVision').disabled = false;
@@ -919,22 +924,9 @@ async function analizarVisionModal() {
       }
     }
 
-    // ── AUTO-CONFIRMAR si pago completo ──────────────────────────
-    const estadoActual = document.getElementById('mEstadoOrden').value;
-    if (resultado.estadoPago === 'completo' && estadoActual === 'Nueva') {
-      document.getElementById('mEstadoOrden').value = 'Confirmada';
-      document.getElementById('visionDone').innerHTML =
-        '✦ Análisis completado — <strong style="color:var(--green)">pago completo verificado · Estado → Confirmada</strong><br>' +
-        '<span style="font-size:.72rem;color:var(--muted)">Revisa los datos y guarda para confirmar la orden</span>';
-      showToast('✅ Pago completo — orden lista para confirmar');
-    } else {
-      document.getElementById('visionDone').innerHTML =
-        '✦ Análisis completado — revisa y corrige si es necesario';
-      showToast('✅ Voucher analizado correctamente');
-    }
-
     document.getElementById('visionAnalyzing').style.display = 'none';
     document.getElementById('visionDone').style.display = 'block';
+    showToast('✅ Voucher analizado correctamente');
   } catch(err) {
     document.getElementById('visionAnalyzing').style.display = 'none';
     document.getElementById('visionCard').classList.remove('show');
