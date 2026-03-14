@@ -452,7 +452,55 @@ tr:hover td{background:rgba(0,0,0,.015)}
           </div>
         </div>
 
-        <div class="modal-grid" style="margin-top:.75rem">
+      </div>
+
+      <!-- Pago COD con Yappy en entrega -->
+      <div class="modal-section" id="codSection" style="display:none">
+        <div class="modal-section-label">Pago recibido en entrega</div>
+
+        <!-- Mensaje dinámico: sin voucher vs ya tiene voucher -->
+        <div id="codNoVoucherMsg" style="font-size:.78rem;color:var(--muted);margin-bottom:.75rem;display:none">
+          📦 Orden contra entrega — cuando el cliente pague con Yappy, sube el voucher aquí para registrar el ingreso.
+        </div>
+        <div id="codHasVoucherMsg" style="font-size:.78rem;color:var(--green);margin-bottom:.75rem;display:none;align-items:center;gap:.4rem">
+          ✅ Voucher guardado en Drive — puedes re-analizarlo o subir uno nuevo.
+        </div>
+
+        <!-- Upload área (siempre visible para permitir reemplazar) -->
+        <div id="codUploadArea" style="border:2px dashed var(--border);border-radius:var(--r);padding:1rem 1.25rem;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:.75rem"
+          onclick="document.getElementById('codVoucherInput').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--orange)'"
+          ondragleave="this.style.borderColor='var(--border)'"
+          ondrop="handleCodVoucherDrop(event)">
+          <div style="font-size:1.3rem;margin-bottom:.2rem">📎</div>
+          <div style="font-size:.78rem;color:var(--muted)">Clic o arrastra para subir / reemplazar voucher</div>
+          <input type="file" id="codVoucherInput" accept="image/*" style="display:none" onchange="handleCodVoucherSelect(event)">
+        </div>
+
+        <!-- Preview del voucher COD -->
+        <div id="codVoucherPreviewWrap" style="display:none;margin-bottom:.75rem">
+          <img id="codVoucherPreviewImg" class="modal-voucher-preview" src="" alt="Voucher COD"
+            onclick="window.open(this.src,'_blank')" style="cursor:pointer">
+          <div style="font-size:.72rem;color:var(--chrome);margin-top:.3rem" id="codVoucherFileName"></div>
+        </div>
+
+        <!-- Vision card COD -->
+        <div class="vision-card" id="codVisionCard" style="display:none">
+          <div class="vision-analyzing" id="codVisionAnalyzing" style="display:none;align-items:center;gap:.75rem;font-size:.82rem;color:#4527A0">
+            <div class="spinner" style="width:18px;height:18px;border-width:2px"></div>
+            Claude Vision analizando voucher...
+          </div>
+          <div class="vision-done" id="codVisionDone" style="display:none;font-size:.78rem;color:var(--muted)">
+            ✦ Análisis completado — revisa y corrige si es necesario
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Campos de pago compartidos (Yappy + COD con Yappy en entrega) -->
+      <div class="modal-section" id="pagoFields" style="display:none">
+        <div class="modal-section-label" id="pagoFieldsLabel">Datos del pago</div>
+        <div class="modal-grid">
           <div class="modal-field"><label>Monto pagado (USD)</label><input type="text" id="mMonto" placeholder="0.00"></div>
           <div class="modal-field"><label>Código de transacción</label><input type="text" id="mCodigo" placeholder="—"></div>
           <div class="modal-field full"><label>Nombre del pagador</label><input type="text" id="mPagador" placeholder="—"></div>
@@ -486,7 +534,8 @@ tr:hover td{background:rgba(0,0,0,.015)}
 
     </div>
     <div class="modal-actions">
-      <button class="btn-primary" id="btnAnalizarVision" onclick="analizarVisionModal()">✦ Analizar voucher</button>
+      <button class="btn-primary" id="btnAnalizarVision" onclick="analizarVisionModal()" style="display:none">✦ Analizar voucher</button>
+      <button class="btn-primary" id="btnAnalizarCod" onclick="analizarVoucherCod()" style="display:none;background:#4527A0">✦ Analizar voucher COD</button>
       <button class="btn-primary" id="btnGuardar" onclick="guardarCambios()" style="background:var(--green)">💾 Guardar cambios</button>
       <button class="btn-secondary" onclick="abrirWhatsApp()">📲 WhatsApp</button>
       <button class="btn-secondary" onclick="closeModal()">Cerrar</button>
@@ -609,6 +658,8 @@ function renderTable(rows) {
     const estadoPago  = r[COL.ESTADO_PAGO] || '';
     const voucherUrl  = r[COL.VOUCHER]     || '';
     const ingresoId   = r[COL.INGRESO_ID]  || '';
+    const isCOD       = pago === 'Contra entrega';
+    const isYappy     = pago === 'Yappy';
 
     const estadoBadge = {
       'Nueva':     '<span class="badge badge-nueva">● Nueva</span>',
@@ -617,20 +668,26 @@ function renderTable(rows) {
       'Cancelada': '<span class="badge badge-cancelada">● Cancelada</span>',
     }[estado] || `<span class="badge">${estado}</span>`;
 
-    const pagoBadge = pago === 'Yappy'
+    const pagoBadge = isYappy
       ? '<span class="badge badge-yappy">📱 Yappy</span>'
       : '<span class="badge badge-cod">🚚 COD</span>';
 
     let estadoPagoBadge = '';
-    if (pago === 'Yappy') {
+    if (isYappy || isCOD) {
       estadoPagoBadge = {
         'completo': '<span class="pago-badge pago-completo">✅ Completo</span>',
         'parcial':  '<span class="pago-badge pago-parcial">⚡ Parcial</span>',
         'sinpago':  '<span class="pago-badge pago-sinpago">❌ Sin pago</span>',
-      }[estadoPago] || '<span class="pago-badge pago-pending">⏳ Pendiente</span>';
+      }[estadoPago] || (isCOD
+        ? (voucherUrl
+            ? '<span class="pago-badge" style="background:#EDE7F6;color:#4527A0">✦ Voucher subido</span>'
+            : '<span class="pago-badge pago-pending">⏳ Pend. entrega</span>')
+        : '<span class="pago-badge pago-pending">⏳ Pendiente</span>');
     }
 
-    const needsVision = pago === 'Yappy' && !estadoPago && voucherUrl;
+    // Botón IA rápido: Yappy sin analizar, o COD con voucher sin analizar
+    const needsVisionYappy = isYappy && !estadoPago && voucherUrl;
+    const needsVisionCOD   = isCOD  && !estadoPago && voucherUrl;
 
     return `<tr>
       <td><span style="font-family:'DM Mono',monospace;font-size:.75rem;font-weight:600">${esc(r[COL.ORDEN_NUM]||'')}</span></td>
@@ -646,7 +703,8 @@ function renderTable(rows) {
       <td>
         <div class="action-btns">
           <button class="btn-xs" onclick="openModal(${i})" style="background:var(--bg2);color:var(--text)">Ver</button>
-          ${needsVision?`<button class="btn-xs btn-vision" onclick="openModal(${i});setTimeout(analizarVisionModal,300)" title="Analizar voucher con IA">✦ IA</button>`:''}
+          ${needsVisionYappy?`<button class="btn-xs btn-vision" onclick="openModal(${i});setTimeout(analizarVisionModal,300)" title="Analizar voucher Yappy con IA">✦ IA</button>`:''}
+          ${needsVisionCOD?`<button class="btn-xs btn-vision" onclick="openModal(${i});setTimeout(()=>{codVoucherBase64='__existing__';analizarVoucherCod();},300)" title="Analizar voucher COD con IA">✦ IA</button>`:''}
           ${estado==='Nueva'?`<button class="btn-xs btn-confirm" onclick="cambiarEstado(${i},'Confirmada')">✓ Confirmar</button>`:''}
           ${estado==='Confirmada'?`<button class="btn-xs btn-deliver" onclick="cambiarEstado(${i},'Entregada')">📦 Entregar</button>`:''}
           <button class="btn-xs btn-wa" onclick="waCliente(${i})">📲</button>
@@ -711,20 +769,7 @@ async function registrarPagosYappy() {
   let procesados = 0;
   for (const orden of pendientes) {
     try {
-      const resultado = await analizarYGuardarOrden(orden);
-      // Actualizar en memoria
-      const idx = ordenes.findIndex(r => r[COL.ORDEN_NUM] === orden[COL.ORDEN_NUM]);
-      if (idx !== -1 && resultado) {
-        if (resultado.monto)      ordenes[idx][COL.MONTO_PAGADO] = resultado.monto;
-        if (resultado.codigo)     ordenes[idx][COL.CODIGO_TRANS] = resultado.codigo;
-        if (resultado.pagador)    ordenes[idx][COL.PAGADOR]      = resultado.pagador;
-        if (resultado.fecha)      ordenes[idx][COL.FECHA_PAGO]   = resultado.fecha;
-        if (resultado.estadoPago) ordenes[idx][COL.ESTADO_PAGO]  = resultado.estadoPago;
-        if (resultado.estadoPago === 'completo' && ordenes[idx][COL.ESTADO] === 'Nueva') {
-          ordenes[idx][COL.ESTADO]     = 'Confirmada';
-          ordenes[idx][COL.INGRESO_ID] = 'pendiente';
-        }
-      }
+      await analizarYGuardarOrden(orden);
       procesados++;
       btn.textContent = `Procesando ${procesados}/${pendientes.length}...`;
     } catch(e) {
@@ -735,8 +780,7 @@ async function registrarPagosYappy() {
   btn.disabled = false;
   btn.textContent = '✦ Registrar pagos Yappy';
   showToast(`✅ ${procesados} pago(s) Yappy analizados`);
-  applyFilters(); // reflejar cambios en memoria inmediatamente
-  setTimeout(loadOrdenes, 8000); // sincronizar con CSV después de 8s
+  loadOrdenes();
 }
 
 // ══════════════════════════════════════════════════
@@ -806,12 +850,40 @@ function analyzeVoucherViaGAS(orderNumber) {
   });
 }
 
-async function enviarActualizacionGAS(payload) {
-  await fetch(GAS_URL, {
-    method:  'POST',
-    mode:    'no-cors',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body:    JSON.stringify(payload),
+// Envía actualización al GAS vía JSONP (evita problemas de CORS/no-cors con doPost)
+// El GAS doGet maneja action=updateOrden con todos los parámetros via URL
+function enviarActualizacionGAS(payload) {
+  return new Promise((resolve, reject) => {
+    const callbackName = '_gasCb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    window[callbackName] = function(result) {
+      delete window[callbackName];
+      const el = document.getElementById('_jsonp_' + callbackName);
+      if (el) el.remove();
+      if (result && result.error) console.warn('GAS update warning:', result.error);
+      resolve(result);
+    };
+    const params = new URLSearchParams();
+    for (const k in payload) {
+      if (payload[k] !== undefined && payload[k] !== null) params.set(k, payload[k]);
+    }
+    params.set('callback', callbackName);
+    const script = document.createElement('script');
+    script.id  = '_jsonp_' + callbackName;
+    script.src = GAS_URL + '?' + params.toString();
+    script.onerror = () => {
+      delete window[callbackName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      reject(new Error('Error conectando con el servidor'));
+    };
+    document.body.appendChild(script);
+    setTimeout(() => {
+      if (window[callbackName]) {
+        delete window[callbackName];
+        const el = document.getElementById('_jsonp_' + callbackName);
+        if (el) el.remove();
+        reject(new Error('Tiempo de espera agotado'));
+      }
+    }, 30000);
   });
 }
 
@@ -842,25 +914,43 @@ function openModal(idx) {
     document.getElementById('mProductos').textContent = r[COL.PRODUCTOS] || '—';
   }
 
-  // Sección Yappy
   const isYappy = r[COL.PAGO] === 'Yappy';
+  const isCOD   = r[COL.PAGO] === 'Contra entrega';
+  const hasPago = isYappy || isCOD;
+
+  // Sección Yappy (voucher subido por el cliente al hacer el pedido)
   document.getElementById('yappySection').style.display = isYappy ? 'block' : 'none';
+  // Sección COD (voucher lo sube el admin al momento de la entrega)
+  document.getElementById('codSection').style.display = isCOD ? 'block' : 'none';
+  // Campos de pago compartidos
+  document.getElementById('pagoFields').style.display = hasPago ? 'block' : 'none';
+  // Botones de analizar
+  document.getElementById('btnAnalizarVision').style.display = isYappy ? 'inline-flex' : 'none';
+  document.getElementById('btnAnalizarCod').style.display    = isCOD   ? 'inline-flex' : 'none';
+
+  // Llenar campos de pago si ya tienen datos
+  if (hasPago) {
+    document.getElementById('mMonto').value      = r[COL.MONTO_PAGADO] || '';
+    document.getElementById('mCodigo').value     = r[COL.CODIGO_TRANS] || '';
+    document.getElementById('mPagador').value    = r[COL.PAGADOR]      || '';
+    document.getElementById('mFechaPago').value  = r[COL.FECHA_PAGO]   || '';
+    document.getElementById('mEstadoPago').value = r[COL.ESTADO_PAGO]  || '';
+    document.getElementById('mSaldo').value      = r[COL.SALDO_PEND]   || '';
+    document.getElementById('saldoField').style.display = r[COL.ESTADO_PAGO]==='parcial' ? 'flex' : 'none';
+  }
 
   if (isYappy) {
-    document.getElementById('mMonto').value     = r[COL.MONTO_PAGADO] || '';
-    document.getElementById('mCodigo').value    = r[COL.CODIGO_TRANS] || '';
-    document.getElementById('mPagador').value   = r[COL.PAGADOR]      || '';
-    document.getElementById('mFechaPago').value = r[COL.FECHA_PAGO]   || '';
-    document.getElementById('mEstadoPago').value= r[COL.ESTADO_PAGO]  || '';
-    document.getElementById('mSaldo').value     = r[COL.SALDO_PEND]   || '';
-    document.getElementById('saldoField').style.display = r[COL.ESTADO_PAGO]==='parcial' ? 'flex' : 'none';
-
-    // Voucher preview
+    // Voucher preview (subido por el cliente)
     const vurl = r[COL.VOUCHER];
     if (vurl) {
-      // Para imágenes en Drive, usamos el thumbnail URL
-      const thumbUrl = vurl.replace('/view','/preview').replace('open?id=','uc?id=');
+      const fileIdMatch = vurl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                          vurl.match(/id=([a-zA-Z0-9_-]+)/) ||
+                          vurl.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      const thumbUrl = fileIdMatch
+        ? `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w600`
+        : vurl;
       document.getElementById('voucherPreviewImg').src = thumbUrl;
+      document.getElementById('voucherPreviewImg').onclick = () => window.open(vurl, '_blank');
       document.getElementById('voucherPreviewWrap').style.display = 'block';
       document.getElementById('noVoucherMsg').style.display = 'none';
       document.getElementById('btnAnalizarVision').disabled = false;
@@ -869,10 +959,44 @@ function openModal(idx) {
       document.getElementById('noVoucherMsg').style.display = 'block';
       document.getElementById('btnAnalizarVision').disabled = true;
     }
-
     document.getElementById('visionCard').classList.remove('show');
     document.getElementById('visionAnalyzing').style.display = 'flex';
     document.getElementById('visionDone').style.display = 'none';
+  }
+
+  if (isCOD) {
+    // Reset upload state
+    codVoucherBase64 = null;
+    codVoucherName   = null;
+    document.getElementById('codVisionCard').style.display = 'none';
+
+    const existingVoucher = r[COL.VOUCHER];
+    if (existingVoucher) {
+      // Ya hay voucher en Drive — mostrarlo y habilitar re-análisis IA
+      const fmEx = existingVoucher.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+                   existingVoucher.match(/id=([a-zA-Z0-9_-]+)/) ||
+                   existingVoucher.match(/\/d\/([a-zA-Z0-9_-]+)/);
+      const thumbEx = fmEx
+        ? `https://drive.google.com/thumbnail?id=${fmEx[1]}&sz=w600`
+        : existingVoucher;
+      document.getElementById('codVoucherPreviewImg').src = thumbEx;
+      document.getElementById('codVoucherPreviewImg').onclick = () => window.open(existingVoucher, '_blank');
+      document.getElementById('codVoucherFileName').textContent =
+        r[COL.ESTADO_PAGO]
+          ? '✅ Voucher en Drive · ya analizado — puedes re-analizar'
+          : '📎 Voucher en Drive · pendiente de analizar';
+      document.getElementById('codVoucherPreviewWrap').style.display = 'block';
+      document.getElementById('codNoVoucherMsg').style.display = 'none';
+      document.getElementById('codHasVoucherMsg').style.display = 'flex';
+      // Señal para que analizarVoucherCod use el voucher ya guardado en Drive
+      codVoucherBase64 = '__existing__';
+      document.getElementById('btnAnalizarCod').disabled = false;
+    } else {
+      document.getElementById('codVoucherPreviewWrap').style.display = 'none';
+      document.getElementById('codNoVoucherMsg').style.display = 'block';
+      document.getElementById('codHasVoucherMsg').style.display = 'none';
+      document.getElementById('btnAnalizarCod').disabled = true;
+    }
   }
 
   document.getElementById('modalOverlay').classList.add('open');
@@ -942,6 +1066,129 @@ async function analizarVisionModal() {
   document.getElementById('btnAnalizarVision').disabled = false;
 }
 
+// ── COD VOUCHER UPLOAD ──
+let codVoucherBase64 = null;
+let codVoucherName   = null;
+
+function handleCodVoucherSelect(e) {
+  const file = e.target.files[0];
+  if (file) processCodVoucherFile(file);
+}
+function handleCodVoucherDrop(e) {
+  e.preventDefault();
+  document.getElementById('codUploadArea').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file && file.type.startsWith('image/')) processCodVoucherFile(file);
+}
+function processCodVoucherFile(file) {
+  codVoucherName   = file.name;
+  codVoucherBase64 = null; // reset mientras carga
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const dataUrl = ev.target.result;
+    codVoucherBase64 = dataUrl.split(',')[1];
+    document.getElementById('codVoucherPreviewImg').src = dataUrl;
+    document.getElementById('codVoucherPreviewImg').onclick = () => window.open(dataUrl, '_blank');
+    document.getElementById('codVoucherPreviewWrap').style.display = 'block';
+    document.getElementById('codVoucherFileName').textContent = '📎 ' + file.name + ' — listo para subir y analizar';
+    document.getElementById('codNoVoucherMsg').style.display = 'none';
+    document.getElementById('codHasVoucherMsg').style.display = 'none';
+    document.getElementById('btnAnalizarCod').disabled = false;
+    showToast('📎 Voucher listo — presiona ✦ Analizar voucher');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analizarVoucherCod() {
+  if (!codVoucherBase64 || !currentOrden) return;
+  const btn = document.getElementById('btnAnalizarCod');
+  btn.disabled = true;
+
+  const card = document.getElementById('codVisionCard');
+  card.style.display = 'block';
+  document.getElementById('codVisionAnalyzing').style.display = 'flex';
+  document.getElementById('codVisionDone').style.display = 'none';
+
+  try {
+    // Si es un voucher nuevo (subido en esta sesión), primero subirlo a Drive
+    if (codVoucherBase64 !== '__existing__') {
+      showToast('⏳ Subiendo voucher a Drive...');
+      const uploadRes = await uploadVoucherCodGAS(codVoucherBase64, codVoucherName, currentOrden[COL.ORDEN_NUM]);
+      if (!uploadRes || !uploadRes.voucherUrl) throw new Error('No se pudo subir el voucher');
+      currentOrden[COL.VOUCHER] = uploadRes.voucherUrl;
+      // Actualizar preview con URL de Drive
+      const fmNew = uploadRes.voucherUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+      if (fmNew) {
+        document.getElementById('codVoucherPreviewImg').src =
+          `https://drive.google.com/thumbnail?id=${fmNew[1]}&sz=w600`;
+      }
+      document.getElementById('codVoucherFileName').textContent = '✅ Guardado en Drive · analizando...';
+      showToast('✅ Voucher subido — analizando con IA...');
+    } else {
+      showToast('🔍 Analizando voucher con IA...');
+    }
+
+    // Analizar con Vision (el GAS lo toma de Drive por el orderNumber)
+    const resultado = await analyzeVoucherViaGAS(currentOrden[COL.ORDEN_NUM]);
+    if (!resultado) throw new Error('Sin datos del análisis');
+
+    // Llenar campos
+    if (resultado.monto)      document.getElementById('mMonto').value     = resultado.monto;
+    if (resultado.codigo)     document.getElementById('mCodigo').value    = resultado.codigo;
+    if (resultado.pagador)    document.getElementById('mPagador').value   = resultado.pagador;
+    if (resultado.fecha)      document.getElementById('mFechaPago').value = resultado.fecha;
+    if (resultado.estadoPago) {
+      document.getElementById('mEstadoPago').value = resultado.estadoPago;
+      if (resultado.estadoPago === 'parcial') {
+        document.getElementById('saldoField').style.display = 'flex';
+        document.getElementById('mSaldo').value = resultado.saldo || '';
+      }
+    }
+
+    const estadoActual = document.getElementById('mEstadoOrden').value;
+    if (resultado.estadoPago === 'completo' && estadoActual === 'Nueva') {
+      document.getElementById('mEstadoOrden').value = 'Confirmada';
+      document.getElementById('codVisionDone').innerHTML =
+        '✦ Pago completo verificado · <strong style="color:var(--green)">Estado → Confirmada</strong>';
+    } else {
+      document.getElementById('codVisionDone').textContent = '✦ Análisis completado — revisa y corrige si es necesario';
+    }
+    document.getElementById('codVisionAnalyzing').style.display = 'none';
+    document.getElementById('codVisionDone').style.display = 'block';
+    showToast('✅ Voucher analizado');
+  } catch(err) {
+    document.getElementById('codVisionCard').style.display = 'none';
+    showToast('⚠️ ' + err.message);
+    console.error(err);
+  }
+  btn.disabled = false;
+}
+
+// Subir voucher COD a Drive vía GAS y obtener la URL
+function uploadVoucherCodGAS(base64, fileName, orderNumber) {
+  return new Promise((resolve, reject) => {
+    const callbackName = '_gasCb_' + Date.now();
+    window[callbackName] = function(result) {
+      delete window[callbackName];
+      const el = document.getElementById('_jsonp_' + callbackName);
+      if (el) el.remove();
+      if (result.error) reject(new Error(result.error));
+      else resolve(result);
+    };
+    const script = document.createElement('script');
+    script.id  = '_jsonp_' + callbackName;
+    script.src = GAS_URL
+      + '?action=uploadVoucher'
+      + '&orderNumber=' + encodeURIComponent(orderNumber)
+      + '&fileName='    + encodeURIComponent(fileName)
+      + '&base64='      + encodeURIComponent(base64)
+      + '&callback='    + callbackName;
+    script.onerror = () => { delete window[callbackName]; reject(new Error('Error conectando con el servidor')); };
+    document.body.appendChild(script);
+    setTimeout(() => { if (window[callbackName]) { delete window[callbackName]; reject(new Error('Tiempo agotado')); } }, 30000);
+  });
+}
+
 // ── GUARDAR CAMBIOS ──
 async function guardarCambios() {
   if (!currentOrden) return;
@@ -949,62 +1196,57 @@ async function guardarCambios() {
   btn.disabled = true;
   btn.textContent = 'Guardando...';
 
-  const payload = {
-    action:         'updateOrden',
-    orderNumber:    currentOrden[COL.ORDEN_NUM],
-    estado:         document.getElementById('mEstadoOrden').value,
-    montoPagado:    document.getElementById('mMonto').value     || '',
-    codigo:         document.getElementById('mCodigo').value    || '',
-    pagador:        document.getElementById('mPagador').value   || '',
-    fechaPago:      document.getElementById('mFechaPago').value || '',
-    estadoPago:     document.getElementById('mEstadoPago').value|| '',
-    saldoPendiente: document.getElementById('mSaldo').value     || '',
-  };
-
-  await enviarActualizacionGAS(payload);
-
-  // Actualizar el array en memoria inmediatamente (el CSV tiene cache de ~5 min)
-  const idx = ordenes.findIndex(r => r[COL.ORDEN_NUM] === currentOrden[COL.ORDEN_NUM]);
-  if (idx !== -1) {
-    if (payload.estado)         ordenes[idx][COL.ESTADO]       = payload.estado;
-    if (payload.montoPagado)    ordenes[idx][COL.MONTO_PAGADO] = payload.montoPagado;
-    if (payload.estadoPago)     ordenes[idx][COL.ESTADO_PAGO]  = payload.estadoPago;
-    if (payload.codigo)         ordenes[idx][COL.CODIGO_TRANS] = payload.codigo;
-    if (payload.pagador)        ordenes[idx][COL.PAGADOR]      = payload.pagador;
-    if (payload.fechaPago)      ordenes[idx][COL.FECHA_PAGO]   = payload.fechaPago;
-    if (payload.saldoPendiente !== undefined) ordenes[idx][COL.SALDO_PEND] = payload.saldoPendiente;
-    // Si fue confirmada, marcar con un ID provisional para que aparezca el ✓ CF
-    if (payload.estado === 'Confirmada' && !ordenes[idx][COL.INGRESO_ID]) {
-      ordenes[idx][COL.INGRESO_ID] = 'pendiente';
+  try {
+    const isCOD   = currentOrden[COL.PAGO] === 'Contra entrega';
+    const isYappy = currentOrden[COL.PAGO] === 'Yappy';
+    const payload = {
+      action:         'updateOrden',
+      orderNumber:    currentOrden[COL.ORDEN_NUM],
+      estado:         document.getElementById('mEstadoOrden').value,
+      montoPagado:    document.getElementById('mMonto').value      || '',
+      codigo:         document.getElementById('mCodigo').value     || '',
+      pagador:        document.getElementById('mPagador').value    || '',
+      fechaPago:      document.getElementById('mFechaPago').value  || '',
+      estadoPago:     document.getElementById('mEstadoPago').value || '',
+      saldoPendiente: document.getElementById('mSaldo').value      || '',
+    };
+    // Incluir voucherUrl siempre que exista (para COD: se asigna al analizar)
+    if (currentOrden[COL.VOUCHER]) {
+      payload.voucherUrl = currentOrden[COL.VOUCHER];
     }
+    // Para Yappy, si el voucher ya estaba en el Sheet, también incluirlo
+    if (isYappy && currentOrden[COL.VOUCHER] && !payload.voucherUrl) {
+      payload.voucherUrl = currentOrden[COL.VOUCHER];
+    }
+
+    await enviarActualizacionGAS(payload);
+    showToast('✅ Cambios guardados');
+    closeModal();
+    setTimeout(loadOrdenes, 1500);
+  } catch(err) {
+    showToast('⚠️ Error guardando: ' + err.message);
+    console.error('guardarCambios error:', err);
   }
 
   btn.disabled = false;
   btn.textContent = '💾 Guardar cambios';
-  showToast('✅ Cambios guardados');
-  closeModal();
-  applyFilters(); // re-renderizar con datos actualizados en memoria
-  setTimeout(loadOrdenes, 8000); // refrescar desde CSV después de 8s para sincronizar
 }
 
 // ── CAMBIAR ESTADO DIRECTO ──
 async function cambiarEstado(idx, nuevoEstado) {
   const orden = ordenes[idx];
-  await enviarActualizacionGAS({
-    action:      'updateOrden',
-    orderNumber: orden[COL.ORDEN_NUM],
-    estado:      nuevoEstado,
-  });
-
-  // Actualizar en memoria inmediatamente
-  ordenes[idx][COL.ESTADO] = nuevoEstado;
-  if (nuevoEstado === 'Confirmada' && !ordenes[idx][COL.INGRESO_ID]) {
-    ordenes[idx][COL.INGRESO_ID] = 'pendiente';
+  try {
+    await enviarActualizacionGAS({
+      action:      'updateOrden',
+      orderNumber: orden[COL.ORDEN_NUM],
+      estado:      nuevoEstado,
+    });
+    showToast(`✅ Orden ${orden[COL.ORDEN_NUM]} → ${nuevoEstado}`);
+    setTimeout(loadOrdenes, 1200);
+  } catch(err) {
+    showToast('⚠️ Error: ' + err.message);
+    console.error('cambiarEstado error:', err);
   }
-
-  showToast(`✅ Orden ${orden[COL.ORDEN_NUM]} → ${nuevoEstado}`);
-  applyFilters();
-  setTimeout(loadOrdenes, 8000);
 }
 
 // ── WHATSAPP ──
