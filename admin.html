@@ -736,17 +736,21 @@ async function analizarYGuardarOrden(orden) {
   const resultado = await analyzeVoucherViaGAS(orden[COL.ORDEN_NUM]);
   if (!resultado) throw new Error('El análisis no devolvió datos');
 
-  // Guardar en GAS/Sheet
-  await enviarActualizacionGAS({
+  // Guardar en GAS/Sheet — si pago completo, confirmar la orden automáticamente
+  const payload = {
     action:         'updateYappy',
     orderNumber:    orden[COL.ORDEN_NUM],
-    montoPagado:    resultado.monto    || '',
-    codigo:         resultado.codigo   || '',
-    pagador:        resultado.pagador  || '',
-    fechaPago:      resultado.fecha    || '',
+    montoPagado:    resultado.monto       || '',
+    codigo:         resultado.codigo      || '',
+    pagador:        resultado.pagador     || '',
+    fechaPago:      resultado.fecha       || '',
     estadoPago:     resultado.estadoPago  || '',
     saldoPendiente: resultado.saldo       || '',
-  });
+  };
+  if (resultado.estadoPago === 'completo' && orden[COL.ESTADO] === 'Nueva') {
+    payload.estado = 'Confirmada';
+  }
+  await enviarActualizacionGAS(payload);
 
   return resultado;
 }
@@ -915,9 +919,22 @@ async function analizarVisionModal() {
       }
     }
 
+    // ── AUTO-CONFIRMAR si pago completo ──────────────────────────
+    const estadoActual = document.getElementById('mEstadoOrden').value;
+    if (resultado.estadoPago === 'completo' && estadoActual === 'Nueva') {
+      document.getElementById('mEstadoOrden').value = 'Confirmada';
+      document.getElementById('visionDone').innerHTML =
+        '✦ Análisis completado — <strong style="color:var(--green)">pago completo verificado · Estado → Confirmada</strong><br>' +
+        '<span style="font-size:.72rem;color:var(--muted)">Revisa los datos y guarda para confirmar la orden</span>';
+      showToast('✅ Pago completo — orden lista para confirmar');
+    } else {
+      document.getElementById('visionDone').innerHTML =
+        '✦ Análisis completado — revisa y corrige si es necesario';
+      showToast('✅ Voucher analizado correctamente');
+    }
+
     document.getElementById('visionAnalyzing').style.display = 'none';
     document.getElementById('visionDone').style.display = 'block';
-    showToast('✅ Voucher analizado correctamente');
   } catch(err) {
     document.getElementById('visionAnalyzing').style.display = 'none';
     document.getElementById('visionCard').classList.remove('show');
