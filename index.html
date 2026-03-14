@@ -1344,58 +1344,81 @@ async function submitOrder() {
   errEl.textContent = '';
 
   const orderNum = 'RP-' + Date.now().toString().slice(-6);
-
   const totalNum = cart.reduce((s,c) => s + (getPrice(c)*c.qty), 0);
   const totalStr = totalNum > 0 ? fmtPrice(String(totalNum)) : 'A cotizar';
 
   // Datos del análisis Yappy (desde campos editables del formulario)
   const yappyPayload = selectedPayment === 'yappy' ? {
-    montoPagado:  document.getElementById('yMonto').value   || '',
-    codigo:       document.getElementById('yCodigo').value  || '',
-    pagador:      document.getElementById('yPagador').value || '',
-    fechaPago:    document.getElementById('yFecha').value   || '',
-    estadoPago:   estadoPago || '',
+    montoPagado:    document.getElementById('yMonto').value   || '',
+    codigo:         document.getElementById('yCodigo').value  || '',
+    pagador:        document.getElementById('yPagador').value || '',
+    fechaPago:      document.getElementById('yFecha').value   || '',
+    estadoPago:     estadoPago || '',
     saldoPendiente: estadoPago === 'parcial' ? (document.getElementById('ySaldo').value || '') : '',
   } : {};
 
   const payload = {
-    orderNumber:  orderNum,
-    nombre:       document.getElementById('fName').value,
-    ruc:          document.getElementById('fRuc').value,
-    telefono:     document.getElementById('fPhone').value,
-    email:        document.getElementById('fEmail').value,
-    direccion:    document.getElementById('fAddress').value,
-    notas:        document.getElementById('fNotes').value,
-    pago:         selectedPayment === 'cod' ? 'Contra entrega' : 'Yappy',
-    productos:    cart.map(c => ({titulo:c.title, cantidad:c.qty, precio:fmtPrice(c.price)})),
-    total:        totalStr,
+    orderNumber:   orderNum,
+    nombre:        document.getElementById('fName').value,
+    ruc:           document.getElementById('fRuc').value,
+    telefono:      document.getElementById('fPhone').value,
+    email:         document.getElementById('fEmail').value,
+    direccion:     document.getElementById('fAddress').value,
+    notas:         document.getElementById('fNotes').value,
+    pago:          selectedPayment === 'cod' ? 'Contra entrega' : 'Yappy',
+    productos:     cart.map(c => ({titulo:c.title, cantidad:c.qty, precio:fmtPrice(c.price)})),
+    total:         totalStr,
     voucherBase64: voucherBase64 || '',
-    voucherName:  voucherFile ? voucherFile.name : '',
-    voucherType:  voucherFile ? voucherFile.type : '',
+    voucherName:   voucherFile ? voucherFile.name : '',
+    voucherType:   voucherFile ? voucherFile.type : '',
     ...yappyPayload,
   };
 
-  // CORS fix: usar no-cors + fire-and-forget para GAS
-  // GAS siempre redirige (302) lo que bloquea fetch normal.
-  // Enviamos con no-cors (opaque response) y asumimos éxito.
   const gasConfigured = !GAS_URL.includes('TU_DEPLOYMENT_ID');
 
   if (gasConfigured) {
+    // Técnica de form oculto: evita CORS completamente.
+    // GAS recibe los datos via e.parameter.payload (doPost lo lee de postData).
+    // Usamos un iframe oculto como target para que no navegue fuera de la página.
     try {
-      // no-cors evita el bloqueo del redirect 302 de GAS
-      fetch(GAS_URL, {
-        method: 'POST',
-        mode:   'no-cors',
-        headers: { 'Content-Type': 'text/plain' }, // text/plain evita preflight
-        body:   JSON.stringify(payload),
-      });
-      // No esperamos respuesta (opaque) — fire and forget
+      // Crear iframe oculto target
+      let iframe = document.getElementById('_gasTarget');
+      if (!iframe) {
+        iframe = document.createElement('iframe');
+        iframe.name = '_gasTarget';
+        iframe.id   = '_gasTarget';
+        iframe.style.display = 'none';
+        document.body.appendChild(iframe);
+      }
+
+      // Crear form oculto que apunta al iframe
+      const form = document.createElement('form');
+      form.method  = 'POST';
+      form.action  = GAS_URL;
+      form.target  = '_gasTarget';
+      form.style.display = 'none';
+
+      // GAS lee e.postData.contents cuando el campo se llama "payload" con text/plain
+      // Pero con un form HTML el content-type es application/x-www-form-urlencoded
+      // y GAS lo lee via e.parameter. Usamos un campo oculto "data" con el JSON.
+      const input = document.createElement('input');
+      input.type  = 'hidden';
+      input.name  = 'data';
+      input.value = JSON.stringify(payload);
+      form.appendChild(input);
+
+      document.body.appendChild(form);
+      form.submit();
+
+      // Limpiar form después del submit
+      setTimeout(() => { form.parentNode && form.parentNode.removeChild(form); }, 2000);
+
     } catch(e) {
-      console.warn('GAS fetch error (non-blocking):', e);
+      console.warn('GAS form submit error:', e);
     }
   }
 
-  // WhatsApp siempre se dispara como canal de respaldo
+  // WhatsApp siempre se dispara
   sendWhatsAppNotification(orderNum, payload, yappyPayload);
   showSuccess(orderNum);
 }
