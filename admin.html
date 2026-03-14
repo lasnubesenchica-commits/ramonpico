@@ -711,7 +711,20 @@ async function registrarPagosYappy() {
   let procesados = 0;
   for (const orden of pendientes) {
     try {
-      await analizarYGuardarOrden(orden);
+      const resultado = await analizarYGuardarOrden(orden);
+      // Actualizar en memoria
+      const idx = ordenes.findIndex(r => r[COL.ORDEN_NUM] === orden[COL.ORDEN_NUM]);
+      if (idx !== -1 && resultado) {
+        if (resultado.monto)      ordenes[idx][COL.MONTO_PAGADO] = resultado.monto;
+        if (resultado.codigo)     ordenes[idx][COL.CODIGO_TRANS] = resultado.codigo;
+        if (resultado.pagador)    ordenes[idx][COL.PAGADOR]      = resultado.pagador;
+        if (resultado.fecha)      ordenes[idx][COL.FECHA_PAGO]   = resultado.fecha;
+        if (resultado.estadoPago) ordenes[idx][COL.ESTADO_PAGO]  = resultado.estadoPago;
+        if (resultado.estadoPago === 'completo' && ordenes[idx][COL.ESTADO] === 'Nueva') {
+          ordenes[idx][COL.ESTADO]     = 'Confirmada';
+          ordenes[idx][COL.INGRESO_ID] = 'pendiente';
+        }
+      }
       procesados++;
       btn.textContent = `Procesando ${procesados}/${pendientes.length}...`;
     } catch(e) {
@@ -722,7 +735,8 @@ async function registrarPagosYappy() {
   btn.disabled = false;
   btn.textContent = '✦ Registrar pagos Yappy';
   showToast(`✅ ${procesados} pago(s) Yappy analizados`);
-  loadOrdenes();
+  applyFilters(); // reflejar cambios en memoria inmediatamente
+  setTimeout(loadOrdenes, 8000); // sincronizar con CSV después de 8s
 }
 
 // ══════════════════════════════════════════════════
@@ -736,21 +750,18 @@ async function analizarYGuardarOrden(orden) {
   const resultado = await analyzeVoucherViaGAS(orden[COL.ORDEN_NUM]);
   if (!resultado) throw new Error('El análisis no devolvió datos');
 
-  // Construir payload — si pago completo y orden en Nueva, auto-confirmar
-  const payload = {
+  // Guardar en GAS/Sheet
+  await enviarActualizacionGAS({
     action:         'updateYappy',
     orderNumber:    orden[COL.ORDEN_NUM],
-    montoPagado:    resultado.monto       || '',
-    codigo:         resultado.codigo      || '',
-    pagador:        resultado.pagador     || '',
-    fechaPago:      resultado.fecha       || '',
+    montoPagado:    resultado.monto    || '',
+    codigo:         resultado.codigo   || '',
+    pagador:        resultado.pagador  || '',
+    fechaPago:      resultado.fecha    || '',
     estadoPago:     resultado.estadoPago  || '',
     saldoPendiente: resultado.saldo       || '',
-  };
-  if (resultado.estadoPago === 'completo' && String(orden[COL.ESTADO]||'').trim() === 'Nueva') {
-    payload.estado = 'Confirmada';
-  }
-  await enviarActualizacionGAS(payload);
+  });
+
   return resultado;
 }
 
@@ -847,15 +858,9 @@ function openModal(idx) {
     // Voucher preview
     const vurl = r[COL.VOUCHER];
     if (vurl) {
-      // Extraer fileId y usar el thumbnail endpoint de Drive (funciona sin auth adicional)
-      const fileIdMatch = vurl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
-                          vurl.match(/id=([a-zA-Z0-9_-]+)/) ||
-                          vurl.match(/\/d\/([a-zA-Z0-9_-]+)/);
-      const thumbUrl = fileIdMatch
-        ? `https://drive.google.com/thumbnail?id=${fileIdMatch[1]}&sz=w600`
-        : vurl;
+      // Para imágenes en Drive, usamos el thumbnail URL
+      const thumbUrl = vurl.replace('/view','/preview').replace('open?id=','uc?id=');
       document.getElementById('voucherPreviewImg').src = thumbUrl;
-      document.getElementById('voucherPreviewImg').onclick = () => window.open(vurl, '_blank');
       document.getElementById('voucherPreviewWrap').style.display = 'block';
       document.getElementById('noVoucherMsg').style.display = 'none';
       document.getElementById('btnAnalizarVision').disabled = false;
@@ -958,11 +963,28 @@ async function guardarCambios() {
 
   await enviarActualizacionGAS(payload);
 
+  // Actualizar el array en memoria inmediatamente (el CSV tiene cache de ~5 min)
+  const idx = ordenes.findIndex(r => r[COL.ORDEN_NUM] === currentOrden[COL.ORDEN_NUM]);
+  if (idx !== -1) {
+    if (payload.estado)         ordenes[idx][COL.ESTADO]       = payload.estado;
+    if (payload.montoPagado)    ordenes[idx][COL.MONTO_PAGADO] = payload.montoPagado;
+    if (payload.estadoPago)     ordenes[idx][COL.ESTADO_PAGO]  = payload.estadoPago;
+    if (payload.codigo)         ordenes[idx][COL.CODIGO_TRANS] = payload.codigo;
+    if (payload.pagador)        ordenes[idx][COL.PAGADOR]      = payload.pagador;
+    if (payload.fechaPago)      ordenes[idx][COL.FECHA_PAGO]   = payload.fechaPago;
+    if (payload.saldoPendiente !== undefined) ordenes[idx][COL.SALDO_PEND] = payload.saldoPendiente;
+    // Si fue confirmada, marcar con un ID provisional para que aparezca el ✓ CF
+    if (payload.estado === 'Confirmada' && !ordenes[idx][COL.INGRESO_ID]) {
+      ordenes[idx][COL.INGRESO_ID] = 'pendiente';
+    }
+  }
+
   btn.disabled = false;
   btn.textContent = '💾 Guardar cambios';
   showToast('✅ Cambios guardados');
   closeModal();
-  setTimeout(loadOrdenes, 1500);
+  applyFilters(); // re-renderizar con datos actualizados en memoria
+  setTimeout(loadOrdenes, 8000); // refrescar desde CSV después de 8s para sincronizar
 }
 
 // ── CAMBIAR ESTADO DIRECTO ──
@@ -973,8 +995,16 @@ async function cambiarEstado(idx, nuevoEstado) {
     orderNumber: orden[COL.ORDEN_NUM],
     estado:      nuevoEstado,
   });
+
+  // Actualizar en memoria inmediatamente
+  ordenes[idx][COL.ESTADO] = nuevoEstado;
+  if (nuevoEstado === 'Confirmada' && !ordenes[idx][COL.INGRESO_ID]) {
+    ordenes[idx][COL.INGRESO_ID] = 'pendiente';
+  }
+
   showToast(`✅ Orden ${orden[COL.ORDEN_NUM]} → ${nuevoEstado}`);
-  setTimeout(loadOrdenes, 1200);
+  applyFilters();
+  setTimeout(loadOrdenes, 8000);
 }
 
 // ── WHATSAPP ──
