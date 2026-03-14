@@ -1215,8 +1215,6 @@ async function guardarCambios() {
   btn.textContent = 'Guardando...';
 
   try {
-    const isCOD   = currentOrden[COL.PAGO] === 'Contra entrega';
-    const isYappy = currentOrden[COL.PAGO] === 'Yappy';
     const payload = {
       action:         'updateOrden',
       orderNumber:    currentOrden[COL.ORDEN_NUM],
@@ -1228,26 +1226,38 @@ async function guardarCambios() {
       estadoPago:     document.getElementById('mEstadoPago').value || '',
       saldoPendiente: document.getElementById('mSaldo').value      || '',
     };
-    // Incluir voucherUrl siempre que exista (para COD: se asigna al analizar)
     if (currentOrden[COL.VOUCHER]) {
-      payload.voucherUrl = currentOrden[COL.VOUCHER];
-    }
-    // Para Yappy, si el voucher ya estaba en el Sheet, también incluirlo
-    if (isYappy && currentOrden[COL.VOUCHER] && !payload.voucherUrl) {
       payload.voucherUrl = currentOrden[COL.VOUCHER];
     }
 
     await enviarActualizacionGAS(payload);
-    showToast('✅ Cambios guardados');
+
+    // Actualizar el array en memoria inmediatamente.
+    // El CSV publicado tiene cache de varios minutos; re-hacer loadOrdenes()
+    // traeria datos viejos. Actualizamos la fila local directamente.
+    const rowIdx = ordenes.findIndex(r => r[COL.ORDEN_NUM] === currentOrden[COL.ORDEN_NUM]);
+    if (rowIdx !== -1) {
+      if (payload.estado)         ordenes[rowIdx][COL.ESTADO]       = payload.estado;
+      if (payload.montoPagado)    ordenes[rowIdx][COL.MONTO_PAGADO] = payload.montoPagado;
+      if (payload.codigo)         ordenes[rowIdx][COL.CODIGO_TRANS] = payload.codigo;
+      if (payload.pagador)        ordenes[rowIdx][COL.PAGADOR]      = payload.pagador;
+      if (payload.fechaPago)      ordenes[rowIdx][COL.FECHA_PAGO]   = payload.fechaPago;
+      if (payload.estadoPago)     ordenes[rowIdx][COL.ESTADO_PAGO]  = payload.estadoPago;
+      if (payload.saldoPendiente) ordenes[rowIdx][COL.SALDO_PEND]   = payload.saldoPendiente;
+      if (payload.voucherUrl)     ordenes[rowIdx][COL.VOUCHER]      = payload.voucherUrl;
+    }
+
+    showToast('\u2705 Cambios guardados');
     closeModal();
-    setTimeout(loadOrdenes, 1500);
+    updateStats(ordenes);
+    applyFilters();
   } catch(err) {
-    showToast('⚠️ Error guardando: ' + err.message);
+    showToast('\u26a0\ufe0f Error guardando: ' + err.message);
     console.error('guardarCambios error:', err);
   }
 
   btn.disabled = false;
-  btn.textContent = '💾 Guardar cambios';
+  btn.textContent = '\U0001f4be Guardar cambios';
 }
 
 // ── CAMBIAR ESTADO DIRECTO ──
@@ -1259,8 +1269,11 @@ async function cambiarEstado(idx, nuevoEstado) {
       orderNumber: orden[COL.ORDEN_NUM],
       estado:      nuevoEstado,
     });
+    // Actualizar en memoria inmediatamente (CSV tiene cache)
+    ordenes[idx][COL.ESTADO] = nuevoEstado;
     showToast(`✅ Orden ${orden[COL.ORDEN_NUM]} → ${nuevoEstado}`);
-    setTimeout(loadOrdenes, 1200);
+    updateStats(ordenes);
+    applyFilters();
   } catch(err) {
     showToast('⚠️ Error: ' + err.message);
     console.error('cambiarEstado error:', err);
