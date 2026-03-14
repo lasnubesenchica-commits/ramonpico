@@ -1347,7 +1347,6 @@ async function submitOrder() {
   const totalNum = cart.reduce((s,c) => s + (getPrice(c)*c.qty), 0);
   const totalStr = totalNum > 0 ? fmtPrice(String(totalNum)) : 'A cotizar';
 
-  // Datos del análisis Yappy (desde campos editables del formulario)
   const yappyPayload = selectedPayment === 'yappy' ? {
     montoPagado:    document.getElementById('yMonto').value   || '',
     codigo:         document.getElementById('yCodigo').value  || '',
@@ -1357,68 +1356,53 @@ async function submitOrder() {
     saldoPendiente: estadoPago === 'parcial' ? (document.getElementById('ySaldo').value || '') : '',
   } : {};
 
+  // Payload SIN el base64 del voucher (demasiado grande para GET/form)
+  // El voucher se sube a Drive por separado si hay GAS configurado
   const payload = {
-    orderNumber:   orderNum,
-    nombre:        document.getElementById('fName').value,
-    ruc:           document.getElementById('fRuc').value,
-    telefono:      document.getElementById('fPhone').value,
-    email:         document.getElementById('fEmail').value,
-    direccion:     document.getElementById('fAddress').value,
-    notas:         document.getElementById('fNotes').value,
-    pago:          selectedPayment === 'cod' ? 'Contra entrega' : 'Yappy',
-    productos:     cart.map(c => ({titulo:c.title, cantidad:c.qty, precio:fmtPrice(c.price)})),
-    total:         totalStr,
-    voucherBase64: voucherBase64 || '',
-    voucherName:   voucherFile ? voucherFile.name : '',
-    voucherType:   voucherFile ? voucherFile.type : '',
+    orderNumber:  orderNum,
+    nombre:       document.getElementById('fName').value,
+    ruc:          document.getElementById('fRuc').value,
+    telefono:     document.getElementById('fPhone').value,
+    email:        document.getElementById('fEmail').value,
+    direccion:    document.getElementById('fAddress').value,
+    notas:        document.getElementById('fNotes').value,
+    pago:         selectedPayment === 'cod' ? 'Contra entrega' : 'Yappy',
+    productos:    cart.map(c => ({titulo:c.title, cantidad:c.qty, precio:fmtPrice(c.price)})),
+    total:        totalStr,
+    voucherName:  voucherFile ? voucherFile.name : '',
     ...yappyPayload,
   };
 
   const gasConfigured = !GAS_URL.includes('TU_DEPLOYMENT_ID');
 
   if (gasConfigured) {
-    // Técnica de form oculto: evita CORS completamente.
-    // GAS recibe los datos via e.parameter.payload (doPost lo lee de postData).
-    // Usamos un iframe oculto como target para que no navegue fuera de la página.
     try {
-      // Crear iframe oculto target
-      let iframe = document.getElementById('_gasTarget');
-      if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.name = '_gasTarget';
-        iframe.id   = '_gasTarget';
-        iframe.style.display = 'none';
-        document.body.appendChild(iframe);
+      // GAS acepta GET sin ningún problema de CORS.
+      // Mandamos el payload completo como un parámetro JSON en la URL.
+      // El voucher base64 se envía en un segundo request separado si existe.
+      const params = new URLSearchParams({ data: JSON.stringify(payload) });
+      const url    = GAS_URL + '?' + params.toString();
+
+      // fetch con no-cors en GET — GAS lo procesa y no hay redirect issue
+      fetch(url, { method: 'GET', mode: 'no-cors' });
+
+      // Si hay voucher, enviarlo en request separado
+      if (voucherBase64 && voucherFile) {
+        const voucherParams = new URLSearchParams({
+          action:       'voucher',
+          orderNumber:  orderNum,
+          voucherBase64: voucherBase64,
+          voucherName:  voucherFile.name,
+          voucherType:  voucherFile.type,
+        });
+        fetch(GAS_URL + '?' + voucherParams.toString(), { method: 'GET', mode: 'no-cors' });
       }
 
-      // Crear form oculto que apunta al iframe
-      const form = document.createElement('form');
-      form.method  = 'POST';
-      form.action  = GAS_URL;
-      form.target  = '_gasTarget';
-      form.style.display = 'none';
-
-      // GAS lee e.postData.contents cuando el campo se llama "payload" con text/plain
-      // Pero con un form HTML el content-type es application/x-www-form-urlencoded
-      // y GAS lo lee via e.parameter. Usamos un campo oculto "data" con el JSON.
-      const input = document.createElement('input');
-      input.type  = 'hidden';
-      input.name  = 'data';
-      input.value = JSON.stringify(payload);
-      form.appendChild(input);
-
-      document.body.appendChild(form);
-      form.submit();
-
-      // Limpiar form después del submit
-      setTimeout(() => { form.parentNode && form.parentNode.removeChild(form); }, 2000);
-
-    } catch(e) {
-      console.warn('GAS form submit error:', e);
+    } catch(err) {
+      console.warn('GAS send error (non-blocking):', err);
     }
   }
 
-  // WhatsApp siempre se dispara
   sendWhatsAppNotification(orderNum, payload, yappyPayload);
   showSuccess(orderNum);
 }
