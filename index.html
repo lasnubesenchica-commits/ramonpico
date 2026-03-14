@@ -690,44 +690,18 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem cla
         <button class="upload-remove" onclick="removeFile()">✕ Quitar</button>
       </div>
 
-      <!-- Vision AI Analysis Card -->
+      <!-- Confirmación simple de voucher recibido -->
       <div class="yappy-analysis" id="yappyAnalysis">
         <div class="yappy-analysis-title">
-          <span>✦</span> Datos detectados por IA — verifica y corrige si es necesario
+          <span>✓</span> Voucher recibido
         </div>
-        <div class="yappy-analyzing" id="yappyAnalyzing">
+        <div class="yappy-analyzing" id="yappyAnalyzing" style="display:none">
           <div class="spinner"></div>
-          Analizando voucher con IA...
+          Procesando...
         </div>
-        <div class="yappy-analysis-grid" id="yappyFields" style="display:none">
-          <div class="yappy-field">
-            <label>Monto pagado (USD)</label>
-            <input type="text" id="yMonto" placeholder="0.00">
-          </div>
-          <div class="yappy-field">
-            <label>Código de transacción</label>
-            <input type="text" id="yCodigo" placeholder="—">
-          </div>
-          <div class="yappy-field full">
-            <label>Nombre del pagador</label>
-            <input type="text" id="yPagador" placeholder="—">
-          </div>
-          <div class="yappy-field full">
-            <label>Fecha del pago</label>
-            <input type="text" id="yFecha" placeholder="—">
-          </div>
-          <div class="yappy-status-group">
-            <div class="yappy-status-label">Estado del pago</div>
-            <div class="yappy-status-btns">
-              <button class="yappy-status-btn" id="sBtnCompleto" onclick="setEstadoPago('completo')">✅ Pago completo</button>
-              <button class="yappy-status-btn" id="sBtnParcial"  onclick="setEstadoPago('parcial')">⚡ Abono parcial</button>
-              <button class="yappy-status-btn" id="sBtnSinPago"  onclick="setEstadoPago('sinpago')">❌ Sin pago</button>
-            </div>
-          </div>
-          <div class="yappy-field saldo-row" id="saldoRow">
-            <label>Saldo pendiente (USD)</label>
-            <input type="text" id="ySaldo" placeholder="0.00">
-          </div>
+        <div id="yappyReadyMsg" style="display:none;align-items:center;gap:.6rem;font-size:.83rem;color:var(--green)">
+          <span style="font-size:1.1rem">✅</span>
+          Tu voucher fue adjuntado. Nuestro equipo lo verificará al procesar tu orden.
         </div>
       </div>
 
@@ -1136,7 +1110,7 @@ function selectPayment(method) {
   document.getElementById('paymentErr').textContent='';
 }
 
-// FILE UPLOAD + VISION AI
+// FILE UPLOAD — solo guarda el archivo, el análisis lo hace el admin
 async function handleFileSelect(e) {
   const file = e.target.files[0];
   if (!file) return;
@@ -1147,7 +1121,6 @@ async function handleFileSelect(e) {
   document.getElementById('previewName').textContent = file.name;
   const preview = document.getElementById('previewImg');
 
-  // Leer base64 una sola vez y guardarlo globalmente
   voucherBase64 = await new Promise((res, rej) => {
     const r = new FileReader();
     r.onload  = ev => { preview.src = ev.target.result; res(ev.target.result.split(',')[1]); };
@@ -1157,84 +1130,12 @@ async function handleFileSelect(e) {
   preview.style.display = 'block';
   document.getElementById('uploadPreview').classList.add('show');
 
-  // Lanzar análisis Vision
-  analyzeVoucher(voucherBase64, file.type);
-}
-
-async function analyzeVoucher(base64, mimeType) {
+  // Mostrar confirmación simple — el análisis se hace en el panel admin
   const analysisCard = document.getElementById('yappyAnalysis');
-  const analyzing    = document.getElementById('yappyAnalyzing');
-  const fieldsDiv    = document.getElementById('yappyFields');
-
   analysisCard.classList.add('show');
-  analyzing.style.display  = 'flex';
-  fieldsDiv.style.display  = 'none';
-
-  try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': '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',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
-        messages: [{
-          role: 'user',
-          content: [
-            {
-              type: 'image',
-              source: { type: 'base64', media_type: mimeType || 'image/jpeg', data: base64 }
-            },
-            {
-              type: 'text',
-              text: `Analiza este voucher/comprobante de pago de Yappy (Panama) y extrae la información. 
-Responde SOLO con JSON válido, sin texto adicional, sin markdown:
-{
-  "monto": "monto pagado en números con decimales, ej: 150.00",
-  "codigo": "código o número de transacción/referencia si aparece",
-  "pagador": "nombre completo de quien realizó el pago",
-  "fecha": "fecha y hora del pago en formato legible",
-  "receptor": "nombre o número de quien recibió el pago",
-  "notas": "cualquier otra información relevante del comprobante"
-}
-Si algún campo no es visible o no aplica, usa null.`
-            }
-          ]
-        }]
-      })
-    });
-
-    const data = await resp.json();
-    const text = data.content?.find(b => b.type === 'text')?.text || '{}';
-    const clean = text.replace(/```json|```/g, '').trim();
-    yappyData = JSON.parse(clean);
-
-    // Llenar campos
-    document.getElementById('yMonto').value   = yappyData.monto   || '';
-    document.getElementById('yCodigo').value  = yappyData.codigo  || '';
-    document.getElementById('yPagador').value = yappyData.pagador || '';
-    document.getElementById('yFecha').value   = yappyData.fecha   || '';
-
-    // Auto-detectar estado según monto vs total de la orden
-    const totalOrden = cart.reduce((s,c) => s + (getPrice(c)*c.qty), 0);
-    const montoPagado = parseFloat(String(yappyData.monto||'0').replace(/[^0-9.]/g,'')) || 0;
-    if (totalOrden > 0 && montoPagado > 0) {
-      if (montoPagado >= totalOrden) setEstadoPago('completo');
-      else setEstadoPago('parcial');
-    }
-
-  } catch(err) {
-    console.error('Vision error:', err);
-    yappyData = {};
-    // Dejar campos vacíos para llenado manual
-  } finally {
-    analyzing.style.display = 'none';
-    fieldsDiv.style.display = 'grid';
-  }
+  document.getElementById('yappyAnalyzing').style.display = 'none';
+  document.getElementById('yappyFields').style.display = 'none';
+  document.getElementById('yappyReadyMsg').style.display = 'flex';
 }
 
 function setEstadoPago(estado) {
@@ -1246,7 +1147,6 @@ function setEstadoPago(estado) {
   const saldoRow = document.getElementById('saldoRow');
   if (estado === 'parcial') {
     saldoRow.classList.add('show');
-    // Auto-calcular saldo
     const totalOrden  = cart.reduce((s,c) => s + (getPrice(c)*c.qty), 0);
     const montoPagado = parseFloat(document.getElementById('yMonto').value) || 0;
     if (totalOrden > 0 && montoPagado > 0) {
@@ -1266,9 +1166,7 @@ function removeFile() {
   document.getElementById('voucherFile').value = '';
   document.getElementById('uploadPreview').classList.remove('show');
   document.getElementById('yappyAnalysis').classList.remove('show');
-  document.getElementById('yappyFields').style.display = 'none';
-  ['yMonto','yCodigo','yPagador','yFecha','ySaldo'].forEach(id => document.getElementById(id).value = '');
-  ['sBtnCompleto','sBtnParcial','sBtnSinPago'].forEach(id => document.getElementById(id).className = 'yappy-status-btn');
+  document.getElementById('yappyReadyMsg').style.display = 'none';
 }
 
 // BUILD CONFIRMATION
@@ -1307,28 +1205,11 @@ function buildConfirmation() {
   // Yappy summary en paso 3
   const yappySummaryEl = document.getElementById('confirmYappySummary');
   if (selectedPayment === 'yappy' && voucherFile) {
-    const monto    = document.getElementById('yMonto').value   || '—';
-    const codigo   = document.getElementById('yCodigo').value  || '—';
-    const pagador  = document.getElementById('yPagador').value || '—';
-    const fecha    = document.getElementById('yFecha').value   || '—';
-    const saldo    = document.getElementById('ySaldo').value;
-    const estadoLabel = {
-      completo: '✅ Pago completo',
-      parcial:  '⚡ Abono parcial',
-      sinpago:  '❌ Sin pago registrado',
-      '':       '—'
-    }[estadoPago] || '—';
-
     yappySummaryEl.style.display = 'block';
     yappySummaryEl.innerHTML = `
-      <div style="margin-top:.5rem;padding-top:.75rem;border-top:1px solid var(--border)">
-        <div style="font-size:.68rem;font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--orange);margin-bottom:.5rem">Datos del voucher</div>
-        <b>Monto pagado:</b> $${esc(monto)}<br>
-        <b>Estado:</b> ${estadoLabel}
-        ${estadoPago==='parcial' && saldo ? `<br><b>Saldo pendiente:</b> $${esc(saldo)}` : ''}
-        <br><b>Pagador:</b> ${esc(pagador)}<br>
-        <b>Código:</b> ${esc(codigo)}<br>
-        <b>Fecha pago:</b> ${esc(fecha)}
+      <div style="margin-top:.5rem;padding-top:.75rem;border-top:1px solid var(--border);font-size:.82rem;color:var(--muted)">
+        ✅ Voucher adjunto: <strong>${esc(voucherFile.name)}</strong><br>
+        Nuestro equipo verificará el pago al procesar tu orden.
       </div>`;
   } else {
     yappySummaryEl.style.display = 'none';
@@ -1347,30 +1228,20 @@ async function submitOrder() {
   const totalNum = cart.reduce((s,c) => s + (getPrice(c)*c.qty), 0);
   const totalStr = totalNum > 0 ? fmtPrice(String(totalNum)) : 'A cotizar';
 
-  const yappyPayload = selectedPayment === 'yappy' ? {
-    montoPagado:    document.getElementById('yMonto').value   || '',
-    codigo:         document.getElementById('yCodigo').value  || '',
-    pagador:        document.getElementById('yPagador').value || '',
-    fechaPago:      document.getElementById('yFecha').value   || '',
-    estadoPago:     estadoPago || '',
-    saldoPendiente: estadoPago === 'parcial' ? (document.getElementById('ySaldo').value || '') : '',
-  } : {};
-
   const payload = {
-    orderNumber:  orderNum,
-    nombre:       document.getElementById('fName').value,
-    ruc:          document.getElementById('fRuc').value,
-    telefono:     document.getElementById('fPhone').value,
-    email:        document.getElementById('fEmail').value,
-    direccion:    document.getElementById('fAddress').value,
-    notas:        document.getElementById('fNotes').value,
-    pago:         selectedPayment === 'cod' ? 'Contra entrega' : 'Yappy',
-    productos:    cart.map(c => ({titulo:c.title, cantidad:c.qty, precio:fmtPrice(c.price)})),
-    total:        totalStr,
-    voucherName:  voucherFile ? voucherFile.name : '',
+    orderNumber:   orderNum,
+    nombre:        document.getElementById('fName').value,
+    ruc:           document.getElementById('fRuc').value,
+    telefono:      document.getElementById('fPhone').value,
+    email:         document.getElementById('fEmail').value,
+    direccion:     document.getElementById('fAddress').value,
+    notas:         document.getElementById('fNotes').value,
+    pago:          selectedPayment === 'cod' ? 'Contra entrega' : 'Yappy',
+    productos:     cart.map(c => ({titulo:c.title, cantidad:c.qty, precio:fmtPrice(c.price)})),
+    total:         totalStr,
     voucherBase64: voucherBase64 || '',
-    voucherType:  voucherFile ? voucherFile.type : '',
-    ...yappyPayload,
+    voucherName:   voucherFile ? voucherFile.name : '',
+    voucherType:   voucherFile ? voucherFile.type : '',
   };
 
   // Enviar a GAS — fetch con text/plain evita preflight CORS
@@ -1386,25 +1257,16 @@ async function submitOrder() {
     console.warn('GAS fetch error:', err);
   }
 
-  sendWhatsAppNotification(orderNum, payload, yappyPayload);
+  sendWhatsAppNotification(orderNum, payload);
   showSuccess(orderNum);
 }
 
-function sendWhatsAppNotification(orderNum, data, yappy) {
+function sendWhatsAppNotification(orderNum, data) {
   const prods = (data.productos||cart).map(p =>
     `• ${p.titulo||p.title} ×${p.cantidad||p.qty}`
   ).join('%0A');
-
-  let pagoLine = `*Pago:* ${data.pago}`;
-  if (data.pago === 'Yappy' && yappy && yappy.montoPagado) {
-    const estadoEmoji = {completo:'✅',parcial:'⚡',sinpago:'❌'}[yappy.estadoPago] || '';
-    pagoLine += `%0A${estadoEmoji} Monto: $${yappy.montoPagado}`;
-    if (yappy.estadoPago === 'parcial' && yappy.saldoPendiente) pagoLine += ` | Saldo: $${yappy.saldoPendiente}`;
-    if (yappy.codigo)  pagoLine += `%0ACódigo: ${yappy.codigo}`;
-    if (yappy.pagador) pagoLine += `%0APagador: ${yappy.pagador}`;
-  }
-
-  const msg = `🛒 *NUEVA ORDEN ${orderNum}*%0A%0A*Cliente:* ${data.nombre}%0A*Tel:* ${data.telefono}%0A${pagoLine}%0A%0A*Productos:*%0A${prods}%0A%0A*Total:* ${data.total}`;
+  const pagoLine = data.pago === 'Yappy' ? '📱 Yappy (voucher adjunto)' : '🚚 Contra entrega';
+  const msg = `🛒 *NUEVA ORDEN ${orderNum}*%0A%0A*Cliente:* ${data.nombre}%0A*Tel:* ${data.telefono}%0A*Pago:* ${pagoLine}%0A%0A*Productos:*%0A${prods}%0A%0A*Total:* ${data.total}`;
   window.open(`https://wa.me/${WHATSAPP_NUM}?text=${msg}`, '_blank');
 }
 
