@@ -1631,6 +1631,7 @@ function renderOpTable(items) {
           <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal(${i})">Ver</button>
           ${flagRev ? `<button class="btn-xs btn-confirm" onclick="aprobarMatch('${esc(item.id_item)}')">✓ Aprobar</button>` : ''}
           ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" onclick="openOpModal(${i},true)">+ Vincular</button>` : ''}
+          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" onclick="buscarOrdenWeb('${esc(item.id_item)}')" title="Buscar orden web vinculada">🔗</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -1758,6 +1759,13 @@ function buildOpModalActions(item) {
   }
   if (!esPendiente && !flagRev && item.estado !== 'cerrado') {
     html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarCambiosOp()">💾 Guardar cambios</button>`;
+  }
+  // Botón buscar orden web: visible si tiene factura emitida pero no tiene orden web
+  if (item.num_fac_emitida && item.num_fac_emitida !== 'VENTA-DIRECTA' && !item.id_orden_web) {
+    html += `<button class="btn-secondary" id="opBtnBuscarOrden" onclick="buscarOrdenWebModal()">🔗 Buscar orden web</button>`;
+  }
+  if (item.id_orden_web) {
+    html += `<span style="font-size:.75rem;color:var(--green);display:flex;align-items:center;gap:.3rem">✅ Orden web: <strong>${esc(item.id_orden_web)}</strong></span>`;
   }
   html += `<button class="btn-secondary" onclick="closeOpModal()">Cerrar</button>`;
   actions.innerHTML = html;
@@ -1888,6 +1896,50 @@ async function aprobarMatch(idItem) {
 //  JSONP HELPER GENÉRICO PARA OPERACIONES
 //  (reutiliza el mismo patrón que el resto del admin)
 // ══════════════════════════════════════════════════
+// ── Buscar orden web — desde tabla (botón 🔗) ──
+async function buscarOrdenWeb(idItem) {
+  showToast('🔍 Buscando orden web...');
+  try {
+    const data = await gasJsonp('buscarOrdenWeb', { id_item: idItem });
+    if (!data.success) throw new Error(data.error || 'Error');
+    if (data.encontrado) {
+      showToast('✅ Orden web vinculada: ' + data.ordenNum);
+      await loadOperaciones();
+    } else {
+      showToast('ℹ️ No se encontró orden web correspondiente');
+    }
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+  }
+}
+
+// ── Buscar orden web — desde modal ──
+async function buscarOrdenWebModal() {
+  if (!currentOpItem) return;
+  const btn = document.getElementById('opBtnBuscarOrden');
+  if (btn) { btn.disabled = true; btn.textContent = '🔍 Buscando...'; }
+  try {
+    const data = await gasJsonp('buscarOrdenWeb', { id_item: currentOpItem.id_item });
+    if (!data.success) throw new Error(data.error || 'Error');
+    if (data.encontrado) {
+      showToast('✅ Orden web vinculada: ' + data.ordenNum);
+      // Actualizar en memoria
+      const idx = opItems.findIndex(i => i.id_item === currentOpItem.id_item);
+      if (idx !== -1) opItems[idx].id_orden_web = data.ordenNum;
+      currentOpItem.id_orden_web = data.ordenNum;
+      // Actualizar badge en modal
+      buildOpModalActions(currentOpItem);
+      document.getElementById('opMOrdenWeb').value = data.ordenNum;
+      applyOpFilters();
+    } else {
+      showToast('ℹ️ No se encontró orden web — revisa nombre y monto del cliente');
+    }
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+    if (btn) { btn.disabled = false; btn.textContent = '🔗 Buscar orden web'; }
+  }
+}
+
 function gasJsonp(action, params) {
   return new Promise((resolve, reject) => {
     const cb = '_op_' + Date.now() + '_' + Math.random().toString(36).slice(2);
