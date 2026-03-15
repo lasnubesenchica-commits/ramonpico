@@ -307,11 +307,106 @@ tr:hover td{background:rgba(0,0,0,.015)}
 }
 .toast.show{transform:translateX(-50%) translateY(0)}
 
+/* ── MAIN TABS (Ventas Web / Operaciones) ── */
+.main-tabs{
+  display:flex;gap:0;border-bottom:2px solid var(--border);
+  background:var(--white);padding:0 2rem;
+}
+.main-tab{
+  font-size:.82rem;font-weight:600;letter-spacing:.03em;
+  padding:.85rem 1.4rem;border-bottom:2px solid transparent;
+  margin-bottom:-2px;cursor:pointer;color:var(--muted);
+  transition:all .2s;border-radius:0;background:none;
+}
+.main-tab:hover{color:var(--text)}
+.main-tab.active{color:var(--orange);border-bottom-color:var(--orange)}
+
+/* ── OPERACIONES SECTION ── */
+#sectionOperaciones{display:none}
+#sectionVentasWeb{display:block}
+
+/* ── OPERACIONES STATS ── */
+.op-stats{
+  display:flex;gap:1rem;padding:1.25rem 2rem;flex-wrap:wrap;
+  border-bottom:1px solid var(--border);background:var(--white);
+}
+
+/* ── OPERACIONES TOOLBAR ── */
+.op-toolbar{
+  display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;
+  padding:1rem 2rem;border-bottom:1px solid var(--border);
+  background:var(--white);
+}
+.op-filter-btn{
+  font-size:.78rem;font-weight:500;padding:.35rem .9rem;
+  border-radius:100px;border:1px solid var(--border);
+  background:var(--bg);color:var(--muted);cursor:pointer;transition:all .2s;
+}
+.op-filter-btn:hover{border-color:rgba(0,0,0,.25);color:var(--text)}
+.op-filter-btn.active{background:var(--orange);border-color:var(--orange);color:#fff;font-weight:600}
+.btn-sync{
+  display:flex;align-items:center;gap:.5rem;margin-left:auto;
+  background:var(--orange);color:#fff;font-weight:600;font-size:.82rem;
+  padding:.45rem 1.1rem;border-radius:var(--r);border:none;cursor:pointer;
+  transition:all .2s;white-space:nowrap;
+}
+.btn-sync:hover{background:var(--orange2)}
+.btn-sync:disabled{opacity:.5;cursor:not-allowed}
+
+/* ── OPERACIONES ITEM CARDS ── */
+.op-table-wrap{padding:1.5rem 2rem;overflow-x:auto}
+.op-table{width:100%;border-collapse:collapse;min-width:1000px}
+.op-table thead tr{background:var(--bg2)}
+.op-table th{
+  font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);font-weight:500;
+  padding:.6rem .9rem;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;
+}
+.op-table td{
+  padding:.7rem .9rem;border-bottom:1px solid var(--border);
+  font-size:.81rem;vertical-align:middle;
+}
+.op-table tr:last-child td{border-bottom:none}
+.op-table tr:hover td{background:rgba(0,0,0,.015)}
+
+/* Estado badges Operaciones */
+.badge-pendiente {background:#FFF3E0;color:#E65100}
+.badge-vinculado  {background:var(--green-bg);color:var(--green)}
+.badge-facturado  {background:var(--blue-bg);color:#1565C0}
+.badge-cerrado    {background:#F1F8E9;color:#388E3C}
+.badge-revision   {background:var(--yellow-bg);color:#795548}
+
+/* Confianza bar */
+.conf-bar{display:flex;align-items:center;gap:.4rem}
+.conf-track{flex:1;height:5px;background:var(--bg3);border-radius:3px;min-width:40px}
+.conf-fill{height:100%;border-radius:3px;transition:width .3s}
+
+/* ── MODAL OPERACIONES ── */
+.op-modal-box{max-width:720px}
+.op-section-hdr{
+  font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.1em;
+  text-transform:uppercase;padding:.5rem .75rem;border-radius:4px;
+  margin-bottom:.6rem;font-weight:600;
+}
+.op-section-compra{background:#FBE9E7;color:#BF360C}
+.op-section-venta {background:#E8F5E9;color:#1B5E20}
+.op-section-vinculo{background:var(--blue-bg);color:#0D47A1}
+
+/* Upload zone */
+.upload-zone{
+  border:2px dashed var(--border);border-radius:var(--r);
+  padding:1.25rem;text-align:center;cursor:pointer;
+  transition:border-color .2s;background:var(--bg);
+}
+.upload-zone:hover{border-color:var(--orange)}
+.upload-zone.has-file{border-color:var(--green);background:var(--green-bg)}
+
 /* RESPONSIVE */
 @media(max-width:768px){
-  .stats-bar,.filter-bar,.table-wrap{padding-left:1rem;padding-right:1rem}
+  .stats-bar,.filter-bar,.table-wrap,.op-toolbar,.op-table-wrap,.op-stats{padding-left:1rem;padding-right:1rem}
   .topnav{padding:0 1rem}
   .modal-grid{grid-template-columns:1fr}
+  .main-tabs{padding:0 1rem}
 }
 </style>
 </head>
@@ -340,10 +435,19 @@ tr:hover td{background:rgba(0,0,0,.015)}
       <div class="topnav-badge">Admin</div>
     </div>
     <div class="topnav-right">
-      <button class="topnav-refresh" onclick="loadOrdenes()">↻ Actualizar</button>
+      <button class="topnav-refresh" id="btnRefreshNav" onclick="refreshCurrentSection()">↻ Actualizar</button>
       <span class="topnav-logout" onclick="logout()">Salir →</span>
     </div>
   </nav>
+
+  <!-- MAIN TABS -->
+  <div class="main-tabs">
+    <button class="main-tab active" id="tabVentasWeb" onclick="switchTab('ventasWeb')">🛒 Ventas Web</button>
+    <button class="main-tab" id="tabOperaciones" onclick="switchTab('operaciones')">⚙️ Operaciones</button>
+  </div>
+
+  <!-- ══════════ SECCIÓN: VENTAS WEB ══════════ -->
+  <div id="sectionVentasWeb">
 
   <!-- STATS BAR -->
   <div class="stats-bar" id="statsBar">
@@ -395,6 +499,60 @@ tr:hover td{background:rgba(0,0,0,.015)}
       </tbody>
     </table>
   </div>
+
+</div><!-- /sectionVentasWeb -->
+
+<!-- ═══════════ SECCIÓN: OPERACIONES ═══════════ -->
+<div id="sectionOperaciones">
+
+  <!-- Stats Operaciones -->
+  <div class="op-stats" id="opStatsBar">
+    <div class="stat-pill"><div class="stat-pill-num orange" id="opStatTotal">—</div><div class="stat-pill-label">Total ítems</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#E65100" id="opStatPendiente">—</div><div class="stat-pill-label">Pendientes</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#795548" id="opStatRevision">—</div><div class="stat-pill-label">Para revisar</div></div>
+    <div class="stat-pill"><div class="stat-pill-num green" id="opStatCerrado">—</div><div class="stat-pill-label">Cerrados</div></div>
+    <div class="stat-pill"><div class="stat-pill-num orange" id="opStatMargen">—</div><div class="stat-pill-label">Margen total</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="op-toolbar">
+    <button class="op-filter-btn active" data-op-filter="all">Todos</button>
+    <button class="op-filter-btn" data-op-filter="pendiente">Pendiente</button>
+    <button class="op-filter-btn" data-op-filter="revision">⚠️ Revisar</button>
+    <button class="op-filter-btn" data-op-filter="vinculado">Vinculado</button>
+    <button class="op-filter-btn" data-op-filter="facturado">Facturado</button>
+    <button class="op-filter-btn" data-op-filter="cerrado">Cerrado</button>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="filter-search" id="searchOp" placeholder="Buscar producto, cliente...">
+    </div>
+    <button class="btn-sync" id="btnSync" onclick="sincronizarEmails()">↻ Sincronizar emails</button>
+  </div>
+
+  <!-- Tabla Operaciones -->
+  <div class="op-table-wrap">
+    <table class="op-table" id="opTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Producto (Carbone)</th>
+          <th>Costo</th>
+          <th>Cliente (Factura)</th>
+          <th>Venta</th>
+          <th>Margen</th>
+          <th>Orden Web</th>
+          <th>Estado</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="opBody">
+        <tr><td colspan="9">
+          <div class="table-loading"><div class="spinner"></div><span>Cargando operaciones...</span></div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</div><!-- /sectionOperaciones -->
 
 </div><!-- /app -->
 
@@ -545,6 +703,95 @@ tr:hover td{background:rgba(0,0,0,.015)}
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- ═══════════ MODAL OPERACIONES ═══════════ -->
+<div class="modal-overlay" id="opModalOverlay" onclick="closeOpModalOutside(event)">
+  <div class="modal-box op-modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="opModalTitle">Ítem</div>
+      <button class="modal-close" onclick="closeOpModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Compra -->
+      <div class="modal-section">
+        <div class="op-section-hdr op-section-compra">🧾 Compra — Carbone</div>
+        <div class="modal-grid">
+          <div class="modal-field"><label>N° Factura Carbone</label><input type="text" id="opMFacCarbone" readonly></div>
+          <div class="modal-field"><label>Fecha compra</label><input type="text" id="opMFechaCompra" readonly></div>
+          <div class="modal-field full"><label>Producto</label><input type="text" id="opMDescripcion" readonly></div>
+          <div class="modal-field"><label>Código</label><input type="text" id="opMCodigo" readonly></div>
+          <div class="modal-field"><label>Costo total (con ITBMS)</label><input type="text" id="opMCostoTotal" readonly></div>
+          <div class="modal-field" style="grid-column:1/-1">
+            <a id="opMLinkCarbone" href="#" target="_blank" style="font-size:.78rem;color:var(--orange);display:none">📄 Ver factura Carbone →</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Venta -->
+      <div class="modal-section">
+        <div class="op-section-hdr op-section-venta">💰 Venta — Factura emitida</div>
+
+        <!-- Upload PDF manual (para ítems pendientes) -->
+        <div id="opUploadZone" style="display:none;margin-bottom:.75rem">
+          <div class="upload-zone" id="opDropZone"
+            onclick="document.getElementById('opPdfInput').click()"
+            ondragover="event.preventDefault();this.classList.add('has-file')"
+            ondragleave="this.classList.remove('has-file')"
+            ondrop="handleOpPdfDrop(event)">
+            <div style="font-size:1.3rem;margin-bottom:.2rem">📎</div>
+            <div style="font-size:.78rem;color:var(--muted)">Sube la factura emitida (PDF) para que la IA extraiga los datos</div>
+            <input type="file" id="opPdfInput" accept="application/pdf" style="display:none" onchange="handleOpPdfSelect(event)">
+          </div>
+          <div id="opPdfFileName" style="font-size:.72rem;color:var(--chrome);margin-top:.3rem"></div>
+        </div>
+
+        <div class="modal-grid" id="opVentaFields">
+          <div class="modal-field"><label>N° Factura emitida</label><input type="text" id="opMFacEmitida"></div>
+          <div class="modal-field"><label>Fecha venta</label><input type="text" id="opMFechaVenta" placeholder="YYYY-MM-DD"></div>
+          <div class="modal-field full"><label>Cliente</label><input type="text" id="opMCliente"></div>
+          <div class="modal-field"><label>RUC cliente</label><input type="text" id="opMRucCliente"></div>
+          <div class="modal-field"><label>Total venta (con ITBMS)</label><input type="text" id="opMTotalVenta" placeholder="0.00" oninput="recalcMargen()"></div>
+          <div class="modal-field" style="grid-column:1/-1">
+            <a id="opMLinkEmitida" href="#" target="_blank" style="font-size:.78rem;color:var(--green);display:none">📄 Ver factura emitida →</a>
+          </div>
+        </div>
+
+        <!-- Venta directa toggle -->
+        <div style="margin-top:.75rem;padding-top:.75rem;border-top:1px solid var(--border)">
+          <label style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;cursor:pointer">
+            <input type="checkbox" id="opEsVentaDirecta" onchange="toggleVentaDirecta()">
+            <span>Venta directa (sin factura emitida — neto, sin ITBMS)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Confianza y vínculo web -->
+      <div class="modal-section" id="opMatchSection">
+        <div class="op-section-hdr op-section-vinculo">🔗 Match & Vínculos</div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <label>Confianza del match IA</label>
+            <div class="conf-bar" style="margin-top:.35rem">
+              <div class="conf-track"><div class="conf-fill" id="opMConfFill" style="width:0%"></div></div>
+              <span id="opMConfPct" style="font-family:'DM Mono',monospace;font-size:.75rem;min-width:30px">—</span>
+            </div>
+          </div>
+          <div class="modal-field">
+            <label>Margen estimado</label>
+            <div id="opMMargen" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--green);margin-top:.2rem">—</div>
+          </div>
+          <div class="modal-field full"><label>Orden web vinculada</label><input type="text" id="opMOrdenWeb" readonly></div>
+          <div class="modal-field full"><label>Notas del match</label><input type="text" id="opMNotas" readonly></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-actions" id="opModalActions">
+      <!-- Se rellena dinámicamente según estado del ítem -->
+    </div>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════
@@ -1260,7 +1507,425 @@ async function guardarCambios() {
   btn.textContent = '\U0001f4be Guardar cambios';
 }
 
-// ── CAMBIAR ESTADO DIRECTO ──
+// ══════════════════════════════════════════════════
+//  TAB SWITCHING
+// ══════════════════════════════════════════════════
+let activeTab = 'ventasWeb';
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('sectionVentasWeb').style.display   = tab === 'ventasWeb'   ? 'block' : 'none';
+  document.getElementById('sectionOperaciones').style.display = tab === 'operaciones' ? 'block' : 'none';
+  document.getElementById('tabVentasWeb').classList.toggle('active',   tab === 'ventasWeb');
+  document.getElementById('tabOperaciones').classList.toggle('active', tab === 'operaciones');
+  if (tab === 'operaciones' && !opItems.length) loadOperaciones();
+}
+
+function refreshCurrentSection() {
+  if (activeTab === 'ventasWeb') loadOrdenes();
+  else loadOperaciones();
+}
+
+// ══════════════════════════════════════════════════
+//  OPERACIONES STATE
+// ══════════════════════════════════════════════════
+let opItems      = [];
+let opFiltered   = [];
+let opFilter     = 'all';
+let currentOpItem = null;
+let opPdfBase64  = null;
+let opPdfName    = null;
+
+// ══════════════════════════════════════════════════
+//  CARGAR OPERACIONES
+// ══════════════════════════════════════════════════
+async function loadOperaciones() {
+  document.getElementById('opBody').innerHTML =
+    '<tr><td colspan="9"><div class="table-loading"><div class="spinner"></div><span>Cargando operaciones...</span></div></td></tr>';
+  try {
+    const data = await gasJsonp('getComprasVentas', {});
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    opItems = data.items || [];
+    updateOpStats(opItems);
+    applyOpFilters();
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+    document.getElementById('opBody').innerHTML =
+      '<tr><td colspan="9"><div class="table-empty"><span style="font-size:2rem">⚠️</span><span>' + esc(err.message) + '</span></div></td></tr>';
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  SINCRONIZAR EMAILS
+// ══════════════════════════════════════════════════
+async function sincronizarEmails() {
+  const btn = document.getElementById('btnSync');
+  btn.disabled = true;
+  btn.textContent = '⏳ Sincronizando...';
+  try {
+    const data = await gasJsonp('sincronizarEmails', {});
+    if (!data.success) throw new Error(data.error || 'Error en sincronización');
+    showToast(`✅ Procesados: ${data.procesados} | Nuevos: ${data.nuevos} | Vinculados: ${data.vinculados}`);
+    if (data.errores && data.errores.length) console.warn('Errores:', data.errores);
+    await loadOperaciones();
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+  }
+  btn.disabled = false;
+  btn.textContent = '↻ Sincronizar emails';
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER TABLA OPERACIONES
+// ══════════════════════════════════════════════════
+function renderOpTable(items) {
+  const tbody = document.getElementById('opBody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay ítems</span></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map((item, i) => {
+    const estado    = item.estado || 'pendiente';
+    const flagRev   = item.flag_revision === true || item.flag_revision === 'TRUE';
+    const conf      = parseInt(item.confianza_match || '0') || 0;
+
+    const estadoBadge = flagRev
+      ? '<span class="badge badge-revision">⚠ Revisar</span>'
+      : {
+          pendiente: '<span class="badge badge-pendiente">● Pendiente</span>',
+          vinculado: '<span class="badge badge-vinculado">● Vinculado</span>',
+          facturado: '<span class="badge badge-facturado">● Facturado</span>',
+          cerrado:   '<span class="badge badge-cerrado">✓ Cerrado</span>',
+        }[estado] || `<span class="badge">${esc(estado)}</span>`;
+
+    const confBar = conf > 0
+      ? `<div class="conf-bar" title="${conf}% confianza">
+           <div class="conf-track"><div class="conf-fill" style="width:${conf}%;background:${conf>=70?'#4CAF50':conf>=50?'#FF9800':'#f44336'}"></div></div>
+           <span style="font-family:'DM Mono',monospace;font-size:.65rem">${conf}%</span>
+         </div>` : '';
+
+    const margen   = parseFloat(item.margen || '0') || 0;
+    const margenFmt = margen ? `<span style="font-weight:700;color:${margen>0?'var(--green)':'var(--red)'}">$${margen.toFixed(2)}</span>` : '—';
+    const costoFmt  = item.total_carbone ? `$${parseFloat(item.total_carbone).toFixed(2)}` : '—';
+    const ventaFmt  = item.total_venta   ? `$${parseFloat(item.total_venta).toFixed(2)}`   : '—';
+
+    return `<tr>
+      <td><span style="font-family:'DM Mono',monospace;font-size:.72rem">${esc(item.id_item||'')}</span>
+          <div style="font-size:.65rem;color:var(--chrome)">${esc(item.num_fac_carbone||'')}</div></td>
+      <td>
+        <div style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.descripcion_prod||'')}">${esc((item.descripcion_prod||'').substring(0,50))}</div>
+        <div style="font-size:.7rem;color:var(--muted)">${esc(item.codigo_prod||'')} · ${esc(item.fecha_compra||'').substring(0,10)}</div>
+        ${confBar}
+      </td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#E65100">${costoFmt}</td>
+      <td>
+        <div style="font-weight:500">${esc(item.nombre_cliente||'—')}</div>
+        <div style="font-size:.72rem;color:var(--muted)">${esc(item.num_fac_emitida||'')}</div>
+      </td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--green)">${ventaFmt}</td>
+      <td>${margenFmt}</td>
+      <td style="font-size:.72rem;font-family:'DM Mono',monospace">${esc(item.id_orden_web||'—')}</td>
+      <td>${estadoBadge}</td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal(${i})">Ver</button>
+          ${flagRev ? `<button class="btn-xs btn-confirm" onclick="aprobarMatch('${esc(item.id_item)}')">✓ Aprobar</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" onclick="openOpModal(${i},true)">+ Vincular</button>` : ''}
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function updateOpStats(items) {
+  document.getElementById('opStatTotal').textContent     = items.length;
+  document.getElementById('opStatPendiente').textContent = items.filter(i=>i.estado==='pendiente'&&i.flag_revision!==true&&i.flag_revision!=='TRUE').length;
+  document.getElementById('opStatRevision').textContent  = items.filter(i=>i.flag_revision===true||i.flag_revision==='TRUE').length;
+  document.getElementById('opStatCerrado').textContent   = items.filter(i=>i.estado==='cerrado').length;
+  const margen = items.reduce((s,i)=>s+(parseFloat(i.margen||'0')||0),0);
+  document.getElementById('opStatMargen').textContent    = margen>0?'$'+margen.toLocaleString('es-PA',{minimumFractionDigits:2}):'—';
+}
+
+// ── Filtros Operaciones ──
+document.querySelectorAll('[data-op-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-op-filter]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    opFilter = btn.dataset.opFilter;
+    applyOpFilters();
+  });
+});
+document.getElementById('searchOp').addEventListener('input', applyOpFilters);
+
+function applyOpFilters() {
+  const q = document.getElementById('searchOp').value.toLowerCase().trim();
+  let items = opItems;
+  if (opFilter === 'revision') {
+    items = items.filter(i=>i.flag_revision===true||i.flag_revision==='TRUE');
+  } else if (opFilter !== 'all') {
+    items = items.filter(i=>i.estado===opFilter);
+  }
+  if (q) items = items.filter(i =>
+    (i.descripcion_prod||'').toLowerCase().includes(q) ||
+    (i.nombre_cliente||'').toLowerCase().includes(q) ||
+    (i.num_fac_carbone||'').toLowerCase().includes(q) ||
+    (i.id_item||'').toLowerCase().includes(q)
+  );
+  opFiltered = items;
+  renderOpTable(items);
+}
+
+// ══════════════════════════════════════════════════
+//  MODAL OPERACIONES
+// ══════════════════════════════════════════════════
+function openOpModal(idx, vincularMode) {
+  currentOpItem = opFiltered[idx];
+  if (!currentOpItem) return;
+  opPdfBase64  = null;
+  opPdfName    = null;
+
+  const item = currentOpItem;
+  document.getElementById('opModalTitle').textContent = item.id_item || 'Ítem';
+  document.getElementById('opMFacCarbone').value    = item.num_fac_carbone  || '';
+  document.getElementById('opMFechaCompra').value   = item.fecha_compra     || '';
+  document.getElementById('opMDescripcion').value   = item.descripcion_prod || '';
+  document.getElementById('opMCodigo').value        = item.codigo_prod      || '';
+  document.getElementById('opMCostoTotal').value    = item.total_carbone ? '$'+parseFloat(item.total_carbone).toFixed(2) : '';
+
+  // Link Drive Carbone
+  const linkCarb = document.getElementById('opMLinkCarbone');
+  if (item.drive_url_carb) { linkCarb.href = item.drive_url_carb; linkCarb.style.display='inline'; }
+  else linkCarb.style.display = 'none';
+
+  // Campos venta
+  document.getElementById('opMFacEmitida').value    = item.num_fac_emitida || '';
+  document.getElementById('opMFechaVenta').value    = item.fecha_venta     || '';
+  document.getElementById('opMCliente').value       = item.nombre_cliente  || '';
+  document.getElementById('opMRucCliente').value    = item.ruc_cliente     || '';
+  document.getElementById('opMTotalVenta').value    = item.total_venta ? parseFloat(item.total_venta).toFixed(2) : '';
+  document.getElementById('opEsVentaDirecta').checked = false;
+
+  // Link Drive emitida
+  const linkEmit = document.getElementById('opMLinkEmitida');
+  if (item.drive_url_emit) { linkEmit.href = item.drive_url_emit; linkEmit.style.display='inline'; }
+  else linkEmit.style.display = 'none';
+
+  // Confianza
+  const conf = parseInt(item.confianza_match||'0')||0;
+  document.getElementById('opMConfFill').style.width       = conf + '%';
+  document.getElementById('opMConfFill').style.background  = conf>=70?'#4CAF50':conf>=50?'#FF9800':'#f44336';
+  document.getElementById('opMConfPct').textContent        = conf ? conf+'%' : '—';
+
+  // Margen
+  const margen = parseFloat(item.margen||'0')||0;
+  const margenEl = document.getElementById('opMMargen');
+  margenEl.textContent = margen ? '$'+margen.toFixed(2) : '—';
+  margenEl.style.color = margen > 0 ? 'var(--green)' : 'var(--red)';
+
+  document.getElementById('opMOrdenWeb').value = item.id_orden_web || '—';
+  document.getElementById('opMNotas').value    = item.notas        || '';
+
+  // Mostrar zona upload si pendiente o si se forzó vincularMode
+  const esPendiente = item.estado === 'pendiente' && !item.num_fac_emitida;
+  document.getElementById('opUploadZone').style.display = (esPendiente || vincularMode) ? 'block' : 'none';
+  document.getElementById('opPdfFileName').textContent  = '';
+  document.getElementById('opDropZone').classList.remove('has-file');
+
+  // Campos venta editables solo si pendiente
+  ['opMFacEmitida','opMFechaVenta','opMCliente','opMRucCliente','opMTotalVenta'].forEach(id => {
+    const el = document.getElementById(id);
+    el.readOnly = !(esPendiente || vincularMode);
+  });
+
+  // Acciones dinámicas
+  buildOpModalActions(item);
+
+  document.getElementById('opModalOverlay').classList.add('open');
+}
+
+function buildOpModalActions(item) {
+  const actions = document.getElementById('opModalActions');
+  const esPendiente = item.estado === 'pendiente' && !item.num_fac_emitida;
+  const flagRev     = item.flag_revision === true || item.flag_revision === 'TRUE';
+
+  let html = '';
+  if (flagRev) {
+    html += `<button class="btn-primary" onclick="aprobarMatch('${esc(item.id_item)}');closeOpModal()">✓ Aprobar match</button>`;
+  }
+  if (esPendiente) {
+    html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Analizar PDF</button>`;
+    html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarVentaDirecta()">💾 Guardar venta directa</button>`;
+  }
+  if (!esPendiente && !flagRev && item.estado !== 'cerrado') {
+    html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarCambiosOp()">💾 Guardar cambios</button>`;
+  }
+  html += `<button class="btn-secondary" onclick="closeOpModal()">Cerrar</button>`;
+  actions.innerHTML = html;
+}
+
+function closeOpModal() {
+  document.getElementById('opModalOverlay').classList.remove('open');
+  currentOpItem = null;
+}
+function closeOpModalOutside(e) {
+  if (e.target === document.getElementById('opModalOverlay')) closeOpModal();
+}
+
+function recalcMargen() {
+  const venta = parseFloat(document.getElementById('opMTotalVenta').value)||0;
+  const costo = parseFloat((currentOpItem||{}).total_carbone||'0')||0;
+  const margen = venta - costo;
+  const el = document.getElementById('opMMargen');
+  el.textContent = venta ? '$'+margen.toFixed(2) : '—';
+  el.style.color  = margen>0?'var(--green)':'var(--red)';
+}
+
+function toggleVentaDirecta() {
+  const esDirecta = document.getElementById('opEsVentaDirecta').checked;
+  document.getElementById('opMFacEmitida').value = esDirecta ? 'VENTA-DIRECTA' : '';
+  ['opMFacEmitida'].forEach(id => {
+    document.getElementById(id).readOnly = esDirecta;
+  });
+}
+
+// ── Upload PDF pendiente ──
+function handleOpPdfSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  _readOpPdf(file);
+}
+function handleOpPdfDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) _readOpPdf(file);
+}
+function _readOpPdf(file) {
+  if (file.type !== 'application/pdf') { showToast('⚠️ Solo se aceptan archivos PDF'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    opPdfBase64 = ev.target.result.split(',')[1];
+    opPdfName   = file.name;
+    document.getElementById('opPdfFileName').textContent = '📎 ' + file.name;
+    document.getElementById('opDropZone').classList.add('has-file');
+    const btn = document.getElementById('opBtnAnalizarPdf');
+    if (btn) btn.disabled = false;
+    showToast('📎 PDF listo — presiona ✦ Analizar PDF');
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Analizar PDF de factura emitida subido manualmente ──
+async function analizarPdfPendiente() {
+  if (!opPdfBase64 || !currentOpItem) return;
+  const btn = document.getElementById('opBtnAnalizarPdf');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analizando...';
+  try {
+    const data = await gasJsonp('analizarFacturaPendiente', {
+      id_item:   currentOpItem.id_item,
+      pdfBase64: opPdfBase64,
+      tipo:      'emitida',
+    });
+    if (!data.success) throw new Error(data.error || 'Error en análisis');
+    const parsed = data.data;
+    if (parsed.num_factura)    document.getElementById('opMFacEmitida').value   = parsed.num_factura;
+    if (parsed.fecha_emision)  document.getElementById('opMFechaVenta').value   = parsed.fecha_emision;
+    if (parsed.nombre_cliente) document.getElementById('opMCliente').value      = parsed.nombre_cliente;
+    if (parsed.ruc_cliente)    document.getElementById('opMRucCliente').value   = parsed.ruc_cliente;
+    if (parsed.total)          document.getElementById('opMTotalVenta').value   = parseFloat(parsed.total).toFixed(2);
+    recalcMargen();
+    showToast('✅ PDF analizado — revisa y guarda');
+    await loadOperaciones(); // recargar para reflejar cambios del servidor
+    closeOpModal();
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+  }
+  if (btn) { btn.disabled = false; btn.textContent = '✦ Analizar PDF'; }
+}
+
+// ── Guardar venta directa desde modal ──
+async function guardarVentaDirecta() {
+  if (!currentOpItem) return;
+  const esVentaDirecta = document.getElementById('opEsVentaDirecta').checked;
+  const total = parseFloat(document.getElementById('opMTotalVenta').value)||0;
+  const nombre = document.getElementById('opMCliente').value.trim();
+
+  if (!nombre) { showToast('⚠️ Ingresa el nombre del cliente'); return; }
+  if (!total)  { showToast('⚠️ Ingresa el monto de venta');     return; }
+
+  try {
+    const params = {
+      id_item: currentOpItem.id_item,
+      nombre:  nombre,
+      ruc:     document.getElementById('opMRucCliente').value,
+      total:   total,
+      fecha:   document.getElementById('opMFechaVenta').value,
+      notas:   document.getElementById('opMNotas').value,
+    };
+    const data = await gasJsonp('registrarVentaDirecta', params);
+    if (!data.success) throw new Error(data.error || 'Error al guardar');
+    showToast('✅ Venta directa registrada');
+    closeOpModal();
+    await loadOperaciones();
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+  }
+}
+
+// ── Aprobar match flaggeado ──
+async function aprobarMatch(idItem) {
+  try {
+    const data = await gasJsonp('aprobarMatch', { id_item: idItem });
+    if (!data.success) throw new Error(data.error || 'Error al aprobar');
+    showToast('✅ Match aprobado');
+    await loadOperaciones();
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+  }
+}
+
+// ══════════════════════════════════════════════════
+//  JSONP HELPER GENÉRICO PARA OPERACIONES
+//  (reutiliza el mismo patrón que el resto del admin)
+// ══════════════════════════════════════════════════
+function gasJsonp(action, params) {
+  return new Promise((resolve, reject) => {
+    const cb = '_op_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+    window[cb] = result => {
+      delete window[cb];
+      const el = document.getElementById('_s_' + cb);
+      if (el) el.remove();
+      resolve(result);
+    };
+    let qs = '?action=' + encodeURIComponent(action) + '&callback=' + cb;
+    // Para payloads grandes (pdfBase64) usar POST; para el resto JSONP
+    // Nota: pdfBase64 en JSONP puede exceder el límite de URL → usamos POST
+    if (params.pdfBase64) {
+      delete window[cb];
+      // Fallback a POST (GAS doPost)
+      fetch(GAS_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body:    JSON.stringify({ action, ...params }),
+      })
+      .then(r => r.json())
+      .then(resolve)
+      .catch(reject);
+      return;
+    }
+    Object.keys(params).forEach(k => {
+      qs += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+    });
+    const script = document.createElement('script');
+    script.id    = '_s_' + cb;
+    script.src   = GAS_URL + qs;
+    script.onerror = () => { delete window[cb]; reject(new Error('Error de red')); };
+    document.body.appendChild(script);
+    setTimeout(() => { if (window[cb]) { delete window[cb]; reject(new Error('Tiempo agotado (60s)')); } }, 60000);
+  });
+}
+
+
 async function cambiarEstado(idx, nuevoEstado) {
   const orden = ordenes[idx];
   try {
