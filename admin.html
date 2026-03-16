@@ -373,7 +373,6 @@ tr:hover td{background:rgba(0,0,0,.015)}
 .badge-pendiente  {background:#FFF3E0;color:#E65100}
 .badge-inventario {background:#E3F2FD;color:#1565C0}
 .badge-vinculado  {background:var(--green-bg);color:var(--green)}
-.badge-facturado  {background:var(--blue-bg);color:#1565C0}
 .badge-cerrado    {background:#F1F8E9;color:#388E3C}
 .badge-revision   {background:var(--yellow-bg);color:#795548}
 
@@ -534,7 +533,6 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <button class="op-filter-btn" data-op-filter="inventario">📦 Inventario</button>
     <button class="op-filter-btn" data-op-filter="revision">⚠️ Revisar</button>
     <button class="op-filter-btn" data-op-filter="vinculado">Vinculado</button>
-    <button class="op-filter-btn" data-op-filter="facturado">Facturado</button>
     <button class="op-filter-btn" data-op-filter="cerrado">Cerrado</button>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
@@ -554,13 +552,12 @@ tr:hover td{background:rgba(0,0,0,.015)}
           <th>Cliente (Factura)</th>
           <th>Venta</th>
           <th>Margen</th>
-          <th>Orden Web</th>
           <th>Estado</th>
           <th>Acciones</th>
         </tr>
       </thead>
       <tbody id="opBody">
-        <tr><td colspan="9">
+        <tr><td colspan="8">
           <div class="table-loading"><div class="spinner"></div><span>Cargando operaciones...</span></div>
         </td></tr>
       </tbody>
@@ -1724,7 +1721,7 @@ async function loadOperaciones() {
   } catch(err) {
     showToast('⚠️ ' + err.message);
     document.getElementById('opBody').innerHTML =
-      '<tr><td colspan="9"><div class="table-empty"><span style="font-size:2rem">⚠️</span><span>' + esc(err.message) + '</span></div></td></tr>';
+      '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">⚠️</span><span>' + esc(err.message) + '</span></div></td></tr>';
   }
 }
 
@@ -1754,7 +1751,7 @@ async function sincronizarEmails() {
 function renderOpTable(items) {
   const tbody = document.getElementById('opBody');
   if (!items.length) {
-    tbody.innerHTML = '<tr><td colspan="9"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay ítems</span></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay ítems</span></div></td></tr>';
     return;
   }
   tbody.innerHTML = items.map((item, i) => {
@@ -1769,9 +1766,12 @@ function renderOpTable(items) {
           pendiente:  '<span class="badge badge-pendiente">● Pendiente</span>',
           inventario: '<span class="badge badge-inventario">📦 Inventario</span>',
           vinculado:  '<span class="badge badge-vinculado">● Vinculado</span>',
-          facturado:  '<span class="badge badge-facturado">● Facturado</span>',
           cerrado:    '<span class="badge badge-cerrado">✓ Cerrado</span>',
         }[estado] || `<span class="badge">${esc(estado)}</span>`;
+
+    const ordenWebBadge = item.id_orden_web
+      ? `<div style="margin-top:.3rem"><span style="font-size:.65rem;background:#E3F2FD;color:#1565C0;padding:.15rem .5rem;border-radius:4px;font-family:'DM Mono',monospace;display:inline-flex;align-items:center;gap:.25rem">🛒 ${esc(item.id_orden_web)}</span></div>`
+      : '';
 
     const confBar = conf > 0
       ? `<div class="conf-bar" title="${conf}% confianza">
@@ -1802,8 +1802,7 @@ function renderOpTable(items) {
       </td>
       <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--green)">${ventaFmt}</td>
       <td>${margenFmt}</td>
-      <td style="font-size:.72rem;font-family:'DM Mono',monospace">${esc(item.id_orden_web||'—')}</td>
-      <td>${estadoBadge}</td>
+      <td>${estadoBadge}${ordenWebBadge}</td>
       <td>
         <div class="action-btns">
           <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal(${i})">Ver</button>
