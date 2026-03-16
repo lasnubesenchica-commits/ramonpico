@@ -571,6 +571,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
         <div class="modal-grid">
           <div class="modal-field full"><label>Nombre</label><input type="text" id="mNombre" readonly></div>
           <div class="modal-field"><label>Cédula / RUC</label><input type="text" id="mRuc" readonly></div>
+          <div class="modal-field"><label>DV</label><input type="text" id="mDv" readonly></div>
           <div class="modal-field"><label>Teléfono</label><input type="text" id="mTelefono" readonly></div>
           <div class="modal-field full"><label>Email</label><input type="text" id="mEmail" readonly></div>
           <div class="modal-field full"><label>Dirección</label><input type="text" id="mDireccion" readonly></div>
@@ -751,6 +752,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
           <div class="modal-field"><label>Fecha venta</label><input type="text" id="opMFechaVenta" placeholder="YYYY-MM-DD"></div>
           <div class="modal-field full"><label>Cliente</label><input type="text" id="opMCliente"></div>
           <div class="modal-field"><label>RUC cliente</label><input type="text" id="opMRucCliente"></div>
+          <div class="modal-field"><label>DV cliente</label><input type="text" id="opMDvCliente"></div>
           <div class="modal-field"><label>Total venta (con ITBMS)</label><input type="text" id="opMTotalVenta" placeholder="0.00" oninput="recalcMargen()"></div>
           <div class="modal-field" style="grid-column:1/-1">
             <a id="opMLinkEmitida" href="#" target="_blank" style="font-size:.78rem;color:var(--green);display:none">📄 Ver factura emitida →</a>
@@ -820,6 +822,7 @@ const COL = {
   MONTO_PAGADO:14, ESTADO_PAGO:15, SALDO_PEND:16,
   CODIGO_TRANS:17, PAGADOR:18, FECHA_PAGO:19,
   INGRESO_ID:20,
+  DV:21,
 };
 
 // ══════════════════════════════════════════════════
@@ -1144,6 +1147,7 @@ function openModal(idx) {
   document.getElementById('modalTitle').textContent = r[COL.ORDEN_NUM] || 'Orden';
   document.getElementById('mNombre').value    = r[COL.NOMBRE]    || '';
   document.getElementById('mRuc').value       = r[COL.RUC]       || '';
+  document.getElementById('mDv').value        = r[COL.DV]        || '';
   document.getElementById('mTelefono').value  = r[COL.TELEFONO]  || '';
   document.getElementById('mEmail').value     = r[COL.EMAIL]     || '';
   document.getElementById('mDireccion').value = r[COL.DIRECCION] || '';
@@ -1703,6 +1707,7 @@ function openOpModal(idx, vincularMode) {
   document.getElementById('opMFechaVenta').value    = item.fecha_venta     || '';
   document.getElementById('opMCliente').value       = item.nombre_cliente  || '';
   document.getElementById('opMRucCliente').value    = item.ruc_cliente     || '';
+  document.getElementById('opMDvCliente').value     = item.dv_cliente      || '';
   document.getElementById('opMTotalVenta').value    = item.total_venta ? parseFloat(item.total_venta).toFixed(2) : '';
   document.getElementById('opEsVentaDirecta').checked = false;
 
@@ -1733,7 +1738,7 @@ function openOpModal(idx, vincularMode) {
   document.getElementById('opDropZone').classList.remove('has-file');
 
   // Campos venta editables solo si pendiente
-  ['opMFacEmitida','opMFechaVenta','opMCliente','opMRucCliente','opMTotalVenta'].forEach(id => {
+  ['opMFacEmitida','opMFechaVenta','opMCliente','opMRucCliente','opMDvCliente','opMTotalVenta'].forEach(id => {
     const el = document.getElementById(id);
     el.readOnly = !(esPendiente || vincularMode);
   });
@@ -1840,6 +1845,7 @@ async function analizarPdfPendiente() {
     if (parsed.fecha_emision)  document.getElementById('opMFechaVenta').value   = parsed.fecha_emision;
     if (parsed.nombre_cliente) document.getElementById('opMCliente').value      = parsed.nombre_cliente;
     if (parsed.ruc_cliente)    document.getElementById('opMRucCliente').value   = parsed.ruc_cliente;
+    if (parsed.dv_cliente)     document.getElementById('opMDvCliente').value    = parsed.dv_cliente;
     if (parsed.total)          document.getElementById('opMTotalVenta').value   = parseFloat(parsed.total).toFixed(2);
     recalcMargen();
     showToast('✅ PDF analizado — revisa y guarda');
@@ -1866,6 +1872,7 @@ async function guardarVentaDirecta() {
       id_item: currentOpItem.id_item,
       nombre:  nombre,
       ruc:     document.getElementById('opMRucCliente').value,
+      dv:      document.getElementById('opMDvCliente').value  || '',
       total:   total,
       fecha:   document.getElementById('opMFechaVenta').value,
       notas:   document.getElementById('opMNotas').value,
@@ -1874,7 +1881,14 @@ async function guardarVentaDirecta() {
     if (!data.success) throw new Error(data.error || 'Error al guardar');
     showToast('✅ Venta directa registrada');
     closeOpModal();
-    await loadOperaciones();
+    const idx = opItems.findIndex(i => i.id_item === currentOpItem.id_item);
+    if (idx !== -1) {
+      opItems[idx].estado = 'vinculado';
+      opItems[idx].nombre_cliente = params.nombre;
+      opItems[idx].total_venta = params.total;
+      opItems[idx].num_fac_emitida = 'VENTA-DIRECTA';
+    }
+    applyOpFilters();
   } catch(err) {
     showToast('⚠️ ' + err.message);
   }
@@ -1886,7 +1900,12 @@ async function aprobarMatch(idItem) {
     const data = await gasJsonp('aprobarMatch', { id_item: idItem });
     if (!data.success) throw new Error(data.error || 'Error al aprobar');
     showToast('✅ Match aprobado');
-    await loadOperaciones();
+    const idx = opItems.findIndex(i => i.id_item === idItem);
+    if (idx !== -1) {
+      opItems[idx].flag_revision = false;
+      opItems[idx].estado = 'vinculado';
+    }
+    applyOpFilters();
   } catch(err) {
     showToast('⚠️ ' + err.message);
   }
@@ -1904,7 +1923,12 @@ async function buscarOrdenWeb(idItem) {
     if (!data.success) throw new Error(data.error || 'Error');
     if (data.encontrado) {
       showToast('✅ Orden web vinculada: ' + data.ordenNum);
-      await loadOperaciones();
+      const idx = opItems.findIndex(i => i.id_item === idItem);
+      if (idx !== -1) {
+        opItems[idx].id_orden_web = data.ordenNum;
+        opItems[idx].estado = 'facturado';
+      }
+      applyOpFilters();
     } else {
       showToast('ℹ️ No se encontró orden web correspondiente');
     }
