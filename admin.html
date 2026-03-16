@@ -370,11 +370,22 @@ tr:hover td{background:rgba(0,0,0,.015)}
 .op-table tr:hover td{background:rgba(0,0,0,.015)}
 
 /* Estado badges Operaciones */
-.badge-pendiente {background:#FFF3E0;color:#E65100}
+.badge-pendiente  {background:#FFF3E0;color:#E65100}
+.badge-inventario {background:#E3F2FD;color:#1565C0}
 .badge-vinculado  {background:var(--green-bg);color:var(--green)}
 .badge-facturado  {background:var(--blue-bg);color:#1565C0}
 .badge-cerrado    {background:#F1F8E9;color:#388E3C}
 .badge-revision   {background:var(--yellow-bg);color:#795548}
+
+/* Inventario btn */
+.btn-inventario{background:#E3F2FD;color:#1565C0}
+.btn-inventario:hover{background:#BBDEFB}
+
+/* Egresos tab */
+.badge-egreso-mercancia{background:#FFF3E0;color:#E65100}
+.badge-egreso-operativo{background:#F3E5F5;color:#6A1B9A}
+.badge-egreso-nomina   {background:#EDE7F6;color:#4527A0}
+.badge-egreso-servicios{background:#E8EAF6;color:#283593}
 
 /* Confianza bar */
 .conf-bar{display:flex;align-items:center;gap:.4rem}
@@ -444,6 +455,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
   <div class="main-tabs">
     <button class="main-tab active" id="tabVentasWeb" onclick="switchTab('ventasWeb')">🛒 Ventas Web</button>
     <button class="main-tab" id="tabOperaciones" onclick="switchTab('operaciones')">⚙️ Operaciones</button>
+    <button class="main-tab" id="tabEgresos" onclick="switchTab('egresos')">📤 Egresos</button>
   </div>
 
   <!-- ══════════ SECCIÓN: VENTAS WEB ══════════ -->
@@ -509,6 +521,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
   <div class="op-stats" id="opStatsBar">
     <div class="stat-pill"><div class="stat-pill-num orange" id="opStatTotal">—</div><div class="stat-pill-label">Total ítems</div></div>
     <div class="stat-pill"><div class="stat-pill-num" style="color:#E65100" id="opStatPendiente">—</div><div class="stat-pill-label">Pendientes</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#1565C0" id="opStatInventario">—</div><div class="stat-pill-label">Inventario</div></div>
     <div class="stat-pill"><div class="stat-pill-num" style="color:#795548" id="opStatRevision">—</div><div class="stat-pill-label">Para revisar</div></div>
     <div class="stat-pill"><div class="stat-pill-num green" id="opStatCerrado">—</div><div class="stat-pill-label">Cerrados</div></div>
     <div class="stat-pill"><div class="stat-pill-num orange" id="opStatMargen">—</div><div class="stat-pill-label">Margen total</div></div>
@@ -518,6 +531,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
   <div class="op-toolbar">
     <button class="op-filter-btn active" data-op-filter="all">Todos</button>
     <button class="op-filter-btn" data-op-filter="pendiente">Pendiente</button>
+    <button class="op-filter-btn" data-op-filter="inventario">📦 Inventario</button>
     <button class="op-filter-btn" data-op-filter="revision">⚠️ Revisar</button>
     <button class="op-filter-btn" data-op-filter="vinculado">Vinculado</button>
     <button class="op-filter-btn" data-op-filter="facturado">Facturado</button>
@@ -553,6 +567,56 @@ tr:hover td{background:rgba(0,0,0,.015)}
     </table>
   </div>
 </div><!-- /sectionOperaciones -->
+
+<!-- ═══════════ SECCIÓN: EGRESOS ═══════════ -->
+<div id="sectionEgresos" style="display:none">
+
+  <!-- Stats Egresos -->
+  <div class="op-stats" id="egresoStatsBar">
+    <div class="stat-pill"><div class="stat-pill-num orange" id="eStatTotal">—</div><div class="stat-pill-label">Total egresos</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#E65100" id="eStatMercancia">—</div><div class="stat-pill-label">Costo mercancía</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#6A1B9A" id="eStatOperativo">—</div><div class="stat-pill-label">Operativos</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#1565C0" id="eStatTotalMonto">—</div><div class="stat-pill-label">Total gastado</div></div>
+  </div>
+
+  <!-- Toolbar Egresos -->
+  <div class="op-toolbar">
+    <button class="op-filter-btn active" data-egr-filter="all">Todos</button>
+    <button class="op-filter-btn" data-egr-filter="costo_mercancia">📦 Mercancía</button>
+    <button class="op-filter-btn" data-egr-filter="costo_operativo">🏢 Operativo</button>
+    <button class="op-filter-btn" data-egr-filter="nomina">👤 Nómina</button>
+    <button class="op-filter-btn" data-egr-filter="servicios">⚡ Servicios</button>
+    <div class="search-wrap" style="margin-left:auto">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="filter-search" id="searchEgr" placeholder="Buscar egreso...">
+    </div>
+    <button class="btn-sync" onclick="abrirModalNuevoEgreso()" style="background:#6A1B9A">+ Nuevo egreso</button>
+    <button class="btn-sync" onclick="loadEgresos()">↻ Actualizar</button>
+  </div>
+
+  <!-- Tabla Egresos -->
+  <div class="op-table-wrap">
+    <table class="op-table" id="egresoTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Fecha</th>
+          <th>Tipo</th>
+          <th>Descripción</th>
+          <th>Proveedor</th>
+          <th>Factura Ref.</th>
+          <th>Total</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody id="egresoBody">
+        <tr><td colspan="8">
+          <div class="table-loading"><div class="spinner"></div><span>Cargando egresos...</span></div>
+        </td></tr>
+      </tbody>
+    </table>
+  </div>
+</div><!-- /sectionEgresos -->
 
 </div><!-- /app -->
 
@@ -704,6 +768,107 @@ tr:hover td{background:rgba(0,0,0,.015)}
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
+
+<!-- ═══════════ MODAL: MOVER A INVENTARIO ═══════════ -->
+<div class="modal-overlay" id="invModalOverlay" onclick="if(event.target===this)closeInvModal()">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title">📦 Mover a Inventario</div>
+      <button class="modal-close" onclick="closeInvModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-section-label">Producto</div>
+        <div id="invProductoDesc" style="font-size:.88rem;font-weight:600;margin-bottom:.25rem"></div>
+        <div id="invProductoCodigo" style="font-size:.75rem;color:var(--muted);font-family:'DM Mono',monospace"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-section-label">Datos de inventario</div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <label>Cantidad a inventariar</label>
+            <input type="number" id="invCantidad" min="1" value="1" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.95rem;outline:none">
+          </div>
+          <div class="modal-field">
+            <label>Costo unitario (ref.)</label>
+            <input type="text" id="invCostoUnit" readonly style="background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.95rem">
+          </div>
+          <div class="modal-field full">
+            <label>Notas (opcional)</label>
+            <input type="text" id="invNotas" placeholder="Ej: Bodega A, revisado, etc." style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
+        </div>
+      </div>
+      <div style="background:#E3F2FD;border:1px solid #90CAF9;border-radius:8px;padding:.85rem 1rem;font-size:.8rem;color:#1565C0">
+        ℹ️ Al mover a inventario se registrará automáticamente un <strong>egreso de costo</strong> en la hoja de Egresos por el valor de la factura Carbone.
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" style="background:#1565C0" onclick="confirmarMoverInventario()">📦 Confirmar inventario</button>
+      <button class="btn-secondary" onclick="closeInvModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL: NUEVO EGRESO OPERATIVO ═══════════ -->
+<div class="modal-overlay" id="egresoModalOverlay" onclick="if(event.target===this)closeEgresoModal()">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">📤 Registrar Egreso</div>
+      <button class="modal-close" onclick="closeEgresoModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-grid">
+          <div class="modal-field full">
+            <label>Tipo de egreso</label>
+            <select id="eTipo" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+              <option value="costo_operativo">🏢 Costo operativo</option>
+              <option value="nomina">👤 Nómina / empleado</option>
+              <option value="servicios">⚡ Servicios</option>
+            </select>
+          </div>
+          <div class="modal-field full">
+            <label>Descripción *</label>
+            <input type="text" id="eDescripcion" placeholder="Ej: Gasolina visita clientes, alquiler oficina..." style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
+          <div class="modal-field">
+            <label>Categoría</label>
+            <input type="text" id="eCategoria" placeholder="Gasolina, Oficina, Empleado..." style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
+          <div class="modal-field">
+            <label>Fecha del gasto *</label>
+            <input type="date" id="eFecha" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
+          <div class="modal-field">
+            <label>Total (USD) *</label>
+            <input type="number" id="eTotal" min="0" step="0.01" placeholder="0.00" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
+          <div class="modal-field">
+            <label>N° Factura / Recibo</label>
+            <input type="text" id="eNumFac" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
+          <div class="modal-field full">
+            <label>Proveedor / Beneficiario</label>
+            <input type="text" id="eProveedor" placeholder="Nombre del proveedor o empleado" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
+          <div class="modal-field">
+            <label>RUC proveedor</label>
+            <input type="text" id="eRucProv" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
+          <div class="modal-field full">
+            <label>Notas internas</label>
+            <input type="text" id="eNotas" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" style="background:#6A1B9A" onclick="guardarEgresoOperativo()">💾 Guardar egreso</button>
+      <button class="btn-secondary" onclick="closeEgresoModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 <!-- ═══════════ MODAL OPERACIONES ═══════════ -->
 <div class="modal-overlay" id="opModalOverlay" onclick="closeOpModalOutside(event)">
@@ -1520,13 +1685,17 @@ function switchTab(tab) {
   activeTab = tab;
   document.getElementById('sectionVentasWeb').style.display   = tab === 'ventasWeb'   ? 'block' : 'none';
   document.getElementById('sectionOperaciones').style.display = tab === 'operaciones' ? 'block' : 'none';
+  document.getElementById('sectionEgresos').style.display     = tab === 'egresos'     ? 'block' : 'none';
   document.getElementById('tabVentasWeb').classList.toggle('active',   tab === 'ventasWeb');
   document.getElementById('tabOperaciones').classList.toggle('active', tab === 'operaciones');
+  document.getElementById('tabEgresos').classList.toggle('active',     tab === 'egresos');
   if (tab === 'operaciones' && !opItems.length) loadOperaciones();
+  if (tab === 'egresos'     && !egrItems.length) loadEgresos();
 }
 
 function refreshCurrentSection() {
-  if (activeTab === 'ventasWeb') loadOrdenes();
+  if (activeTab === 'ventasWeb')   loadOrdenes();
+  else if (activeTab === 'egresos') loadEgresos();
   else loadOperaciones();
 }
 
@@ -1592,14 +1761,16 @@ function renderOpTable(items) {
     const estado    = item.estado || 'pendiente';
     const flagRev   = item.flag_revision === true || item.flag_revision === 'TRUE';
     const conf      = parseInt(item.confianza_match || '0') || 0;
+    const cantidad  = parseInt(item.cantidad || '1') || 1;
 
     const estadoBadge = flagRev
       ? '<span class="badge badge-revision">⚠ Revisar</span>'
       : {
-          pendiente: '<span class="badge badge-pendiente">● Pendiente</span>',
-          vinculado: '<span class="badge badge-vinculado">● Vinculado</span>',
-          facturado: '<span class="badge badge-facturado">● Facturado</span>',
-          cerrado:   '<span class="badge badge-cerrado">✓ Cerrado</span>',
+          pendiente:  '<span class="badge badge-pendiente">● Pendiente</span>',
+          inventario: '<span class="badge badge-inventario">📦 Inventario</span>',
+          vinculado:  '<span class="badge badge-vinculado">● Vinculado</span>',
+          facturado:  '<span class="badge badge-facturado">● Facturado</span>',
+          cerrado:    '<span class="badge badge-cerrado">✓ Cerrado</span>',
         }[estado] || `<span class="badge">${esc(estado)}</span>`;
 
     const confBar = conf > 0
@@ -1612,12 +1783,15 @@ function renderOpTable(items) {
     const margenFmt = margen ? `<span style="font-weight:700;color:${margen>0?'var(--green)':'var(--red)'}">$${margen.toFixed(2)}</span>` : '—';
     const costoFmt  = item.total_carbone ? `$${parseFloat(item.total_carbone).toFixed(2)}` : '—';
     const ventaFmt  = item.total_venta   ? `$${parseFloat(item.total_venta).toFixed(2)}`   : '—';
+    const cantBadge = estado === 'inventario'
+      ? `<span style="font-family:'DM Mono',monospace;font-size:.7rem;background:#E3F2FD;color:#1565C0;padding:.15rem .45rem;border-radius:4px;margin-left:.3rem">×${cantidad}</span>`
+      : '';
 
     return `<tr>
       <td><span style="font-family:'DM Mono',monospace;font-size:.72rem">${esc(item.id_item||'')}</span>
           <div style="font-size:.65rem;color:var(--chrome)">${esc(item.num_fac_carbone||'')}</div></td>
       <td>
-        <div style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.descripcion_prod||'')}">${esc((item.descripcion_prod||'').substring(0,50))}</div>
+        <div style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.descripcion_prod||'')}">${esc((item.descripcion_prod||'').substring(0,50))}${cantBadge}</div>
         <div style="font-size:.7rem;color:var(--muted)">${esc(item.codigo_prod||'')} · ${esc(item.fecha_compra||'').substring(0,10)}</div>
         ${confBar}
       </td>
@@ -1635,6 +1809,7 @@ function renderOpTable(items) {
           <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal(${i})">Ver</button>
           ${flagRev ? `<button class="btn-xs btn-confirm" onclick="aprobarMatch('${esc(item.id_item)}')">✓ Aprobar</button>` : ''}
           ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" onclick="openOpModal(${i},true)">+ Vincular</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" onclick="abrirModalInventario(${i})" title="Mover a inventario">📦</button>` : ''}
           ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" onclick="buscarOrdenWeb('${esc(item.id_item)}')" title="Buscar orden web vinculada">🔗</button>` : ''}
         </div>
       </td>
@@ -1643,12 +1818,13 @@ function renderOpTable(items) {
 }
 
 function updateOpStats(items) {
-  document.getElementById('opStatTotal').textContent     = items.length;
-  document.getElementById('opStatPendiente').textContent = items.filter(i=>i.estado==='pendiente'&&i.flag_revision!==true&&i.flag_revision!=='TRUE').length;
-  document.getElementById('opStatRevision').textContent  = items.filter(i=>i.flag_revision===true||i.flag_revision==='TRUE').length;
-  document.getElementById('opStatCerrado').textContent   = items.filter(i=>i.estado==='cerrado').length;
+  document.getElementById('opStatTotal').textContent      = items.length;
+  document.getElementById('opStatPendiente').textContent  = items.filter(i=>i.estado==='pendiente'&&i.flag_revision!==true&&i.flag_revision!=='TRUE').length;
+  document.getElementById('opStatInventario').textContent = items.filter(i=>i.estado==='inventario').length;
+  document.getElementById('opStatRevision').textContent   = items.filter(i=>i.flag_revision===true||i.flag_revision==='TRUE').length;
+  document.getElementById('opStatCerrado').textContent    = items.filter(i=>i.estado==='cerrado').length;
   const margen = items.reduce((s,i)=>s+(parseFloat(i.margen||'0')||0),0);
-  document.getElementById('opStatMargen').textContent    = margen>0?'$'+margen.toLocaleString('es-PA',{minimumFractionDigits:2}):'—';
+  document.getElementById('opStatMargen').textContent     = margen>0?'$'+margen.toLocaleString('es-PA',{minimumFractionDigits:2}):'—';
 }
 
 // ── Filtros Operaciones ──
@@ -1672,8 +1848,9 @@ function applyOpFilters() {
   }
   if (q) items = items.filter(i =>
     (i.descripcion_prod||'').toLowerCase().includes(q) ||
-    (i.nombre_cliente||'').toLowerCase().includes(q) ||
-    (i.num_fac_carbone||'').toLowerCase().includes(q) ||
+    (i.nombre_cliente||'').toLowerCase().includes(q)   ||
+    (i.num_fac_carbone||'').toLowerCase().includes(q)  ||
+    (i.codigo_prod||'').toLowerCase().includes(q)      ||
     (i.id_item||'').toLowerCase().includes(q)
   );
   opFiltered = items;
@@ -1731,16 +1908,17 @@ function openOpModal(idx, vincularMode) {
   document.getElementById('opMOrdenWeb').value = item.id_orden_web || '—';
   document.getElementById('opMNotas').value    = item.notas        || '';
 
-  // Mostrar zona upload si pendiente o si se forzó vincularMode
-  const esPendiente = item.estado === 'pendiente' && !item.num_fac_emitida;
-  document.getElementById('opUploadZone').style.display = (esPendiente || vincularMode) ? 'block' : 'none';
+  // Mostrar zona upload si pendiente, inventario, o si se forzó vincularMode
+  const esPendiente  = item.estado === 'pendiente' && !item.num_fac_emitida;
+  const esInventario = item.estado === 'inventario';
+  document.getElementById('opUploadZone').style.display = (esPendiente || esInventario || vincularMode) ? 'block' : 'none';
   document.getElementById('opPdfFileName').textContent  = '';
   document.getElementById('opDropZone').classList.remove('has-file');
 
-  // Campos venta editables solo si pendiente
+  // Campos venta editables solo si pendiente o inventario
   ['opMFacEmitida','opMFechaVenta','opMCliente','opMRucCliente','opMDvCliente','opMTotalVenta'].forEach(id => {
     const el = document.getElementById(id);
-    el.readOnly = !(esPendiente || vincularMode);
+    el.readOnly = !(esPendiente || esInventario || vincularMode);
   });
 
   // Acciones dinámicas
@@ -1750,8 +1928,9 @@ function openOpModal(idx, vincularMode) {
 }
 
 function buildOpModalActions(item) {
-  const actions = document.getElementById('opModalActions');
+  const actions    = document.getElementById('opModalActions');
   const esPendiente = item.estado === 'pendiente' && !item.num_fac_emitida;
+  const esInventario = item.estado === 'inventario';
   const flagRev     = item.flag_revision === true || item.flag_revision === 'TRUE';
 
   let html = '';
@@ -1761,11 +1940,16 @@ function buildOpModalActions(item) {
   if (esPendiente) {
     html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Analizar PDF</button>`;
     html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarVentaDirecta()">💾 Guardar venta directa</button>`;
+    html += `<button class="btn-primary" style="background:#1565C0" onclick="closeOpModal();abrirModalInventario(opFiltered.indexOf(item))">📦 Inventario</button>`;
   }
-  if (!esPendiente && !flagRev && item.estado !== 'cerrado') {
+  if (esInventario) {
+    html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Vincular factura</button>`;
+    html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarVentaDirecta()">💾 Venta directa</button>`;
+    html += `<span style="font-size:.75rem;background:#E3F2FD;color:#1565C0;padding:.3rem .7rem;border-radius:4px;display:flex;align-items:center;gap:.3rem">📦 En inventario · cant: <strong>${esc(String(item.cantidad||1))}</strong></span>`;
+  }
+  if (!esPendiente && !esInventario && !flagRev && item.estado !== 'cerrado') {
     html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarCambiosOp()">💾 Guardar cambios</button>`;
   }
-  // Botón buscar orden web: visible si tiene factura emitida pero no tiene orden web
   if (item.num_fac_emitida && item.num_fac_emitida !== 'VENTA-DIRECTA' && !item.id_orden_web) {
     html += `<button class="btn-secondary" id="opBtnBuscarOrden" onclick="buscarOrdenWebModal()">🔗 Buscar orden web</button>`;
   }
@@ -1774,6 +1958,12 @@ function buildOpModalActions(item) {
   }
   html += `<button class="btn-secondary" onclick="closeOpModal()">Cerrar</button>`;
   actions.innerHTML = html;
+
+  // Re-activar botón analizar si ya hay PDF
+  if ((esPendiente || esInventario) && opPdfBase64) {
+    const btn = document.getElementById('opBtnAnalizarPdf');
+    if (btn) btn.disabled = false;
+  }
 }
 
 function closeOpModal() {
@@ -2001,6 +2191,217 @@ function gasJsonp(action, params) {
   });
 }
 
+
+// ══════════════════════════════════════════════════
+//  MOVER A INVENTARIO
+// ══════════════════════════════════════════════════
+let invItemActual = null;
+
+function abrirModalInventario(idx) {
+  const item = opFiltered[idx];
+  if (!item) return;
+  invItemActual = item;
+  document.getElementById('invProductoDesc').textContent   = item.descripcion_prod || '—';
+  document.getElementById('invProductoCodigo').textContent = item.codigo_prod ? 'Código: ' + item.codigo_prod : '';
+  document.getElementById('invCantidad').value             = 1;
+  document.getElementById('invNotas').value                = '';
+  const costoUnit = item.total_carbone ? '$' + parseFloat(item.total_carbone).toFixed(2) : '—';
+  document.getElementById('invCostoUnit').value = costoUnit;
+  document.getElementById('invModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeInvModal() {
+  document.getElementById('invModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  invItemActual = null;
+}
+
+async function confirmarMoverInventario() {
+  if (!invItemActual) return;
+  const cantidad = parseInt(document.getElementById('invCantidad').value) || 1;
+  const notas    = document.getElementById('invNotas').value.trim();
+  const btn      = document.querySelector('#invModalOverlay .btn-primary');
+  btn.disabled   = true;
+  btn.textContent = '⏳ Procesando...';
+  try {
+    const data = await gasJsonp('moverAInventario', {
+      id_item:  invItemActual.id_item,
+      cantidad: cantidad,
+      notas:    notas,
+    });
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    showToast(`✅ ${invItemActual.descripcion_prod?.substring(0,30) || 'Ítem'} → Inventario | Egreso: ${data.egresoId}`);
+    // Actualizar en memoria
+    const idx = opItems.findIndex(i => i.id_item === invItemActual.id_item);
+    if (idx !== -1) {
+      opItems[idx].estado   = 'inventario';
+      opItems[idx].cantidad = cantidad;
+    }
+    closeInvModal();
+    updateOpStats(opItems);
+    applyOpFilters();
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+  }
+  btn.disabled    = false;
+  btn.textContent = '📦 Confirmar inventario';
+}
+
+// ══════════════════════════════════════════════════
+//  EGRESOS — STATE & LOAD
+// ══════════════════════════════════════════════════
+let egrItems    = [];
+let egrFiltered = [];
+let egrFilter   = 'all';
+
+async function loadEgresos() {
+  document.getElementById('egresoBody').innerHTML =
+    '<tr><td colspan="8"><div class="table-loading"><div class="spinner"></div><span>Cargando egresos...</span></div></td></tr>';
+  try {
+    const data = await gasJsonp('getEgresos', {});
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    egrItems = data.items || [];
+    updateEgresoStats(egrItems);
+    applyEgresoFilters();
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+    document.getElementById('egresoBody').innerHTML =
+      '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">⚠️</span><span>' + esc(err.message) + '</span></div></td></tr>';
+  }
+}
+
+function updateEgresoStats(items) {
+  document.getElementById('eStatTotal').textContent     = items.length;
+  document.getElementById('eStatMercancia').textContent = items.filter(i=>i.tipo_egreso==='costo_mercancia').length;
+  document.getElementById('eStatOperativo').textContent = items.filter(i=>i.tipo_egreso!=='costo_mercancia').length;
+  const total = items.reduce((s,i)=>s+(parseFloat(i.total||'0')||0), 0);
+  document.getElementById('eStatTotalMonto').textContent = total > 0
+    ? '$' + total.toLocaleString('es-PA', {minimumFractionDigits:2}) : '—';
+}
+
+// Filtros egresos
+document.querySelectorAll('[data-egr-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-egr-filter]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    egrFilter = btn.dataset.egrFilter;
+    applyEgresoFilters();
+  });
+});
+document.getElementById('searchEgr').addEventListener('input', applyEgresoFilters);
+
+function applyEgresoFilters() {
+  const q = document.getElementById('searchEgr').value.toLowerCase().trim();
+  let items = egrItems;
+  if (egrFilter !== 'all') items = items.filter(i => i.tipo_egreso === egrFilter);
+  if (q) items = items.filter(i =>
+    (i.descripcion||'').toLowerCase().includes(q)  ||
+    (i.proveedor||'').toLowerCase().includes(q)    ||
+    (i.categoria||'').toLowerCase().includes(q)    ||
+    (i.num_fac_ref||'').toLowerCase().includes(q)  ||
+    (i.id_egreso||'').toLowerCase().includes(q)
+  );
+  egrFiltered = items;
+  renderEgresoTable(items);
+}
+
+function renderEgresoTable(items) {
+  const tbody = document.getElementById('egresoBody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay egresos</span></div></td></tr>';
+    return;
+  }
+  const tipoBadge = t => ({
+    costo_mercancia: '<span class="badge badge-egreso-mercancia">📦 Mercancía</span>',
+    costo_operativo: '<span class="badge badge-egreso-operativo">🏢 Operativo</span>',
+    nomina:          '<span class="badge badge-egreso-nomina">👤 Nómina</span>',
+    servicios:       '<span class="badge badge-egreso-servicios">⚡ Servicios</span>',
+  }[t] || `<span class="badge">${esc(t||'—')}</span>`);
+
+  const estadoBadge = e => ({
+    registrado: '<span class="badge badge-pendiente">● Registrado</span>',
+    pagado:     '<span class="badge badge-cerrado">✓ Pagado</span>',
+    anulado:    '<span class="badge badge-cancelada">✕ Anulado</span>',
+  }[e] || `<span class="badge">${esc(e||'—')}</span>`);
+
+  tbody.innerHTML = items.map(item => {
+    const total = parseFloat(item.total || '0') || 0;
+    return `<tr>
+      <td><span style="font-family:'DM Mono',monospace;font-size:.7rem">${esc(item.id_egreso||'')}</span></td>
+      <td style="white-space:nowrap;color:var(--muted);font-size:.8rem">${esc(String(item.fecha_egreso||'').substring(0,10))}</td>
+      <td>${tipoBadge(item.tipo_egreso)}<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem">${esc(item.categoria||'')}</div></td>
+      <td>
+        <div style="font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.descripcion||'')}">${esc((item.descripcion||'').substring(0,60))}</div>
+        ${item.id_item_cv ? `<div style="font-size:.65rem;color:var(--muted);font-family:'DM Mono',monospace">${esc(item.id_item_cv)}</div>` : ''}
+      </td>
+      <td style="font-size:.8rem">${esc(item.proveedor||'—')}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:.75rem">${esc(item.num_fac_ref||'—')}</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#C62828">$${total.toFixed(2)}</td>
+      <td>${estadoBadge(item.estado)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════
+//  NUEVO EGRESO OPERATIVO — MODAL
+// ══════════════════════════════════════════════════
+function abrirModalNuevoEgreso() {
+  // Resetear campos
+  document.getElementById('eTipo').value        = 'costo_operativo';
+  document.getElementById('eDescripcion').value = '';
+  document.getElementById('eCategoria').value   = '';
+  document.getElementById('eFecha').value       = new Date().toISOString().substring(0, 10);
+  document.getElementById('eTotal').value       = '';
+  document.getElementById('eNumFac').value      = '';
+  document.getElementById('eProveedor').value   = '';
+  document.getElementById('eRucProv').value     = '';
+  document.getElementById('eNotas').value       = '';
+  document.getElementById('egresoModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEgresoModal() {
+  document.getElementById('egresoModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+async function guardarEgresoOperativo() {
+  const descripcion = document.getElementById('eDescripcion').value.trim();
+  const total       = parseFloat(document.getElementById('eTotal').value) || 0;
+  const fecha       = document.getElementById('eFecha').value;
+
+  if (!descripcion) { showToast('⚠️ La descripción es requerida'); return; }
+  if (!total)       { showToast('⚠️ El total es requerido');       return; }
+  if (!fecha)       { showToast('⚠️ La fecha es requerida');       return; }
+
+  const btn = document.querySelector('#egresoModalOverlay .btn-primary');
+  btn.disabled    = true;
+  btn.textContent = '⏳ Guardando...';
+
+  try {
+    const data = await gasJsonp('registrarEgresoOperativo', {
+      fecha:       fecha,
+      tipo:        document.getElementById('eTipo').value,
+      categoria:   document.getElementById('eCategoria').value.trim(),
+      proveedor:   document.getElementById('eProveedor').value.trim(),
+      ruc_prov:    document.getElementById('eRucProv').value.trim(),
+      num_fac:     document.getElementById('eNumFac').value.trim(),
+      total:       total,
+      descripcion: descripcion,
+      notas:       document.getElementById('eNotas').value.trim(),
+    });
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    showToast('✅ Egreso registrado: ' + data.egresoId);
+    closeEgresoModal();
+    // Recargar egresos si estamos en esa pestaña
+    if (activeTab === 'egresos') loadEgresos();
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+  }
+  btn.disabled    = false;
+  btn.textContent = '💾 Guardar egreso';
+}
 
 async function cambiarEstado(idx, nuevoEstado) {
   const orden = ordenes[idx];
