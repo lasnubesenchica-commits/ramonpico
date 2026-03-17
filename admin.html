@@ -2482,11 +2482,11 @@ function renderOpTable(items) {
       <td>${estadoBadge}${ordenWebBadge}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" data-op-ver="${i}">Ver</button>
-          ${flagRev ? `<button class="btn-xs btn-confirm" data-op-aprobar="${i}">✓ Aprobar</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" data-op-vincular="${i}">+ Vincular</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" data-op-inv="${i}" title="Mover a inventario">📦</button>` : ''}
-          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" data-op-orden="${i}" title="Buscar orden web vinculada">🔗</button>` : ''}
+          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal(${i})">Ver</button>
+          ${flagRev ? `<button class="btn-xs btn-confirm" onclick="aprobarMatch(opFiltered[${i}].id_item)">✓ Aprobar</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" onclick="openOpModal(${i},true)">+ Vincular</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" onclick="abrirModalInventarioPorId(opFiltered[${i}].id_item)" title="Mover a inventario">📦</button>` : ''}
+          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" onclick="buscarOrdenWeb(opFiltered[${i}].id_item)" title="Buscar orden web vinculada">🔗</button>` : ''}
         </div>
       </td>
     </tr>`;
