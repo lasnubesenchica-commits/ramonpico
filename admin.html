@@ -2487,15 +2487,20 @@ function renderOpTable(items) {
 }
 
 // ── Event delegation para acciones de Operaciones ──
-document.getElementById('opBody').addEventListener('click', function(e) {
-  const btn = e.target.closest('button[data-op-ver], button[data-op-aprobar], button[data-op-vincular], button[data-op-inv], button[data-op-orden]');
+// Usar el ancestro table en lugar del tbody para mayor robustez
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('[data-op-ver],[data-op-aprobar],[data-op-vincular],[data-op-inv],[data-op-orden]');
   if (!btn) return;
+  // Solo actuar si el click viene de dentro de opBody
+  if (!document.getElementById('opBody').contains(btn)) return;
   e.stopPropagation();
-  if (btn.dataset.opVer)     openOpModal(btn.dataset.opVer);
-  if (btn.dataset.opAprobar) aprobarMatch(btn.dataset.opAprobar);
-  if (btn.dataset.opVincular)openOpModal(btn.dataset.opVincular, true);
-  if (btn.dataset.opInv)     abrirModalInventarioPorId(btn.dataset.opInv);
-  if (btn.dataset.opOrden)   buscarOrdenWeb(btn.dataset.opOrden);
+  const id = btn.dataset.opVer || btn.dataset.opAprobar || btn.dataset.opVincular || btn.dataset.opInv || btn.dataset.opOrden;
+  console.log('op action click | attr:', Object.keys(btn.dataset).join(','), '| id:', id);
+  if (btn.dataset.opVer)      openOpModal(btn.dataset.opVer);
+  if (btn.dataset.opAprobar)  aprobarMatch(btn.dataset.opAprobar);
+  if (btn.dataset.opVincular) openOpModal(btn.dataset.opVincular, true);
+  if (btn.dataset.opInv)      abrirModalInventarioPorId(btn.dataset.opInv);
+  if (btn.dataset.opOrden)    buscarOrdenWeb(btn.dataset.opOrden);
 });
 
 // ── Sort Operaciones ──
@@ -2578,9 +2583,15 @@ function applyOpFilters() {
 //  MODAL OPERACIONES
 // ══════════════════════════════════════════════════
 function openOpModal(idItem, vincularMode) {
-  // Buscar por id_item en lugar de índice — evita el bug de desincronía con sorted/filtered
-  currentOpItem = opFiltered.find(i => i.id_item === idItem) || null;
-  if (!currentOpItem) return;
+  // Buscar en opFiltered primero, luego en opItems completo como fallback
+  currentOpItem = opFiltered.find(i => String(i.id_item) === String(idItem))
+               || opItems.find(i => String(i.id_item) === String(idItem))
+               || null;
+  if (!currentOpItem) {
+    console.warn('openOpModal: ítem no encontrado:', idItem, '| opFiltered:', opFiltered.length, '| opItems:', opItems.length);
+    showToast('⚠️ No se encontró el ítem: ' + idItem);
+    return;
+  }
   opPdfBase64  = null;
   opPdfName    = null;
 
