@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
 <style>
 :root {
@@ -419,6 +420,114 @@ tr:hover td{background:rgba(0,0,0,.015)}
   .modal-grid{grid-template-columns:1fr}
   .main-tabs{padding:0 1rem}
 }
+
+/* ── DASHBOARD P&L ── */
+#sectionDashboard { display:none }
+
+.pl-control-bar {
+  display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+  padding:1rem 2rem;border-bottom:1px solid var(--border);
+  background:var(--white);position:sticky;top:60px;z-index:50;
+}
+.pl-control-label {
+  font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin-right:.1rem;
+}
+.pl-year-select {
+  font-family:'DM Mono',monospace;font-size:.78rem;font-weight:600;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r);
+  padding:.35rem .65rem;color:var(--text);outline:none;cursor:pointer;
+  transition:border-color .2s;
+}
+.pl-year-select:focus { border-color:var(--orange) }
+.pl-month-pill {
+  font-family:'DM Mono',monospace;font-size:.65rem;font-weight:600;
+  padding:.3rem .55rem;border-radius:5px;border:1px solid var(--border);
+  background:var(--bg);color:var(--muted);cursor:pointer;transition:all .15s;
+  letter-spacing:.03em;
+}
+.pl-month-pill:hover { border-color:var(--orange);color:var(--orange) }
+.pl-month-pill.active { background:var(--orange);border-color:var(--orange);color:#fff; }
+.pl-month-pill.has-data { border-color:rgba(224,90,0,.4) }
+.pl-month-pill.ytd-active { background:var(--text);border-color:var(--text);color:#fff; }
+.pl-tipo-wrap { margin-left:auto;display:flex;align-items:center;gap:.4rem;flex-wrap:wrap; }
+.pl-tipo-btn {
+  font-size:.72rem;font-weight:500;padding:.3rem .75rem;
+  border-radius:100px;border:1px solid var(--border);
+  background:var(--bg);color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.pl-tipo-btn:hover { border-color:rgba(0,0,0,.25);color:var(--text) }
+.pl-tipo-btn.active { background:var(--orange);border-color:var(--orange);color:#fff;font-weight:600; }
+.pl-kpi-row {
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;
+  padding:1.25rem 2rem;background:var(--white);border-bottom:1px solid var(--border);
+}
+@media(max-width:900px){ .pl-kpi-row{ grid-template-columns:repeat(2,1fr) } }
+@media(max-width:500px){ .pl-kpi-row{ grid-template-columns:1fr } }
+.pl-kpi {
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--r2);
+  padding:1rem 1.25rem;position:relative;overflow:hidden;
+}
+.pl-kpi::before {
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--kpi-accent,var(--orange));border-radius:var(--r2) var(--r2) 0 0;
+}
+.pl-kpi-label {
+  font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:.4rem;
+}
+.pl-kpi-value { font-family:'Bebas Neue',sans-serif;font-size:2rem;line-height:1;color:var(--text); }
+.pl-kpi-value.green  { color:var(--green) }
+.pl-kpi-value.orange { color:var(--orange) }
+.pl-kpi-value.red    { color:var(--red) }
+.pl-kpi-sub { font-size:.72rem;color:var(--muted);margin-top:.25rem;display:flex;align-items:center;gap:.3rem; }
+.pl-kpi-tag { font-family:'DM Mono',monospace;font-size:.65rem;font-weight:600;padding:.15rem .45rem;border-radius:4px; }
+.pl-kpi-tag.pos { background:var(--green-bg);color:var(--green) }
+.pl-kpi-tag.neg { background:var(--red-bg);color:var(--red) }
+.pl-kpi-tag.neutral { background:var(--blue-bg);color:#1565C0 }
+.pl-body {
+  display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;
+  padding:1.25rem 2rem;
+}
+@media(max-width:1100px){ .pl-body{ grid-template-columns:1fr } }
+.pl-card { background:var(--white);border:1px solid var(--border);border-radius:var(--r2);overflow:hidden; }
+.pl-card-header {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.85rem 1.25rem;border-bottom:1px solid var(--border);
+}
+.pl-card-title {
+  font-family:'DM Mono',monospace;font-size:.68rem;letter-spacing:.08em;
+  text-transform:uppercase;font-weight:600;color:var(--text);
+}
+.pl-card-sub { font-size:.72rem;color:var(--muted) }
+.pl-card-body { padding:1.25rem }
+.pl-chart-wrap { position:relative;height:220px }
+.pl-breakdown { width:100%;border-collapse:collapse }
+.pl-breakdown th {
+  font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);font-weight:500;
+  padding:.5rem .75rem;text-align:left;border-bottom:1px solid var(--border);
+}
+.pl-breakdown td { padding:.6rem .75rem;border-bottom:1px solid var(--border);font-size:.81rem;vertical-align:middle; }
+.pl-breakdown tr:last-child td { border-bottom:none }
+.pl-breakdown tr:hover td { background:var(--bg) }
+.pl-bar-wrap { display:flex;align-items:center;gap:.5rem }
+.pl-bar-track { flex:1;height:4px;background:var(--bg3);border-radius:2px;min-width:40px; }
+.pl-bar-fill { height:100%;border-radius:2px;transition:width .4s ease }
+.pl-bottom {
+  display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;
+  padding:0 2rem 1.5rem;
+}
+@media(max-width:1100px){ .pl-bottom{ grid-template-columns:1fr } }
+.pl-metric-grid { display:grid;grid-template-columns:1fr 1fr;gap:.75rem;padding:1rem 1.25rem; }
+.pl-metric { background:var(--bg);border-radius:var(--r);padding:.75rem 1rem; }
+.pl-metric-label { font-size:.68rem;color:var(--muted);margin-bottom:.2rem; }
+.pl-metric-value { font-family:'Bebas Neue',sans-serif;font-size:1.5rem;line-height:1; }
+.pl-loading {
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1rem;padding:4rem 2rem;
+  color:var(--muted);font-size:.83rem;
+}
 </style>
 </head>
 <body>
@@ -457,6 +566,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <button class="main-tab" id="tabIngresos"   onclick="switchTab('ingresos')">💰 Ingresos</button>
     <button class="main-tab" id="tabEgresos"    onclick="switchTab('egresos')">📤 Egresos</button>
     <button class="main-tab" id="tabVentasWeb"  onclick="switchTab('ventasWeb')">🛒 Ventas Web</button>
+    <button class="main-tab" id="tabDashboard"  onclick="switchTab('dashboard')">📊 Dashboard</button>
   </div>
 
   <!-- ══════════ SECCIÓN: VENTAS WEB ══════════ -->
@@ -652,6 +762,150 @@ tr:hover td{background:rgba(0,0,0,.015)}
     </table>
   </div>
 </div><!-- /sectionEgresos -->
+
+<!-- ══════════ SECCIÓN: DASHBOARD P&L ══════════ -->
+<div id="sectionDashboard">
+
+  <!-- CONTROL BAR -->
+  <div class="pl-control-bar">
+    <span class="pl-control-label">Año</span>
+    <select class="pl-year-select" id="plYear" onchange="onPlYearChange()"></select>
+    <div style="display:flex;gap:.3rem;flex-wrap:wrap" id="plMonthPills">
+      <button class="pl-month-pill ytd-active" id="plPillYTD" onclick="selectPlMonth('ytd')">YTD</button>
+      <button class="pl-month-pill" data-m="1"  onclick="selectPlMonth(1)">Ene</button>
+      <button class="pl-month-pill" data-m="2"  onclick="selectPlMonth(2)">Feb</button>
+      <button class="pl-month-pill" data-m="3"  onclick="selectPlMonth(3)">Mar</button>
+      <button class="pl-month-pill" data-m="4"  onclick="selectPlMonth(4)">Abr</button>
+      <button class="pl-month-pill" data-m="5"  onclick="selectPlMonth(5)">May</button>
+      <button class="pl-month-pill" data-m="6"  onclick="selectPlMonth(6)">Jun</button>
+      <button class="pl-month-pill" data-m="7"  onclick="selectPlMonth(7)">Jul</button>
+      <button class="pl-month-pill" data-m="8"  onclick="selectPlMonth(8)">Ago</button>
+      <button class="pl-month-pill" data-m="9"  onclick="selectPlMonth(9)">Sep</button>
+      <button class="pl-month-pill" data-m="10" onclick="selectPlMonth(10)">Oct</button>
+      <button class="pl-month-pill" data-m="11" onclick="selectPlMonth(11)">Nov</button>
+      <button class="pl-month-pill" data-m="12" onclick="selectPlMonth(12)">Dic</button>
+    </div>
+    <div class="pl-tipo-wrap">
+      <span class="pl-control-label">Tipo</span>
+      <button class="pl-tipo-btn active" data-tipo="todos"              onclick="selectPlTipo(this)">Todos</button>
+      <button class="pl-tipo-btn" data-tipo="venta_producto"            onclick="selectPlTipo(this)">Venta producto</button>
+      <button class="pl-tipo-btn" data-tipo="servicio_tecnico"          onclick="selectPlTipo(this)">Serv. técnico</button>
+      <button class="pl-tipo-btn" data-tipo="servicio_asesoria"         onclick="selectPlTipo(this)">Asesoría</button>
+      <button class="pl-tipo-btn" data-tipo="comision"                  onclick="selectPlTipo(this)">Comisión</button>
+      <button class="pl-tipo-btn" data-tipo="otro"                      onclick="selectPlTipo(this)">Otro</button>
+    </div>
+  </div>
+
+  <!-- KPI ROW -->
+  <div class="pl-kpi-row" id="plKpiRow">
+    <div class="pl-loading" style="grid-column:1/-1"><div class="spinner"></div><span>Cargando dashboard...</span></div>
+  </div>
+
+  <!-- BODY GRID -->
+  <div class="pl-body">
+    <!-- Gráfica mensual — full width -->
+    <div class="pl-card" style="grid-column:1/-1">
+      <div class="pl-card-header">
+        <span class="pl-card-title">Ingresos vs Costos vs Utilidad</span>
+        <span class="pl-card-sub" id="plChartSub">—</span>
+      </div>
+      <div class="pl-card-body">
+        <div class="pl-chart-wrap"><canvas id="plBarChart"></canvas></div>
+      </div>
+    </div>
+    <!-- Ingresos por tipo -->
+    <div class="pl-card">
+      <div class="pl-card-header">
+        <span class="pl-card-title">Ingresos por tipo</span>
+        <span class="pl-card-sub" id="plIngSubtitle">—</span>
+      </div>
+      <div class="pl-card-body" style="padding:0">
+        <table class="pl-breakdown">
+          <thead><tr>
+            <th>Tipo</th>
+            <th style="text-align:right">Monto</th>
+            <th style="text-align:right">%</th>
+            <th style="min-width:80px">Distrib.</th>
+          </tr></thead>
+          <tbody id="plIngBody"></tbody>
+        </table>
+      </div>
+    </div>
+    <!-- Egresos por categoría -->
+    <div class="pl-card">
+      <div class="pl-card-header">
+        <span class="pl-card-title">Egresos por categoría</span>
+        <span class="pl-card-sub" id="plEgrSubtitle">—</span>
+      </div>
+      <div class="pl-card-body">
+        <div style="display:flex;gap:1rem;align-items:center;margin-bottom:1rem">
+          <div style="position:relative;width:130px;height:130px;flex-shrink:0">
+            <canvas id="plDonaChart" width="130" height="130"></canvas>
+            <div id="plDonaCenter" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none">
+              <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;line-height:1" id="plDonaCenterVal">—</div>
+              <div style="font-size:.6rem;color:var(--muted)">total</div>
+            </div>
+          </div>
+          <div style="flex:1;overflow:auto">
+            <table class="pl-breakdown">
+              <thead><tr>
+                <th>Categoría</th>
+                <th style="text-align:right">Total</th>
+                <th style="text-align:right">%</th>
+              </tr></thead>
+              <tbody id="plEgrBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /pl-body -->
+
+  <!-- BOTTOM ROW -->
+  <div class="pl-bottom">
+    <!-- Métricas clave -->
+    <div class="pl-card">
+      <div class="pl-card-header"><span class="pl-card-title">Métricas clave</span></div>
+      <div class="pl-metric-grid">
+        <div class="pl-metric">
+          <div class="pl-metric-label">Margen bruto</div>
+          <div class="pl-metric-value" id="plMBruto" style="color:var(--green)">—</div>
+        </div>
+        <div class="pl-metric">
+          <div class="pl-metric-label">Margen neto</div>
+          <div class="pl-metric-value" id="plMNeto" style="color:var(--green)">—</div>
+        </div>
+        <div class="pl-metric">
+          <div class="pl-metric-label">Ticket promedio</div>
+          <div class="pl-metric-value" id="plTicket" style="color:var(--text)">—</div>
+        </div>
+        <div class="pl-metric">
+          <div class="pl-metric-label">Transacciones</div>
+          <div class="pl-metric-value" id="plTxCount" style="color:var(--text)">—</div>
+        </div>
+        <div class="pl-metric">
+          <div class="pl-metric-label">ITBMS cobrado</div>
+          <div class="pl-metric-value" id="plItbmsIng" style="color:#1565C0">—</div>
+        </div>
+        <div class="pl-metric">
+          <div class="pl-metric-label">ITBMS pagado</div>
+          <div class="pl-metric-value" id="plItbmsEgr" style="color:#6A1B9A">—</div>
+        </div>
+      </div>
+    </div>
+    <!-- Gap operativo -->
+    <div class="pl-card">
+      <div class="pl-card-header">
+        <span class="pl-card-title">Órdenes web sin factura emitida</span>
+        <span class="pl-card-sub">Gap operativo</span>
+      </div>
+      <div class="pl-card-body" id="plGapBody">
+        <div class="pl-loading" style="padding:1rem 0"><div class="spinner" style="width:20px;height:20px"></div></div>
+      </div>
+    </div>
+  </div><!-- /pl-bottom -->
+
+</div><!-- /sectionDashboard -->
 
 </div><!-- /app -->
 
@@ -1868,20 +2122,24 @@ function switchTab(tab) {
   document.getElementById('sectionOperaciones').style.display = tab === 'operaciones' ? 'block' : 'none';
   document.getElementById('sectionEgresos').style.display     = tab === 'egresos'     ? 'block' : 'none';
   document.getElementById('sectionIngresos').style.display    = tab === 'ingresos'    ? 'block' : 'none';
+  document.getElementById('sectionDashboard').style.display   = tab === 'dashboard'   ? 'block' : 'none';
   document.getElementById('tabVentasWeb').classList.toggle('active',   tab === 'ventasWeb');
   document.getElementById('tabOperaciones').classList.toggle('active', tab === 'operaciones');
   document.getElementById('tabEgresos').classList.toggle('active',     tab === 'egresos');
   document.getElementById('tabIngresos').classList.toggle('active',    tab === 'ingresos');
+  document.getElementById('tabDashboard').classList.toggle('active',   tab === 'dashboard');
   if (tab === 'operaciones' && !opItems.length)  loadOperaciones();
   if (tab === 'egresos'     && !egrItems.length) loadEgresos();
   if (tab === 'ingresos'    && !ingItems.length) loadIngresos();
   if (tab === 'ventasWeb'   && !document.getElementById('ordenesBody').children.length) loadOrdenes();
+  if (tab === 'dashboard')                       loadDashboard();
 }
 
 function refreshCurrentSection() {
   if (activeTab === 'ventasWeb')        loadOrdenes();
   else if (activeTab === 'egresos')     loadEgresos();
   else if (activeTab === 'ingresos')    loadIngresos();
+  else if (activeTab === 'dashboard')   { plLoaded = false; loadDashboard(); }
   else                                  loadOperaciones();
 }
 
@@ -3239,6 +3497,476 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ══════════════════════════════════════════════════
+//  DASHBOARD P&L
+// ══════════════════════════════════════════════════
+let plIngresos  = [];
+let plEgresos   = [];
+let plOpItems   = [];
+let plYear      = new Date().getFullYear();
+let plMonth     = 'ytd';
+let plTipo      = 'todos';
+let plBarChart  = null;
+let plDonaChart = null;
+let plLoaded    = false;
+
+const EGR_COLORS = {
+  costo_mercancia:          '#E65100',
+  costo_operativo:          '#6A1B9A',
+  nomina:                   '#283593',
+  servicios:                '#00695C',
+  servicios_publicos:       '#00838F',
+  combustible_transporte:   '#4E342E',
+  publicidad_mercadeo:      '#AD1457',
+  honorarios_profesionales: '#1565C0',
+  mantenimiento_reparacion: '#558B2F',
+  seguros:                  '#795548',
+  gastos_financieros:       '#37474F',
+  otros_deducibles:         '#AEAEB2',
+};
+const TIPO_LABEL = {
+  venta_producto:    'Venta producto',
+  servicio_tecnico:  'Serv. técnico',
+  servicio_asesoria: 'Asesoría',
+  comision:          'Comisión',
+  exportacion:       'Exportación',
+  otro:              'Otro',
+};
+const EGR_LABEL = {
+  costo_mercancia:          'Costo mercancía',
+  costo_operativo:          'Operativo',
+  nomina:                   'Nómina',
+  servicios:                'Servicios',
+  servicios_publicos:       'Serv. públicos',
+  combustible_transporte:   'Combustible',
+  publicidad_mercadeo:      'Publicidad',
+  honorarios_profesionales: 'Honorarios',
+  mantenimiento_reparacion: 'Mantenimiento',
+  seguros:                  'Seguros',
+  gastos_financieros:       'Fin. bancarios',
+  otros_deducibles:         'Otros',
+};
+
+async function loadDashboard() {
+  if (plLoaded) { renderDashboard(); return; }
+  document.getElementById('plKpiRow').innerHTML =
+    '<div class="pl-loading" style="grid-column:1/-1"><div class="spinner"></div><span>Cargando datos...</span></div>';
+  try {
+    const [ingRes, egrRes, opRes] = await Promise.all([
+      plGasGet('getIngresos'),
+      plGasGet('getEgresos'),
+      plGasGet('getComprasVentas'),
+    ]);
+    plIngresos = (ingRes.items || []).filter(i => i.estado === 'confirmado' || i.estado === 'abono');
+    plEgresos  = egrRes.items  || [];
+    plOpItems  = opRes.items   || [];
+    plLoaded   = true;
+    initPlYearSelector();
+    renderDashboard();
+  } catch(err) {
+    document.getElementById('plKpiRow').innerHTML =
+      `<div class="pl-loading" style="grid-column:1/-1">
+        <span style="font-size:1.5rem">⚠️</span>
+        <span>Error: ${esc(err.message)}</span>
+        <button class="btn-sync" onclick="plLoaded=false;loadDashboard()">Reintentar</button>
+      </div>`;
+  }
+}
+
+function plGasGet(action) {
+  return new Promise((resolve, reject) => {
+    const cb = 'plCb_' + action + '_' + Date.now();
+    const script = document.createElement('script');
+    let done = false;
+    const timeout = setTimeout(() => {
+      if (!done) { done = true; cleanup(); reject(new Error('Timeout: ' + action)); }
+    }, 30000);
+    window[cb] = (data) => {
+      if (!done) { done = true; clearTimeout(timeout); cleanup(); resolve(data); }
+    };
+    script.onerror = () => {
+      if (!done) { done = true; clearTimeout(timeout); cleanup(); reject(new Error('Script error: ' + action)); }
+    };
+    script.src = GAS_URL + '?action=' + action + '&callback=' + cb;
+    function cleanup() { delete window[cb]; if (script.parentNode) script.parentNode.removeChild(script); }
+    document.head.appendChild(script);
+  });
+}
+
+function initPlYearSelector() {
+  const years = new Set();
+  const now = new Date().getFullYear();
+  years.add(now);
+  plIngresos.forEach(i => { if (i.anio_fiscal) years.add(parseInt(i.anio_fiscal)); });
+  plEgresos.forEach(e => {
+    const y = e.fecha_egreso ? new Date(e.fecha_egreso + 'T12:00:00').getFullYear() : null;
+    if (y && !isNaN(y)) years.add(y);
+  });
+  const sorted = [...years].filter(y => y > 2000 && y <= now + 1).sort((a,b) => b - a);
+  const sel = document.getElementById('plYear');
+  sel.innerHTML = sorted.map(y =>
+    `<option value="${y}" ${y === plYear ? 'selected' : ''}>${y}</option>`
+  ).join('');
+  highlightMonthPills();
+}
+
+function highlightMonthPills() {
+  const monthsWithData = new Set(
+    plIngresos.filter(i => parseInt(i.anio_fiscal) === plYear).map(i => parseInt(i.mes))
+  );
+  document.querySelectorAll('.pl-month-pill[data-m]').forEach(pill => {
+    const m = parseInt(pill.dataset.m);
+    pill.classList.toggle('has-data', monthsWithData.has(m));
+  });
+}
+
+function onPlYearChange() {
+  plYear = parseInt(document.getElementById('plYear').value);
+  highlightMonthPills();
+  renderDashboard();
+}
+
+function selectPlMonth(m) {
+  plMonth = m;
+  document.getElementById('plPillYTD').className = 'pl-month-pill' + (m === 'ytd' ? ' ytd-active' : '');
+  document.querySelectorAll('.pl-month-pill[data-m]').forEach(pill => {
+    const isActive = parseInt(pill.dataset.m) === m;
+    const hasData  = pill.classList.contains('has-data');
+    pill.className = 'pl-month-pill' + (isActive ? ' active' : (hasData ? ' has-data' : ''));
+  });
+  renderDashboard();
+}
+
+function selectPlTipo(btn) {
+  plTipo = btn.dataset.tipo;
+  document.querySelectorAll('.pl-tipo-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDashboard();
+}
+
+function plFiltrarIngresos() {
+  return plIngresos.filter(i => {
+    if (parseInt(i.anio_fiscal) !== plYear) return false;
+    if (plMonth !== 'ytd' && parseInt(i.mes) !== plMonth) return false;
+    if (plTipo !== 'todos') {
+      const t = (i.tipo_ingreso || '').toLowerCase();
+      const c = (i.categoria_ingreso || '').toLowerCase();
+      if (plTipo === 'venta_producto'   && !t.includes('venta')   && !c.includes('venta'))   return false;
+      if (plTipo === 'servicio_tecnico' && !t.includes('tecnico') && !t.includes('técnico')) return false;
+      if (plTipo === 'servicio_asesoria'&& !t.includes('asesoria')&& !t.includes('asesor'))  return false;
+      if (plTipo === 'comision'         && !t.includes('comision'))                          return false;
+      if (plTipo === 'otro'             && t !== 'otro')                                     return false;
+    }
+    return true;
+  });
+}
+
+function plFiltrarEgresos() {
+  return plEgresos.filter(e => {
+    if (!e.fecha_egreso) return false;
+    const d = new Date(e.fecha_egreso + 'T12:00:00');
+    if (d.getFullYear() !== plYear) return false;
+    if (plMonth !== 'ytd' && d.getMonth() + 1 !== plMonth) return false;
+    if (plTipo !== 'todos' && plTipo !== 'venta_producto') {
+      if ((e.tipo_egreso || '') === 'costo_mercancia') return false;
+    }
+    return true;
+  });
+}
+
+function renderDashboard() {
+  const ingresos = plFiltrarIngresos();
+  const egresos  = plFiltrarEgresos();
+
+  const totalIng    = ingresos.reduce((s,i) => s + (parseFloat(i.total)||0), 0);
+  const itbmsIng    = ingresos.reduce((s,i) => s + (parseFloat(i.itbms)||0), 0);
+  const cogs        = egresos.filter(e => e.tipo_egreso === 'costo_mercancia')
+                              .reduce((s,e) => s + (parseFloat(e.total)||0), 0);
+  const totalEgr    = egresos.reduce((s,e) => s + (parseFloat(e.total)||0), 0);
+  const itbmsEgr    = egresos.reduce((s,e) => s + (parseFloat(e.itbms)||0), 0);
+  const utilBruta   = totalIng - cogs;
+  const utilNeta    = totalIng - totalEgr;
+  const margenBruto = totalIng > 0 ? (utilBruta / totalIng) * 100 : 0;
+  const margenNeto  = totalIng > 0 ? (utilNeta  / totalIng) * 100 : 0;
+  const txCount     = ingresos.length;
+  const ticket      = txCount > 0 ? totalIng / txCount : 0;
+
+  // KPIs
+  document.getElementById('plKpiRow').innerHTML = `
+    <div class="pl-kpi" style="--kpi-accent:var(--orange)">
+      <div class="pl-kpi-label">Ingresos brutos</div>
+      <div class="pl-kpi-value orange">${plFmt(totalIng)}</div>
+      <div class="pl-kpi-sub"><span class="pl-kpi-tag neutral">${plMonth === 'ytd' ? 'YTD' : plMesLabel(plMonth)} ${plYear}</span></div>
+    </div>
+    <div class="pl-kpi" style="--kpi-accent:#E65100">
+      <div class="pl-kpi-label">Costo mercancía (COGS)</div>
+      <div class="pl-kpi-value" style="color:#E65100">${plFmt(cogs)}</div>
+      <div class="pl-kpi-sub">${totalIng > 0 ? ((cogs/totalIng)*100).toFixed(1)+'% de ingresos' : '—'}</div>
+    </div>
+    <div class="pl-kpi" style="--kpi-accent:${utilBruta >= 0 ? 'var(--green)' : 'var(--red)'}">
+      <div class="pl-kpi-label">Margen bruto</div>
+      <div class="pl-kpi-value ${utilBruta >= 0 ? 'green' : 'red'}">${plFmt(utilBruta)}</div>
+      <div class="pl-kpi-sub">
+        <span class="pl-kpi-tag ${margenBruto >= 0 ? 'pos' : 'neg'}">${margenBruto.toFixed(1)}%</span>
+        sobre ingresos
+      </div>
+    </div>
+    <div class="pl-kpi" style="--kpi-accent:${utilNeta >= 0 ? 'var(--green)' : 'var(--red)'}">
+      <div class="pl-kpi-label">Utilidad neta estimada</div>
+      <div class="pl-kpi-value ${utilNeta >= 0 ? 'green' : 'red'}">${plFmt(utilNeta)}</div>
+      <div class="pl-kpi-sub">Ingresos − todos los egresos</div>
+    </div>`;
+
+  // Gráfica barras
+  plRenderBarChart(plYear);
+
+  // Tabla ingresos por tipo
+  plRenderIngTable(ingresos, totalIng);
+
+  // Dona egresos
+  plRenderDonaChart(egresos, totalEgr);
+
+  // Métricas
+  document.getElementById('plMBruto').textContent  = margenBruto.toFixed(1) + '%';
+  document.getElementById('plMBruto').className    = 'pl-metric-value ' + (margenBruto >= 0 ? 'green' : 'red');
+  document.getElementById('plMNeto').textContent   = margenNeto.toFixed(1) + '%';
+  document.getElementById('plMNeto').className     = 'pl-metric-value ' + (margenNeto >= 0 ? 'green' : 'red');
+  document.getElementById('plTicket').textContent  = plFmt(ticket);
+  document.getElementById('plTxCount').textContent = txCount;
+  document.getElementById('plItbmsIng').textContent= plFmt(itbmsIng);
+  document.getElementById('plItbmsEgr').textContent= plFmt(itbmsEgr);
+
+  // Gap
+  plRenderGap();
+
+  // Subtítulos
+  const periodoLabel = plMonth === 'ytd'
+    ? 'Enero – ' + ['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][new Date().getMonth()+1] + ' ' + plYear
+    : plMesLabel(plMonth) + ' ' + plYear;
+  document.getElementById('plChartSub').textContent    = periodoLabel;
+  document.getElementById('plIngSubtitle').textContent = plFmt(totalIng);
+  document.getElementById('plEgrSubtitle').textContent = plFmt(totalEgr);
+}
+
+function plRenderBarChart(year) {
+  const meses   = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const ingData = new Array(12).fill(0);
+  const utilData= new Array(12).fill(0);
+
+  const ingYear = plIngresos.filter(i => {
+    if (parseInt(i.anio_fiscal) !== year) return false;
+    if (plTipo === 'todos') return true;
+    const t = (i.tipo_ingreso || '').toLowerCase();
+    const c = (i.categoria_ingreso || '').toLowerCase();
+    if (plTipo === 'venta_producto')    return t.includes('venta') || c.includes('venta');
+    if (plTipo === 'servicio_tecnico')  return t.includes('tecnico') || t.includes('técnico');
+    if (plTipo === 'servicio_asesoria') return t.includes('asesoria') || t.includes('asesor');
+    if (plTipo === 'comision')          return t.includes('comision');
+    if (plTipo === 'otro')              return t === 'otro';
+    return true;
+  });
+
+  const egrYear = plEgresos.filter(e => {
+    if (!e.fecha_egreso) return false;
+    if (new Date(e.fecha_egreso + 'T12:00:00').getFullYear() !== year) return false;
+    if (plTipo !== 'todos' && plTipo !== 'venta_producto') {
+      if ((e.tipo_egreso || '') === 'costo_mercancia') return false;
+    }
+    return true;
+  });
+
+  ingYear.forEach(i => {
+    const m = parseInt(i.mes) - 1;
+    if (m >= 0 && m < 12) ingData[m] += parseFloat(i.total) || 0;
+  });
+
+  const egrByMes = new Array(12).fill(0);
+  egrYear.forEach(e => {
+    const m = new Date(e.fecha_egreso + 'T12:00:00').getMonth();
+    if (m >= 0 && m < 12) egrByMes[m] += parseFloat(e.total) || 0;
+  });
+
+  const cogsData = new Array(12).fill(0);
+  egrYear.filter(e => e.tipo_egreso === 'costo_mercancia').forEach(e => {
+    const m = new Date(e.fecha_egreso + 'T12:00:00').getMonth();
+    if (m >= 0 && m < 12) cogsData[m] += parseFloat(e.total) || 0;
+  });
+
+  for (let m = 0; m < 12; m++) utilData[m] = ingData[m] - egrByMes[m];
+
+  const activeMes = plMonth === 'ytd' ? -1 : plMonth - 1;
+  const ingColors  = meses.map((_,i) => i === activeMes ? '#E05A00' : 'rgba(224,90,0,.5)');
+  const cogsColors = meses.map((_,i) => i === activeMes ? '#BF360C' : 'rgba(191,54,12,.4)');
+  const utilColors = meses.map((_,i) => {
+    const v = utilData[i];
+    if (i === activeMes) return v >= 0 ? '#2E7D32' : '#C62828';
+    return v >= 0 ? 'rgba(46,125,50,.45)' : 'rgba(198,40,40,.45)';
+  });
+
+  const ctx = document.getElementById('plBarChart').getContext('2d');
+  if (plBarChart) { plBarChart.destroy(); plBarChart = null; }
+  plBarChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: meses,
+      datasets: [
+        { label: 'Ingresos', data: ingData,  backgroundColor: ingColors,  borderRadius: 3 },
+        { label: 'COGS',     data: cogsData, backgroundColor: cogsColors, borderRadius: 3 },
+        { label: 'Utilidad', data: utilData, backgroundColor: utilColors, borderRadius: 3 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { font: { family: 'DM Sans', size: 11 }, boxWidth: 10, padding: 14 } },
+        tooltip: { callbacks: { label: c => ' ' + c.dataset.label + ': ' + plFmt(c.raw||0) } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { family: 'DM Mono', size: 10 } } },
+        y: {
+          grid: { color: 'rgba(0,0,0,.05)' },
+          ticks: { font: { family: 'DM Mono', size: 10 }, callback: v => '$'+(v>=1000?(v/1000).toFixed(0)+'k':v) }
+        }
+      }
+    }
+  });
+}
+
+function plRenderIngTable(ingresos, totalIng) {
+  const byTipo = {};
+  ingresos.forEach(i => {
+    const t = i.tipo_ingreso || 'otro';
+    byTipo[t] = (byTipo[t] || 0) + (parseFloat(i.total) || 0);
+  });
+  const rows = Object.entries(byTipo).sort((a,b) => b[1]-a[1]);
+  const maxVal = rows.length ? rows[0][1] : 1;
+  const colorMap = {
+    venta_producto:'#E05A00', servicio_tecnico:'#1565C0',
+    servicio_asesoria:'#2E7D32', comision:'#6A1B9A',
+    exportacion:'#00695C', otro:'#AEAEB2',
+  };
+  if (!rows.length) {
+    document.getElementById('plIngBody').innerHTML =
+      '<tr><td colspan="4" style="text-align:center;color:var(--muted);padding:2rem">Sin datos para el período</td></tr>';
+    return;
+  }
+  document.getElementById('plIngBody').innerHTML = rows.map(([tipo, monto]) => {
+    const pct   = totalIng > 0 ? (monto/totalIng*100).toFixed(1) : '0.0';
+    const w     = maxVal  > 0 ? (monto/maxVal*100).toFixed(1) : '0';
+    const color = colorMap[tipo] || '#AEAEB2';
+    return `<tr>
+      <td style="font-weight:500">${esc(TIPO_LABEL[tipo]||tipo)}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:.78rem">${plFmt(monto)}</td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:.75rem;color:var(--muted)">${pct}%</td>
+      <td><div class="pl-bar-wrap"><div class="pl-bar-track"><div class="pl-bar-fill" style="width:${w}%;background:${color}"></div></div></div></td>
+    </tr>`;
+  }).join('');
+}
+
+function plRenderDonaChart(egresos, totalEgr) {
+  const byCat = {};
+  egresos.forEach(e => {
+    const c = e.categoria || e.tipo_egreso || 'otros_deducibles';
+    byCat[c] = (byCat[c] || 0) + (parseFloat(e.total) || 0);
+  });
+  const entries = Object.entries(byCat).sort((a,b) => b[1]-a[1]);
+  document.getElementById('plDonaCenterVal').textContent = plFmt(totalEgr);
+  const ctx = document.getElementById('plDonaChart').getContext('2d');
+  if (plDonaChart) { plDonaChart.destroy(); plDonaChart = null; }
+  if (!entries.length) {
+    document.getElementById('plEgrBody').innerHTML =
+      '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:1rem">Sin egresos</td></tr>';
+    return;
+  }
+  plDonaChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: entries.map(([c]) => EGR_LABEL[c]||c),
+      datasets: [{
+        data:            entries.map(([,v]) => v),
+        backgroundColor: entries.map(([c]) => EGR_COLORS[c]||'#AEAEB2'),
+        borderWidth: 2, borderColor: '#fff', hoverOffset: 4,
+      }]
+    },
+    options: {
+      responsive: false, maintainAspectRatio: false, cutout: '65%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: c => ' ' + plFmt(c.raw||0) } }
+      }
+    }
+  });
+  document.getElementById('plEgrBody').innerHTML = entries.map(([cat, monto]) => {
+    const pct = totalEgr > 0 ? (monto/totalEgr*100).toFixed(1) : '0.0';
+    const col = EGR_COLORS[cat] || '#AEAEB2';
+    return `<tr>
+      <td>
+        <div style="display:flex;align-items:center;gap:.4rem">
+          <div style="width:8px;height:8px;border-radius:2px;background:${col};flex-shrink:0"></div>
+          <span style="font-size:.78rem">${esc(EGR_LABEL[cat]||cat)}</span>
+        </div>
+      </td>
+      <td style="text-align:right;font-family:'DM Mono',monospace;font-size:.75rem">${plFmt(monto)}</td>
+      <td style="text-align:right;font-size:.72rem;color:var(--muted)">${pct}%</td>
+    </tr>`;
+  }).join('');
+}
+
+function plRenderGap() {
+  const gapBody = document.getElementById('plGapBody');
+  const cvSinOrden = plOpItems.filter(item => {
+    if (item.estado !== 'cerrado' || item.id_orden_web) return false;
+    const fechaV = item.fecha_venta ? new Date(String(item.fecha_venta).substring(0,10) + 'T12:00:00') : null;
+    if (!fechaV || isNaN(fechaV)) return false;
+    if (fechaV.getFullYear() !== plYear) return false;
+    if (plMonth !== 'ytd' && (fechaV.getMonth()+1) !== plMonth) return false;
+    return true;
+  });
+  const totalGap = cvSinOrden.reduce((s,i) => s + (parseFloat(i.total_venta)||0), 0);
+  if (!cvSinOrden.length) {
+    gapBody.innerHTML = `
+      <div style="display:flex;align-items:center;gap:.75rem;color:var(--green)">
+        <span style="font-size:1.3rem">✅</span>
+        <div>
+          <div style="font-weight:600;font-size:.85rem">Sin gaps detectados</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Todas las ventas cerradas tienen orden web vinculada</div>
+        </div>
+      </div>`;
+    return;
+  }
+  gapBody.innerHTML = `
+    <div style="margin-bottom:.75rem;padding:.75rem;background:#FFF3E0;border-radius:var(--r);border:1px solid rgba(224,90,0,.2)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:.78rem;color:var(--muted)">${cvSinOrden.length} venta${cvSinOrden.length>1?'s':''} sin orden web</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--orange)">${plFmt(totalGap)}</div>
+      </div>
+    </div>
+    <table class="pl-breakdown">
+      <thead><tr><th>Factura emitida</th><th>Cliente</th><th style="text-align:right">Venta</th></tr></thead>
+      <tbody>
+        ${cvSinOrden.slice(0,8).map(i => `
+          <tr>
+            <td style="font-family:'DM Mono',monospace;font-size:.72rem">${esc(i.num_fac_emitida||'—')}</td>
+            <td style="font-size:.78rem">${esc(i.nombre_cliente||'—')}</td>
+            <td style="text-align:right;font-family:'DM Mono',monospace;font-size:.75rem">${plFmt(parseFloat(i.total_venta)||0)}</td>
+          </tr>`).join('')}
+        ${cvSinOrden.length > 8 ? `<tr><td colspan="3" style="text-align:center;color:var(--muted);font-size:.72rem">+${cvSinOrden.length-8} más...</td></tr>` : ''}
+      </tbody>
+    </table>`;
+}
+
+function plFmt(n) {
+  if (isNaN(n) || n === null) return '—';
+  const abs = Math.abs(n);
+  const f = abs >= 10000
+    ? '$' + (abs/1000).toLocaleString('es-PA',{minimumFractionDigits:1,maximumFractionDigits:1}) + 'k'
+    : '$' + abs.toLocaleString('es-PA',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return n < 0 ? '-' + f : f;
+}
+function plMesLabel(m) {
+  return ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][m] || '';
 }
 </script>
 </body>
