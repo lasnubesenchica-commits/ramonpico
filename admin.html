@@ -1436,7 +1436,6 @@ tr:hover td{background:rgba(0,0,0,.015)}
       <div class="modal-section">
         <div class="modal-grid">
           <div class="modal-field full">
-          <div class="modal-field full">
             <label>Categoría</label>
             <select id="eCategoria" onchange="inferirTipoEgreso()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
               <option value="costo_mercancia">📦 Costo de mercancía</option>
@@ -2482,11 +2481,11 @@ function renderOpTable(items) {
       <td>${estadoBadge}${ordenWebBadge}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal(${i})">Ver</button>
-          ${flagRev ? `<button class="btn-xs btn-confirm" onclick="aprobarMatch(opFiltered[${i}].id_item)">✓ Aprobar</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" onclick="openOpModal(${i},true)">+ Vincular</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" onclick="abrirModalInventarioPorId(opFiltered[${i}].id_item)" title="Mover a inventario">📦</button>` : ''}
-          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" onclick="buscarOrdenWeb(opFiltered[${i}].id_item)" title="Buscar orden web vinculada">🔗</button>` : ''}
+          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" data-op-ver="${i}">Ver</button>
+          ${flagRev ? `<button class="btn-xs btn-confirm" data-op-aprobar="${i}">✓ Aprobar</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" data-op-vincular="${i}">+ Vincular</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" data-op-inv="${i}" title="Mover a inventario">📦</button>` : ''}
+          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" data-op-orden="${i}" title="Buscar orden web vinculada">🔗</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -3775,6 +3774,7 @@ function abrirModalNuevoEgreso() {
   document.getElementById('eItemsSection').style.display = 'none';
   document.getElementById('eFacturaInput').value = '';
   egresoFileB64 = null; egresoFileMime = null; egresoIAItems = [];
+  inferirTipoEgreso();   // sync eTipoHidden with default category
   document.getElementById('egresoModalOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -4114,7 +4114,7 @@ async function guardarVentaInv() {
   }
   btn.disabled = false; btn.textContent = '💾 Registrar venta';
 }
-
+</script>
 let plIngresos  = [];
 let plEgresos   = [];
 let plOpItems   = [];
