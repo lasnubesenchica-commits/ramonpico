@@ -2583,6 +2583,9 @@ function applyOpFilters() {
 //  MODAL OPERACIONES
 // ══════════════════════════════════════════════════
 function openOpModal(idItem, vincularMode) {
+  console.log('openOpModal llamado con:', idItem);
+  console.log('opFiltered.length:', opFiltered.length, '| opItems.length:', opItems.length);
+  if (opItems.length > 0) console.log('primer id_item en opItems:', opItems[0].id_item, '| tipo:', typeof opItems[0].id_item);
   currentOpItem = opFiltered.find(i => String(i.id_item) === String(idItem))
                || opItems.find(i => String(i.id_item) === String(idItem))
                || null;
