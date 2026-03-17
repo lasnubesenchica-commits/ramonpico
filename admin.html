@@ -855,7 +855,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <div class="modal-body">
       <div class="modal-section">
         <div class="modal-grid">
-          <div class="modal-field full">
+          <div class="modal-field">
             <label>Tipo de ingreso</label>
             <select id="iTipo" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
               <option value="servicio_asesoria">💼 Servicio de asesoría</option>
@@ -865,9 +865,19 @@ tr:hover td{background:rgba(0,0,0,.015)}
               <option value="otro">📋 Otro</option>
             </select>
           </div>
+          <div class="modal-field">
+            <label>Tipo de comprobante</label>
+            <select id="iTipoComp" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+              <option value="yappy">📱 Yappy</option>
+              <option value="transferencia">🏦 Transferencia</option>
+              <option value="factura">🧾 Factura</option>
+              <option value="efectivo">💵 Efectivo</option>
+              <option value="otro">📋 Otro</option>
+            </select>
+          </div>
           <div class="modal-field full">
-            <label>Descripción *</label>
-            <input type="text" id="iDescripcion" placeholder="Ej: Asesoría técnica instalación equipo..." style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%;box-sizing:border-box">
+            <label>Descripción</label>
+            <input type="text" id="iDescripcion" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%;box-sizing:border-box">
           </div>
           <div class="modal-field">
             <label>Fecha *</label>
@@ -2758,7 +2768,8 @@ function renderIngresosTable(items) {
 }
 
 function abrirModalNuevoIngreso() {
-  document.getElementById('iTipo').value        = 'servicio_asesoria';
+  document.getElementById('iTipo').value     = 'servicio_asesoria';
+  document.getElementById('iTipoComp').value = 'yappy';
   document.getElementById('iDescripcion').value = '';
   document.getElementById('iFecha').value       = new Date().toISOString().substring(0,10);
   document.getElementById('iNumFac').value      = '';
@@ -2921,9 +2932,10 @@ function llenarCamposIngreso(parsed) {
     recalcIngreso();
   }
   if (parsed.tipo_comprobante) {
-    const tipos = { yappy:'servicio_asesoria', transferencia:'venta_producto', factura:'venta_producto' };
-    const t = document.getElementById('iTipo');
-    if (tipos[parsed.tipo_comprobante]) t.value = tipos[parsed.tipo_comprobante];
+    const tc = document.getElementById('iTipoComp');
+    // mapear valores IA → opciones del select
+    const mapa = { yappy: 'yappy', transferencia: 'transferencia', factura: 'factura' };
+    if (mapa[parsed.tipo_comprobante]) tc.value = mapa[parsed.tipo_comprobante];
   }
   if (parsed.notas) document.getElementById('iNotas').value = parsed.notas;
 }
@@ -2933,25 +2945,25 @@ async function guardarNuevoIngreso() {
   const total       = parseFloat(document.getElementById('iTotal').value)||0;
   const fecha       = document.getElementById('iFecha').value;
   const nombre      = document.getElementById('iNombreCli').value.trim();
-  if (!descripcion) { showToast('⚠️ La descripción es requerida'); return; }
-  if (!total)       { showToast('⚠️ El total es requerido');       return; }
-  if (!fecha)       { showToast('⚠️ La fecha es requerida');       return; }
-  if (!nombre)      { showToast('⚠️ El nombre del cliente es requerido'); return; }
+  if (!total)  { showToast('⚠️ El total es requerido');               return; }
+  if (!fecha)  { showToast('⚠️ La fecha es requerida');               return; }
+  if (!nombre) { showToast('⚠️ El nombre del cliente es requerido');  return; }
   const btn = document.querySelector('#ingresoModalOverlay .btn-primary');
   btn.disabled = true; btn.textContent = '⏳ Guardando...';
   try {
     const data = await gasJsonp('registrarIngresoManual', {
-      fecha:       fecha,
-      tipo:        document.getElementById('iTipo').value,
-      descripcion: descripcion,
-      num_factura: document.getElementById('iNumFac').value.trim(),
-      subtotal:    document.getElementById('iSubtotal').value||'',
-      itbms:       document.getElementById('iItbms').value||'',
-      total:       total,
-      nombre:      nombre,
-      ruc:         document.getElementById('iRucCli').value.trim(),
-      dv:          document.getElementById('iDvCli').value.trim(),
-      notas:       document.getElementById('iNotas').value.trim(),
+      fecha:           fecha,
+      tipo:            document.getElementById('iTipo').value,
+      tipo_comprobante: document.getElementById('iTipoComp').value,
+      descripcion:     descripcion,
+      num_factura:     document.getElementById('iNumFac').value.trim(),
+      subtotal:        document.getElementById('iSubtotal').value||'',
+      itbms:           document.getElementById('iItbms').value||'',
+      total:           total,
+      nombre:          nombre,
+      ruc:             document.getElementById('iRucCli').value.trim(),
+      dv:              document.getElementById('iDvCli').value.trim(),
+      notas:           document.getElementById('iNotas').value.trim(),
     });
     if (!data.success) throw new Error(data.error||'Error desconocido');
     showToast('✅ Ingreso registrado: ' + data.ingresoId);
