@@ -2424,7 +2424,8 @@ function renderOpTable(items) {
     tbody.innerHTML = '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay ítems</span></div></td></tr>';
     return;
   }
-  tbody.innerHTML = getSortedItems(items).map((item, i) => {
+  // items ya viene ordenado desde applyOpFilters — usar directamente
+  tbody.innerHTML = items.map((item, i) => {
     const estado    = item.estado || 'pendiente';
     const flagRev   = item.flag_revision === true || item.flag_revision === 'TRUE';
     const conf      = parseInt(item.confianza_match || '0') || 0;
@@ -2481,11 +2482,11 @@ function renderOpTable(items) {
       <td>${estadoBadge}${ordenWebBadge}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" data-op-ver="${item.id_item}">Ver</button>
-          ${flagRev ? `<button class="btn-xs btn-confirm" data-op-aprobar="${item.id_item}">✓ Aprobar</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" data-op-vincular="${item.id_item}">+ Vincular</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" data-op-inv="${item.id_item}" title="Mover a inventario">📦</button>` : ''}
-          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" data-op-orden="${item.id_item}" title="Buscar orden web vinculada">🔗</button>` : ''}
+          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" data-op-ver="${i}">Ver</button>
+          ${flagRev ? `<button class="btn-xs btn-confirm" data-op-aprobar="${i}">✓ Aprobar</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" data-op-vincular="${i}">+ Vincular</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" data-op-inv="${i}" title="Mover a inventario">📦</button>` : ''}
+          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" data-op-orden="${i}" title="Buscar orden web vinculada">🔗</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -2493,20 +2494,19 @@ function renderOpTable(items) {
 }
 
 // ── Event delegation para acciones de Operaciones ──
-// Usar el ancestro table en lugar del tbody para mayor robustez
 document.addEventListener('click', function(e) {
   const btn = e.target.closest('[data-op-ver],[data-op-aprobar],[data-op-vincular],[data-op-inv],[data-op-orden]');
   if (!btn) return;
-  // Solo actuar si el click viene de dentro de opBody
   if (!document.getElementById('opBody').contains(btn)) return;
   e.stopPropagation();
-  const id = btn.dataset.opVer || btn.dataset.opAprobar || btn.dataset.opVincular || btn.dataset.opInv || btn.dataset.opOrden;
-  console.log('op action click | attr:', Object.keys(btn.dataset).join(','), '| id:', id);
-  if (btn.dataset.opVer)      openOpModal(btn.dataset.opVer);
-  if (btn.dataset.opAprobar)  aprobarMatch(btn.dataset.opAprobar);
-  if (btn.dataset.opVincular) openOpModal(btn.dataset.opVincular, true);
-  if (btn.dataset.opInv)      abrirModalInventarioPorId(btn.dataset.opInv);
-  if (btn.dataset.opOrden)    buscarOrdenWeb(btn.dataset.opOrden);
+  const idx = parseInt(btn.dataset.opVer ?? btn.dataset.opAprobar ?? btn.dataset.opVincular ?? btn.dataset.opInv ?? btn.dataset.opOrden);
+  const item = opFiltered[idx];
+  if (!item) return;
+  if (btn.dataset.opVer      !== undefined) openOpModal(idx);
+  if (btn.dataset.opAprobar  !== undefined) aprobarMatch(item.id_item);
+  if (btn.dataset.opVincular !== undefined) openOpModal(idx, true);
+  if (btn.dataset.opInv      !== undefined) abrirModalInventarioPorId(item.id_item);
+  if (btn.dataset.opOrden    !== undefined) buscarOrdenWeb(item.id_item);
 });
 
 // ── Sort Operaciones ──
@@ -2581,23 +2581,17 @@ function applyOpFilters() {
     (i.codigo_prod||'').toLowerCase().includes(q)      ||
     (i.id_item||'').toLowerCase().includes(q)
   );
-  opFiltered = items;
-  renderOpTable(items);
+  // Guardar el array YA ORDENADO — el índice del DOM coincide con opFiltered
+  opFiltered = getSortedItems(items);
+  renderOpTable(opFiltered);
 }
 
 // ══════════════════════════════════════════════════
 //  MODAL OPERACIONES
 // ══════════════════════════════════════════════════
-function openOpModal(idItem, vincularMode) {
-  const idClean = String(idItem).replace(/^"|"$/g,'').trim();
-  currentOpItem = opFiltered.find(i => String(i.id_item).replace(/^"|"$/g,'').trim() === idClean)
-               || opItems.find(i => String(i.id_item).replace(/^"|"$/g,'').trim() === idClean)
-               || null;
-  if (!currentOpItem) {
-    console.warn('openOpModal: ítem no encontrado:', idItem, '| opFiltered:', opFiltered.length, '| opItems:', opItems.length);
-    showToast('⚠️ No se encontró el ítem: ' + idItem);
-    return;
-  }
+function openOpModal(idx, vincularMode) {
+  currentOpItem = opFiltered[idx] || null;
+  if (!currentOpItem) return;
   try {
   opPdfBase64  = null;
   opPdfName    = null;
@@ -2668,19 +2662,20 @@ function openOpModal(idItem, vincularMode) {
 }
 
 function buildOpModalActions(item) {
-  const actions    = document.getElementById('opModalActions');
+  const actions     = document.getElementById('opModalActions');
+  const idx         = opFiltered.indexOf(item);
   const esPendiente = item.estado === 'pendiente' && !item.num_fac_emitida;
-  const esInventario = item.estado === 'inventario';
+  const esInventario= item.estado === 'inventario';
   const flagRev     = item.flag_revision === true || item.flag_revision === 'TRUE';
 
   let html = '';
   if (flagRev) {
-    html += `<button class="btn-primary" data-modal-aprobar="${item.id_item}">✓ Aprobar match</button>`;
+    html += `<button class="btn-primary" data-modal-aprobar="${idx}">✓ Aprobar match</button>`;
   }
   if (esPendiente) {
     html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Analizar PDF</button>`;
     html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarVentaDirecta()">💾 Guardar venta directa</button>`;
-    html += `<button class="btn-primary" style="background:#1565C0" data-modal-inv="${item.id_item}">📦 Inventario</button>`;
+    html += `<button class="btn-primary" style="background:#1565C0" data-modal-inv="${idx}">📦 Inventario</button>`;
   }
   if (esInventario) {
     html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Vincular factura</button>`;
@@ -2710,8 +2705,11 @@ function buildOpModalActions(item) {
 document.getElementById('opModalActions').addEventListener('click', function(e) {
   const btn = e.target.closest('button[data-modal-aprobar], button[data-modal-inv]');
   if (!btn) return;
-  if (btn.dataset.modalAprobar) { aprobarMatch(btn.dataset.modalAprobar); closeOpModal(); }
-  if (btn.dataset.modalInv)     { closeOpModal(); abrirModalInventarioPorId(btn.dataset.modalInv); }
+  const idx  = parseInt(btn.dataset.modalAprobar ?? btn.dataset.modalInv);
+  const item = opFiltered[idx];
+  if (!item) return;
+  if (btn.dataset.modalAprobar !== undefined) { aprobarMatch(item.id_item); closeOpModal(); }
+  if (btn.dataset.modalInv     !== undefined) { closeOpModal(); abrirModalInventarioPorId(item.id_item); }
 });
 
 function closeOpModal() {
