@@ -2583,7 +2583,6 @@ function applyOpFilters() {
 //  MODAL OPERACIONES
 // ══════════════════════════════════════════════════
 function openOpModal(idItem, vincularMode) {
-  // Buscar en opFiltered primero, luego en opItems completo como fallback
   currentOpItem = opFiltered.find(i => String(i.id_item) === String(idItem))
                || opItems.find(i => String(i.id_item) === String(idItem))
                || null;
@@ -2592,13 +2591,14 @@ function openOpModal(idItem, vincularMode) {
     showToast('⚠️ No se encontró el ítem: ' + idItem);
     return;
   }
+  try {
   opPdfBase64  = null;
   opPdfName    = null;
 
   const item = currentOpItem;
   document.getElementById('opModalTitle').textContent = item.id_item || 'Ítem';
   document.getElementById('opMFacCarbone').value    = item.num_fac_carbone  || '';
-  document.getElementById('opMFechaCompra').value   = item.fecha_compra     || '';
+  document.getElementById('opMFechaCompra').value   = String(item.fecha_compra || '').substring(0,10);
   document.getElementById('opMDescripcion').value   = item.descripcion_prod || '';
   document.getElementById('opMCodigo').value        = item.codigo_prod      || '';
   document.getElementById('opMCostoTotal').value    = item.total_carbone ? '$'+parseFloat(item.total_carbone).toFixed(2) : '';
@@ -2610,7 +2610,7 @@ function openOpModal(idItem, vincularMode) {
 
   // Campos venta
   document.getElementById('opMFacEmitida').value    = item.num_fac_emitida || '';
-  document.getElementById('opMFechaVenta').value    = item.fecha_venta     || '';
+  document.getElementById('opMFechaVenta').value    = String(item.fecha_venta || '').substring(0,10);
   document.getElementById('opMCliente').value       = item.nombre_cliente  || '';
   document.getElementById('opMRucCliente').value    = item.ruc_cliente     || '';
   document.getElementById('opMDvCliente').value     = item.dv_cliente      || '';
@@ -2654,6 +2654,10 @@ function openOpModal(idItem, vincularMode) {
   buildOpModalActions(item);
 
   document.getElementById('opModalOverlay').classList.add('open');
+  } catch(err) {
+    console.error('openOpModal ERROR:', err);
+    showToast('⚠️ Error abriendo modal: ' + err.message);
+  }
 }
 
 function buildOpModalActions(item) {
