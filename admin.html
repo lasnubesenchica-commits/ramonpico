@@ -855,35 +855,18 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <div class="modal-body">
       <div class="modal-section">
         <div class="modal-grid">
-          <div class="modal-field">
-            <label>Tipo de ingreso</label>
-            <select id="iTipo" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
-              <option value="servicio_asesoria">💼 Servicio de asesoría</option>
-              <option value="servicio_tecnico">🔧 Servicio técnico</option>
-              <option value="venta_producto">📦 Venta de producto</option>
-              <option value="comision">💳 Comisión</option>
-              <option value="otro">📋 Otro</option>
-            </select>
-          </div>
-          <div class="modal-field">
-            <label>Tipo de comprobante</label>
-            <select id="iTipoComp" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
-              <option value="yappy">📱 Yappy</option>
-              <option value="transferencia">🏦 Transferencia</option>
-              <option value="factura">🧾 Factura</option>
-              <option value="efectivo">💵 Efectivo</option>
-              <option value="otro">📋 Otro</option>
-            </select>
-          </div>
           <div class="modal-field full">
-            <label>Categoría fiscal (DGI)</label>
-            <select id="iCategoriaFiscal" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
-              <option value="gravado_itbms">🟢 Gravado ITBMS (7%)</option>
-              <option value="exento_itbms">⚪ Exento de ITBMS</option>
-              <option value="servicios_gravados">🔵 Servicios gravados</option>
-              <option value="servicios_exentos">⚪ Servicios exentos</option>
+            <label>Categoría</label>
+            <select id="iCategoria" onchange="inferirItbmsIngreso()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+              <option value="venta_producto_gravado">📦 Venta de producto (con ITBMS)</option>
+              <option value="venta_producto_exento">📦 Venta de producto (exento)</option>
+              <option value="servicio_tecnico_gravado">🔧 Servicio técnico (con ITBMS)</option>
+              <option value="servicio_tecnico_exento">🔧 Servicio técnico (exento)</option>
+              <option value="asesoria_consultoria">💼 Asesoría / Consultoría</option>
+              <option value="comision">💳 Comisión</option>
               <option value="exportacion">📦 Exportación</option>
-              <option value="otro">📋 Otro</option>
+              <option value="otro_gravado">📋 Otro ingreso (con ITBMS)</option>
+              <option value="otro_exento">📋 Otro ingreso (exento)</option>
             </select>
           </div>
           <div class="modal-field full">
@@ -986,20 +969,11 @@ tr:hover td{background:rgba(0,0,0,.015)}
       <div class="modal-section">
         <div class="modal-grid">
           <div class="modal-field full">
-          <div class="modal-field">
-            <label>Tipo de egreso</label>
-            <select id="eTipo" onchange="sugerirCategoriaEgreso()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
-              <option value="costo_mercancia">📦 Costo mercancía</option>
-              <option value="costo_operativo">🏢 Costo operativo</option>
-              <option value="nomina">👤 Nómina / empleado</option>
-              <option value="servicios">⚡ Servicios</option>
-            </select>
-          </div>
-          <div class="modal-field">
-            <label>Categoría fiscal (DGI)</label>
-            <select id="eCategoria" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          <div class="modal-field full">
+            <label>Categoría</label>
+            <select id="eCategoria" onchange="inferirTipoEgreso()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
               <option value="costo_mercancia">📦 Costo de mercancía</option>
-              <option value="gastos_personal">👤 Gastos de personal</option>
+              <option value="gastos_personal">👤 Nómina / Personal</option>
               <option value="alquileres">🏠 Alquileres</option>
               <option value="servicios_publicos">💡 Servicios públicos</option>
               <option value="combustible_transporte">⛽ Combustible / Transporte</option>
@@ -1038,6 +1012,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
             </div>
           </div>
           <!-- campos hidden para mantener compatibilidad con guardarEgresoOperativo() -->
+          <input type="hidden" id="eTipoHidden" value="costo_operativo">
           <input type="hidden" id="eSubtotal">
           <input type="hidden" id="eItbms">
           <div class="modal-field">
@@ -2528,8 +2503,8 @@ async function loadEgresos() {
 
 function updateEgresoStats(items) {
   document.getElementById('eStatTotal').textContent     = items.length;
-  document.getElementById('eStatMercancia').textContent = items.filter(i=>i.tipo_egreso==='costo_mercancia').length;
-  document.getElementById('eStatOperativo').textContent = items.filter(i=>i.tipo_egreso!=='costo_mercancia').length;
+  document.getElementById('eStatMercancia').textContent = items.filter(i=>i.categoria==='costo_mercancia').length;
+  document.getElementById('eStatOperativo').textContent = items.filter(i=>i.categoria!=='costo_mercancia').length;
   const total = items.reduce((s,i)=>s+(parseFloat(i.total||'0')||0), 0);
   document.getElementById('eStatTotalMonto').textContent = total > 0
     ? '$' + total.toLocaleString('es-PA', {minimumFractionDigits:2}) : '—';
@@ -2549,7 +2524,7 @@ document.getElementById('searchEgr').addEventListener('input', applyEgresoFilter
 function applyEgresoFilters() {
   const q = document.getElementById('searchEgr').value.toLowerCase().trim();
   let items = egrItems;
-  if (egrFilter !== 'all') items = items.filter(i => i.tipo_egreso === egrFilter);
+  if (egrFilter !== 'all') items = items.filter(i => i.categoria === egrFilter);
   if (q) items = items.filter(i =>
     (i.descripcion||'').toLowerCase().includes(q)  ||
     (i.proveedor||'').toLowerCase().includes(q)    ||
@@ -2567,12 +2542,20 @@ function renderEgresoTable(items) {
     tbody.innerHTML = '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay egresos</span></div></td></tr>';
     return;
   }
-  const tipoBadge = t => ({
-    costo_mercancia: '<span class="badge badge-egreso-mercancia">📦 Mercancía</span>',
-    costo_operativo: '<span class="badge badge-egreso-operativo">🏢 Operativo</span>',
-    nomina:          '<span class="badge badge-egreso-nomina">👤 Nómina</span>',
-    servicios:       '<span class="badge badge-egreso-servicios">⚡ Servicios</span>',
-  }[t] || `<span class="badge">${esc(t||'—')}</span>`);
+  const catBadgeEgr = c => ({
+    costo_mercancia:          '<span class="badge badge-egreso-mercancia">📦 Mercancía</span>',
+    gastos_personal:          '<span class="badge badge-egreso-nomina">👤 Personal</span>',
+    alquileres:               '<span class="badge badge-egreso-operativo">🏠 Alquiler</span>',
+    servicios_publicos:       '<span class="badge badge-egreso-servicios">💡 Serv. públicos</span>',
+    combustible_transporte:   '<span class="badge badge-egreso-operativo">⛽ Combustible</span>',
+    publicidad_mercadeo:      '<span class="badge badge-egreso-operativo">📣 Publicidad</span>',
+    honorarios_profesionales: '<span class="badge badge-egreso-servicios">📋 Honorarios</span>',
+    mantenimiento_reparacion: '<span class="badge badge-egreso-operativo">🔧 Mantenimiento</span>',
+    seguros:                  '<span class="badge badge-egreso-operativo">🛡️ Seguros</span>',
+    depreciacion:             '<span class="badge badge-egreso-operativo">📉 Depreciación</span>',
+    gastos_financieros:       '<span class="badge badge-egreso-servicios">🏦 Financiero</span>',
+    otros_deducibles:         '<span class="badge">📂 Otros</span>',
+  }[c] || `<span class="badge">${esc(c||'—')}</span>`);
 
   const estadoBadge = e => ({
     registrado: '<span class="badge badge-pendiente">● Registrado</span>',
@@ -2585,7 +2568,7 @@ function renderEgresoTable(items) {
     return `<tr>
       <td><span style="font-family:'DM Mono',monospace;font-size:.7rem">${esc(item.id_egreso||'')}</span></td>
       <td style="white-space:nowrap;color:var(--muted);font-size:.8rem">${esc(String(item.fecha_egreso||'').substring(0,10))}</td>
-      <td>${tipoBadge(item.tipo_egreso)}<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem">${esc(item.categoria||'')}</div></td>
+      <td>${catBadgeEgr(item.categoria)}</td>
       <td>
         <div style="font-weight:500;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.descripcion||'')}">${esc((item.descripcion||'').substring(0,60))}</div>
         ${item.id_item_cv ? `<div style="font-size:.65rem;color:var(--muted);font-family:'DM Mono',monospace">${esc(item.id_item_cv)}</div>` : ''}
@@ -2606,9 +2589,11 @@ async function guardarEgresoOperativo() {
   const total       = parseFloat(document.getElementById('eTotal').value) || 0;
   const fecha       = document.getElementById('eFecha').value;
 
-  if (!descripcion) { showToast('⚠️ La descripción es requerida'); return; }
-  if (!total)       { showToast('⚠️ El total es requerido');       return; }
-  if (!fecha)       { showToast('⚠️ La fecha es requerida');       return; }
+  if (!total) { showToast('⚠️ El total es requerido'); return; }
+  if (!fecha) { showToast('⚠️ La fecha es requerida'); return; }
+
+  // Asegurar que eTipoHidden esté actualizado
+  inferirTipoEgreso();
 
   const btn = document.querySelector('#egresoModalOverlay .btn-primary');
   btn.disabled    = true;
@@ -2617,8 +2602,8 @@ async function guardarEgresoOperativo() {
   try {
     const data = await gasJsonp('registrarEgresoOperativo', {
       fecha:       fecha,
-      tipo:        document.getElementById('eTipo').value,
-      categoria:   document.getElementById('eCategoria').value.trim(),
+      tipo:        document.getElementById('eTipoHidden').value,
+      categoria:   document.getElementById('eCategoria').value,
       proveedor:   document.getElementById('eProveedor').value.trim(),
       ruc_prov:    document.getElementById('eRucProv').value.trim(),
       dv_prov:     document.getElementById('eDvProv').value.trim(),
@@ -2764,13 +2749,17 @@ function renderIngresosTable(items) {
     abono:      '<span class="badge badge-revision">◑ Abono</span>',
   }[e] || `<span class="badge">${esc(e||'—')}</span>`);
 
-  const tipoBadge = t => ({
-    venta_producto:    '<span class="badge badge-vinculado">📦 Producto</span>',
-    servicio_asesoria: '<span class="badge" style="background:#E8EAF6;color:#283593">💼 Asesoría</span>',
-    servicio_tecnico:  '<span class="badge" style="background:#E8EAF6;color:#283593">🔧 Técnico</span>',
-    comision:          '<span class="badge" style="background:#FFF9C4;color:#795548">💳 Comisión</span>',
-    otro:              `<span class="badge">${esc(t)}</span>`,
-  }[t] || `<span class="badge">${esc(t||'—')}</span>`);
+  const catBadgeIng = c => ({
+    venta_producto_gravado:   '<span class="badge badge-vinculado">📦 Venta (+ITBMS)</span>',
+    venta_producto_exento:    '<span class="badge" style="background:#F5F5F5;color:#555">📦 Venta (exento)</span>',
+    servicio_tecnico_gravado: '<span class="badge" style="background:#E8EAF6;color:#283593">🔧 Técnico (+ITBMS)</span>',
+    servicio_tecnico_exento:  '<span class="badge" style="background:#F5F5F5;color:#555">🔧 Técnico (exento)</span>',
+    asesoria_consultoria:     '<span class="badge" style="background:#E8EAF6;color:#283593">💼 Asesoría</span>',
+    comision:                 '<span class="badge" style="background:#FFF9C4;color:#795548">💳 Comisión</span>',
+    exportacion:              '<span class="badge" style="background:#E3F2FD;color:#0D47A1">📦 Exportación</span>',
+    otro_gravado:             '<span class="badge badge-vinculado">📋 Otro (+ITBMS)</span>',
+    otro_exento:              '<span class="badge" style="background:#F5F5F5;color:#555">📋 Otro (exento)</span>',
+  }[c] || `<span class="badge">${esc(c||'—')}</span>`);
 
   tbody.innerHTML = items.map(item => {
     const total = parseFloat(item.total||'0')||0;
@@ -2785,7 +2774,7 @@ function renderIngresosTable(items) {
         <div style="font-weight:500">${esc(item.nombre_cliente||'—')}</div>
         <div style="font-size:.68rem;color:var(--muted)">${esc(item.ruc_cliente||'')}</div>
       </td>
-      <td>${tipoBadge(item.tipo_ingreso)}<div style="font-size:.68rem;color:var(--muted);margin-top:.2rem">${esc(item.categoria_ingreso||'')}</div></td>
+      <td>${catBadgeIng(item.categoria_ingreso)}</td>
       <td style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--green)">$${total.toFixed(2)}</td>
       <td>${estadoBadge(item.estado)}</td>
       <td>${compLink}</td>
@@ -2794,30 +2783,24 @@ function renderIngresosTable(items) {
 }
 
 function abrirModalNuevoIngreso() {
-  document.getElementById('iTipo').value          = 'servicio_asesoria';
-  document.getElementById('iTipoComp').value      = 'yappy';
-  document.getElementById('iCategoriaFiscal').value = 'gravado_itbms';
-  document.getElementById('iDescripcion').value = '';
-  document.getElementById('iFecha').value       = new Date().toISOString().substring(0,10);
-  document.getElementById('iNumFac').value      = '';
-  document.getElementById('iSubtotal').value    = '';
-  document.getElementById('iItbms').value       = '';
-  document.getElementById('iTotal').value       = '';
-  document.getElementById('iItbmsCheck').checked = false;
+  document.getElementById('iCategoria').value     = 'venta_producto_gravado';
+  document.getElementById('iDescripcion').value   = '';
+  document.getElementById('iFecha').value         = new Date().toISOString().substring(0,10);
+  document.getElementById('iNumFac').value        = '';
+  document.getElementById('iSubtotal').value      = '';
+  document.getElementById('iItbms').value         = '';
+  document.getElementById('iTotal').value         = '';
+  document.getElementById('iItbmsCheck').checked  = true;
   document.getElementById('iDesglose').style.display = 'none';
   document.getElementById('iItbmsTag').style.display  = 'none';
-  document.getElementById('iNombreCli').value   = '';
-  document.getElementById('iRucCli').value      = '';
-  document.getElementById('iDvCli').value       = '';
-  document.getElementById('iNotas').value       = '';
+  document.getElementById('iNombreCli').value     = '';
+  document.getElementById('iRucCli').value        = '';
+  document.getElementById('iDvCli').value         = '';
+  document.getElementById('iNotas').value         = '';
   document.getElementById('iDropLabel').innerHTML = '📎 Adjuntar comprobante (Yappy, transferencia o factura) — la IA llenará los campos';
   document.getElementById('iAIStatus').style.display = 'none';
-  document.getElementById('iVoucherInput').value = '';
+  document.getElementById('iVoucherInput').value  = '';
   ingresoFileB64 = null; ingresoFileMime = null;
-  document.getElementById('iNombreCli').value   = '';
-  document.getElementById('iRucCli').value      = '';
-  document.getElementById('iDvCli').value       = '';
-  document.getElementById('iNotas').value       = '';
   document.getElementById('ingresoModalOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -2828,35 +2811,36 @@ function closeIngresoModal() {
 }
 
 // ── RECALC INGRESO ──────────────────────────────────────────
+// Las categorías que llevan ITBMS por defecto
+const CATS_GRAVADAS_ING = ['venta_producto_gravado','servicio_tecnico_gravado','asesoria_consultoria','comision','otro_gravado'];
+
+function inferirItbmsIngreso() {
+  const cat   = document.getElementById('iCategoria').value;
+  const check = document.getElementById('iItbmsCheck');
+  check.checked = CATS_GRAVADAS_ING.includes(cat);
+  recalcIngreso();
+}
+
 function recalcIngreso() {
   const total    = parseFloat(document.getElementById('iTotal').value) || 0;
   const aplica   = document.getElementById('iItbmsCheck').checked;
   const desglose = document.getElementById('iDesglose');
   const tag      = document.getElementById('iItbmsTag');
-  const catFiscal = document.getElementById('iCategoriaFiscal');
 
   if (aplica && total > 0) {
     const subtotal = parseFloat((total / 1.07).toFixed(2));
     const itbms    = parseFloat((total - subtotal).toFixed(2));
-    document.getElementById('iSubtotal').value      = subtotal;
-    document.getElementById('iItbms').value         = itbms;
+    document.getElementById('iSubtotal').value           = subtotal;
+    document.getElementById('iItbms').value              = itbms;
     document.getElementById('iSubtotalDisp').textContent = '$' + subtotal.toFixed(2);
     document.getElementById('iItbmsDisp').textContent    = '$' + itbms.toFixed(2);
     desglose.style.display = 'block';
     tag.style.display      = 'inline';
-    // sugerir categoría fiscal si aún está en valor por defecto o exento
-    if (catFiscal && ['exento_itbms','servicios_exentos'].includes(catFiscal.value)) {
-      catFiscal.value = 'gravado_itbms';
-    }
   } else {
     document.getElementById('iSubtotal').value = total > 0 ? total.toFixed(2) : '';
     document.getElementById('iItbms').value    = '0';
     desglose.style.display = 'none';
     tag.style.display      = 'none';
-    // sugerir exento si el usuario desmarcó ITBMS
-    if (catFiscal && ['gravado_itbms','servicios_gravados'].includes(catFiscal.value)) {
-      catFiscal.value = 'exento_itbms';
-    }
   }
 }
 
@@ -2963,17 +2947,20 @@ function llenarCamposIngreso(parsed) {
   if (parsed.ruc_pagador)     document.getElementById('iRucCli').value      = parsed.ruc_pagador;
   if (parsed.dv_pagador)      document.getElementById('iDvCli').value       = parsed.dv_pagador;
   if (parsed.descripcion)     document.getElementById('iDescripcion').value = parsed.descripcion;
-  if (parsed.tiene_itbms) {
-    document.getElementById('iItbmsCheck').checked = true;
-    recalcIngreso();
-  }
+  if (parsed.notas)           document.getElementById('iNotas').value       = parsed.notas;
+
+  // Inferir categoría desde tipo de comprobante detectado por IA
+  const cat = document.getElementById('iCategoria');
   if (parsed.tipo_comprobante) {
-    const tc = document.getElementById('iTipoComp');
-    // mapear valores IA → opciones del select
-    const mapa = { yappy: 'yappy', transferencia: 'transferencia', factura: 'factura' };
-    if (mapa[parsed.tipo_comprobante]) tc.value = mapa[parsed.tipo_comprobante];
+    if (['yappy','transferencia','efectivo'].includes(parsed.tipo_comprobante)) {
+      cat.value = 'venta_producto_gravado';
+    } else if (parsed.tipo_comprobante === 'factura') {
+      cat.value = parsed.tiene_itbms ? 'venta_producto_gravado' : 'venta_producto_exento';
+    }
+  } else if (parsed.tiene_itbms) {
+    cat.value = 'venta_producto_gravado';
   }
-  if (parsed.notas) document.getElementById('iNotas').value = parsed.notas;
+  inferirItbmsIngreso();
 }
 
 async function guardarNuevoIngreso() {
@@ -2989,9 +2976,7 @@ async function guardarNuevoIngreso() {
   try {
     const data = await gasJsonp('registrarIngresoManual', {
       fecha:            fecha,
-      tipo:             document.getElementById('iTipo').value,
-      tipo_comprobante: document.getElementById('iTipoComp').value,
-      categoria_fiscal: document.getElementById('iCategoriaFiscal').value,
+      categoria:        document.getElementById('iCategoria').value,
       descripcion:      descripcion,
       num_factura:     document.getElementById('iNumFac').value.trim(),
       subtotal:        document.getElementById('iSubtotal').value||'',
@@ -3174,46 +3159,55 @@ function llenarCamposEgreso(parsed) {
 function _sugerirCategoriaDesdeParsed(parsed) {
   const texto = ((parsed.proveedor || '') + ' ' +
                  (parsed.items ? parsed.items.map(i => i.descripcion||'').join(' ') : '')).toLowerCase();
-  const cat  = document.getElementById('eCategoria');
-  const tipo = document.getElementById('eTipo');
+  const cat = document.getElementById('eCategoria');
 
   if (/carbone|ferreteria|ferretería|herramienta|equipo|maquinaria|repuesto/.test(texto)) {
-    tipo.value = 'costo_mercancia'; cat.value = 'costo_mercancia';
+    cat.value = 'costo_mercancia';
   } else if (/gasolina|combustible|texaco|delta|puma|petro|taxi|uber/.test(texto)) {
-    tipo.value = 'costo_operativo'; cat.value = 'combustible_transporte';
+    cat.value = 'combustible_transporte';
   } else if (/alquiler|renta|arrendamiento|local|oficina|bodega/.test(texto)) {
-    tipo.value = 'costo_operativo'; cat.value = 'alquileres';
+    cat.value = 'alquileres';
   } else if (/cable.*onda|claro|movistar|natcom|internet|telefon|celular|electricidad|ensa|edemet|agua|anam/.test(texto)) {
-    tipo.value = 'servicios'; cat.value = 'servicios_publicos';
+    cat.value = 'servicios_publicos';
   } else if (/publicidad|meta|facebook|google|instagram|ads|impresion|imprenta|diseño/.test(texto)) {
-    tipo.value = 'costo_operativo'; cat.value = 'publicidad_mercadeo';
+    cat.value = 'publicidad_mercadeo';
   } else if (/contador|abogado|legal|auditoria|consultor|honorario|asesor/.test(texto)) {
-    tipo.value = 'servicios'; cat.value = 'honorarios_profesionales';
+    cat.value = 'honorarios_profesionales';
   } else if (/seguro|assa|mapfre|sura/.test(texto)) {
-    tipo.value = 'costo_operativo'; cat.value = 'seguros';
+    cat.value = 'seguros';
   } else if (/banco|comision bancaria|financiero|interes/.test(texto)) {
-    tipo.value = 'servicios'; cat.value = 'gastos_financieros';
+    cat.value = 'gastos_financieros';
   } else if (/nomina|salario|empleado|planilla|sueldo|css|seguro social/.test(texto)) {
-    tipo.value = 'nomina'; cat.value = 'gastos_personal';
+    cat.value = 'gastos_personal';
   } else if (/manten|repara|taller|servicio tecnico/.test(texto)) {
-    tipo.value = 'costo_operativo'; cat.value = 'mantenimiento_reparacion';
+    cat.value = 'mantenimiento_reparacion';
   }
+  inferirTipoEgreso();
 }
 
-function sugerirCategoriaEgreso() {
-  const tipo = document.getElementById('eTipo').value;
-  const cat  = document.getElementById('eCategoria');
+function inferirTipoEgreso() {
+  // Deriva tipo_egreso interno desde la categoría DGI para el GAS
+  const cat  = document.getElementById('eCategoria').value;
   const mapa = {
-    costo_mercancia: 'costo_mercancia',
-    nomina:          'gastos_personal',
-    servicios:       'honorarios_profesionales',
-    costo_operativo: 'otros_deducibles',
+    costo_mercancia:         'costo_mercancia',
+    gastos_personal:         'nomina',
+    alquileres:              'costo_operativo',
+    servicios_publicos:      'servicios',
+    combustible_transporte:  'costo_operativo',
+    publicidad_mercadeo:     'costo_operativo',
+    honorarios_profesionales:'servicios',
+    mantenimiento_reparacion:'costo_operativo',
+    seguros:                 'costo_operativo',
+    depreciacion:            'costo_operativo',
+    gastos_financieros:      'servicios',
+    otros_deducibles:        'costo_operativo',
   };
-  if (mapa[tipo]) cat.value = mapa[tipo];
+  // guardamos en hidden para enviar al GAS
+  const hidden = document.getElementById('eTipoHidden');
+  if (hidden) hidden.value = mapa[cat] || 'costo_operativo';
 }
 
 function abrirModalNuevoEgreso() {
-  document.getElementById('eTipo').value        = 'costo_operativo';
   document.getElementById('eCategoria').value   = 'otros_deducibles';
   document.getElementById('eDescripcion').value = '';
   document.getElementById('eFecha').value       = new Date().toISOString().substring(0,10);
