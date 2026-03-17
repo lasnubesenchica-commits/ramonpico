@@ -500,7 +500,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
   text-transform:uppercase;font-weight:600;color:var(--text);
 }
 .pl-card-sub { font-size:.72rem;color:var(--muted) }
-.pl-card-body { padding:1.25rem }
+.pl-card-body { padding:1.25rem;overflow:hidden }
 .pl-chart-wrap { position:relative;height:220px }
 .pl-breakdown { width:100%;border-collapse:collapse }
 .pl-breakdown th {
@@ -528,6 +528,71 @@ tr:hover td{background:rgba(0,0,0,.015)}
   justify-content:center;gap:1rem;padding:4rem 2rem;
   color:var(--muted);font-size:.83rem;
 }
+
+/* ── INVENTARIO ── */
+#sectionInventario { display:none }
+.inv-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fill, minmax(260px,1fr));
+  gap:1rem;padding:1.5rem 2rem;
+}
+.inv-card {
+  background:var(--white);border:1px solid var(--border);
+  border-radius:var(--r2);overflow:hidden;
+  transition:box-shadow .2s,transform .2s;cursor:pointer;
+  display:flex;flex-direction:column;
+}
+.inv-card:hover {
+  box-shadow:0 4px 20px rgba(0,0,0,.08);
+  transform:translateY(-2px);
+}
+.inv-card-img {
+  width:100%;height:140px;object-fit:contain;
+  background:var(--bg);border-bottom:1px solid var(--border);
+  padding:.5rem;display:flex;align-items:center;justify-content:center;
+}
+.inv-card-img-placeholder {
+  width:100%;height:140px;background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:2.5rem;color:var(--chrome);
+}
+.inv-card-body { padding:.9rem 1rem;flex:1;display:flex;flex-direction:column;gap:.3rem }
+.inv-card-codigo {
+  font-family:'DM Mono',monospace;font-size:.6rem;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);
+}
+.inv-card-desc {
+  font-weight:600;font-size:.84rem;line-height:1.35;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.inv-card-footer {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:.65rem 1rem;border-top:1px solid var(--border);
+  background:var(--bg);
+}
+.inv-qty-badge {
+  font-family:'Bebas Neue',sans-serif;font-size:1.3rem;
+  color:#1565C0;line-height:1;
+}
+.inv-qty-label { font-size:.62rem;color:var(--muted) }
+.inv-costo {
+  font-family:'Bebas Neue',sans-serif;font-size:1.1rem;
+  color:var(--orange);
+}
+.inv-toolbar {
+  display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;
+  padding:1rem 2rem;border-bottom:1px solid var(--border);
+  background:var(--white);
+}
+.inv-view-btn {
+  font-size:.72rem;padding:.3rem .65rem;border-radius:5px;
+  border:1px solid var(--border);background:var(--bg);
+  color:var(--muted);cursor:pointer;transition:all .15s;
+}
+.inv-view-btn.active { background:var(--text);border-color:var(--text);color:#fff }
+/* Lista mode */
+.inv-list { padding:0 2rem 1.5rem }
 </style>
 </head>
 <body>
@@ -566,7 +631,8 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <button class="main-tab" id="tabIngresos"   onclick="switchTab('ingresos')">💰 Ingresos</button>
     <button class="main-tab" id="tabEgresos"    onclick="switchTab('egresos')">📤 Egresos</button>
     <button class="main-tab" id="tabVentasWeb"  onclick="switchTab('ventasWeb')">🛒 Ventas Web</button>
-    <button class="main-tab" id="tabDashboard"  onclick="switchTab('dashboard')">📊 Dashboard</button>
+    <button class="main-tab" id="tabDashboard"   onclick="switchTab('dashboard')">📊 Dashboard</button>
+    <button class="main-tab" id="tabInventario"  onclick="switchTab('inventario')">📦 Inventario</button>
   </div>
 
   <!-- ══════════ SECCIÓN: VENTAS WEB ══════════ -->
@@ -687,8 +753,17 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <div class="stat-pill"><span class="stat-pill-num green" id="iStatMonto">—</span><span class="stat-pill-label">Total ingresos</span></div>
   </div>
   <!-- Toolbar -->
-  <div class="op-toolbar" style="padding:1rem 2rem;display:flex;gap:.75rem;align-items:center;border-bottom:1px solid var(--border)">
-    <input type="text" id="searchIng" class="filter-search" placeholder="Buscar cliente, factura..." style="flex:1;max-width:280px">
+  <div class="op-toolbar" style="padding:1rem 2rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+    <button class="op-filter-btn active" data-ing-filter="all">Todos</button>
+    <button class="op-filter-btn" data-ing-filter="venta_producto">📦 Venta producto</button>
+    <button class="op-filter-btn" data-ing-filter="servicio_tecnico">🔧 Serv. técnico</button>
+    <button class="op-filter-btn" data-ing-filter="servicio_asesoria">💼 Asesoría</button>
+    <button class="op-filter-btn" data-ing-filter="comision">💳 Comisión</button>
+    <button class="op-filter-btn" data-ing-filter="otro">📋 Otro</button>
+    <div class="search-wrap" style="margin-left:auto">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchIng" class="filter-search" placeholder="Buscar cliente, factura...">
+    </div>
     <button class="btn-sync" onclick="abrirModalNuevoIngreso()" style="background:var(--green)">+ Nuevo ingreso</button>
     <button class="btn-sync" onclick="loadIngresos()">↻ Actualizar</button>
   </div>
@@ -906,6 +981,144 @@ tr:hover td{background:rgba(0,0,0,.015)}
   </div><!-- /pl-bottom -->
 
 </div><!-- /sectionDashboard -->
+
+<!-- ══════════ SECCIÓN: INVENTARIO ══════════ -->
+<div id="sectionInventario">
+
+  <!-- Stats -->
+  <div class="op-stats">
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#1565C0" id="invStatTotal">—</div><div class="stat-pill-label">Ítems en stock</div></div>
+    <div class="stat-pill"><div class="stat-pill-num orange" id="invStatValor">—</div><div class="stat-pill-label">Valor en costo</div></div>
+    <div class="stat-pill"><div class="stat-pill-num green" id="invStatFacs">—</div><div class="stat-pill-label">Facturas distintas</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#795548" id="invStatSinImg">—</div><div class="stat-pill-label">Sin imagen</div></div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="inv-toolbar">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" class="filter-search" id="searchInv" placeholder="Buscar producto, código...">
+    </div>
+    <div style="display:flex;gap:.3rem;margin-left:.5rem">
+      <button class="inv-view-btn active" id="invBtnGrid" onclick="setInvView('grid')">⊞ Grid</button>
+      <button class="inv-view-btn" id="invBtnList" onclick="setInvView('list')">≡ Lista</button>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:.5rem;align-items:center">
+      <select id="invSortSel" onchange="applyInvFilters()" style="font-family:'DM Mono',monospace;font-size:.72rem;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);padding:.3rem .6rem;outline:none;color:var(--text)">
+        <option value="fecha_desc">Más reciente</option>
+        <option value="fecha_asc">Más antiguo</option>
+        <option value="costo_desc">Mayor costo</option>
+        <option value="costo_asc">Menor costo</option>
+        <option value="desc_asc">A-Z</option>
+      </select>
+      <button class="btn-sync" onclick="invItems=[];loadInventario()">↻ Actualizar</button>
+    </div>
+  </div>
+
+  <!-- Grid view -->
+  <div id="invGridView">
+    <div class="inv-grid" id="invGrid">
+      <div style="grid-column:1/-1"><div class="pl-loading"><div class="spinner"></div><span>Cargando inventario...</span></div></div>
+    </div>
+  </div>
+
+  <!-- List view -->
+  <div id="invListView" style="display:none">
+    <div class="inv-list">
+      <table class="op-table" id="invTable">
+        <thead>
+          <tr>
+            <th style="width:52px">Img</th>
+            <th>Producto</th>
+            <th>Código</th>
+            <th>Fac. Carbone</th>
+            <th>Fecha compra</th>
+            <th>Costo unit.</th>
+            <th style="text-align:center">Cant.</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="invTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /sectionInventario -->
+
+<!-- ═══════════ MODAL: VENDER DESDE INVENTARIO ═══════════ -->
+<div class="modal-overlay" id="invVentaModalOverlay" onclick="if(event.target===this)closeInvVentaModal()">
+  <div class="modal-box op-modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="invVentaTitle">Vender ítem</div>
+      <button class="modal-close" onclick="closeInvVentaModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- Info producto -->
+      <div class="modal-section">
+        <div class="op-section-hdr op-section-compra">🧾 Producto — Carbone</div>
+        <div style="display:flex;align-items:flex-start;gap:1rem;margin-bottom:.75rem">
+          <div id="invVentaImgWrap" style="width:80px;height:80px;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--bg);font-size:1.8rem">📦</div>
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:.9rem;margin-bottom:.25rem" id="invVentaDesc">—</div>
+            <div style="font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted)" id="invVentaCodigo">—</div>
+            <div style="display:flex;gap:1rem;margin-top:.5rem">
+              <div><div style="font-size:.65rem;color:var(--muted)">Costo total</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#E65100" id="invVentaCosto">—</div></div>
+              <div><div style="font-size:.65rem;color:var(--muted)">Stock</div><div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#1565C0" id="invVentaStock">—</div></div>
+              <div><div style="font-size:.65rem;color:var(--muted)">Fac. Carbone</div><div style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:600" id="invVentaFacCarb">—</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Venta -->
+      <div class="modal-section">
+        <div class="op-section-hdr op-section-venta">💰 Datos de la Venta</div>
+        <div class="modal-grid">
+          <div class="modal-field"><label>N° Factura emitida</label><input type="text" id="invVMFacEmitida" placeholder="Número de factura"></div>
+          <div class="modal-field"><label>Fecha venta</label><input type="date" id="invVMFechaVenta"></div>
+          <div class="modal-field full"><label>Cliente</label><input type="text" id="invVMCliente" placeholder="Nombre completo"></div>
+          <div class="modal-field"><label>RUC / Cédula</label><input type="text" id="invVMRuc" placeholder="Opcional"></div>
+          <div class="modal-field"><label>DV</label><input type="text" id="invVMDv" placeholder="Opcional"></div>
+          <div class="modal-field"><label>Total venta (con ITBMS)</label><input type="number" id="invVMTotal" placeholder="0.00" step="0.01" oninput="recalcInvMargen()"></div>
+          <div class="modal-field">
+            <label>Margen estimado</label>
+            <div id="invVMMargen" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--green);padding:.4rem 0">—</div>
+          </div>
+        </div>
+        <div style="margin-top:.5rem">
+          <label style="display:flex;align-items:center;gap:.5rem;font-size:.82rem;cursor:pointer">
+            <input type="checkbox" id="invVMEsDirecta" onchange="toggleInvVentaDirecta()">
+            <span>Venta directa (sin factura emitida — neto, sin ITBMS)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Upload factura emitida -->
+      <div class="modal-section" id="invVMUploadSection">
+        <div class="op-section-hdr" style="background:#E8EAF6;color:#283593">📎 Factura emitida (opcional)</div>
+        <div class="upload-zone" id="invVMDropZone"
+          onclick="document.getElementById('invVMPdfInput').click()"
+          ondragover="event.preventDefault();this.classList.add('has-file')"
+          ondragleave="this.classList.remove('has-file')"
+          ondrop="handleInvVMPdfDrop(event)">
+          <div style="font-size:1.1rem;margin-bottom:.2rem">📎</div>
+          <div style="font-size:.75rem;color:var(--muted)">Sube el PDF de la factura emitida para que la IA extraiga los datos</div>
+          <input type="file" id="invVMPdfInput" accept="application/pdf" style="display:none" onchange="handleInvVMPdfSelect(event)">
+        </div>
+        <div id="invVMPdfFileName" style="font-size:.72rem;color:var(--chrome);margin-top:.3rem"></div>
+        <div style="margin-top:.5rem">
+          <button class="btn-primary" id="invVMBtnAnalizar" style="background:#4527A0" onclick="analizarPdfInvVenta()" disabled>✦ Analizar PDF</button>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" style="background:var(--green)" onclick="guardarVentaInv()">💾 Registrar venta</button>
+      <button class="btn-secondary" onclick="closeInvVentaModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
 
 </div><!-- /app -->
 
@@ -2123,16 +2336,19 @@ function switchTab(tab) {
   document.getElementById('sectionEgresos').style.display     = tab === 'egresos'     ? 'block' : 'none';
   document.getElementById('sectionIngresos').style.display    = tab === 'ingresos'    ? 'block' : 'none';
   document.getElementById('sectionDashboard').style.display   = tab === 'dashboard'   ? 'block' : 'none';
+  document.getElementById('sectionInventario').style.display  = tab === 'inventario'  ? 'block' : 'none';
   document.getElementById('tabVentasWeb').classList.toggle('active',   tab === 'ventasWeb');
   document.getElementById('tabOperaciones').classList.toggle('active', tab === 'operaciones');
   document.getElementById('tabEgresos').classList.toggle('active',     tab === 'egresos');
   document.getElementById('tabIngresos').classList.toggle('active',    tab === 'ingresos');
   document.getElementById('tabDashboard').classList.toggle('active',   tab === 'dashboard');
+  document.getElementById('tabInventario').classList.toggle('active',  tab === 'inventario');
   if (tab === 'operaciones' && !opItems.length)  loadOperaciones();
   if (tab === 'egresos'     && !egrItems.length) loadEgresos();
   if (tab === 'ingresos'    && !ingItems.length) loadIngresos();
   if (tab === 'ventasWeb'   && !document.getElementById('ordenesBody').children.length) loadOrdenes();
   if (tab === 'dashboard')                       loadDashboard();
+  if (tab === 'inventario')                      loadInventario();
 }
 
 function refreshCurrentSection() {
@@ -2140,6 +2356,7 @@ function refreshCurrentSection() {
   else if (activeTab === 'egresos')     loadEgresos();
   else if (activeTab === 'ingresos')    loadIngresos();
   else if (activeTab === 'dashboard')   { plLoaded = false; loadDashboard(); }
+  else if (activeTab === 'inventario')  loadInventario();
   else                                  loadOperaciones();
 }
 
@@ -2258,10 +2475,10 @@ function renderOpTable(items) {
       <td>${estadoBadge}${ordenWebBadge}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal(${i})">Ver</button>
+          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal('${esc(item.id_item)}')">Ver</button>
           ${flagRev ? `<button class="btn-xs btn-confirm" onclick="aprobarMatch('${esc(item.id_item)}')">✓ Aprobar</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" onclick="openOpModal(${i},true)">+ Vincular</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" onclick="abrirModalInventario(${i})" title="Mover a inventario">📦</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" onclick="openOpModal('${esc(item.id_item)}',true)">+ Vincular</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" onclick="abrirModalInventarioPorId('${esc(item.id_item)}')" title="Mover a inventario">📦</button>` : ''}
           ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" onclick="buscarOrdenWeb('${esc(item.id_item)}')" title="Buscar orden web vinculada">🔗</button>` : ''}
         </div>
       </td>
@@ -2348,8 +2565,9 @@ function applyOpFilters() {
 // ══════════════════════════════════════════════════
 //  MODAL OPERACIONES
 // ══════════════════════════════════════════════════
-function openOpModal(idx, vincularMode) {
-  currentOpItem = opFiltered[idx];
+function openOpModal(idItem, vincularMode) {
+  // Buscar por id_item en lugar de índice — evita el bug de desincronía con sorted/filtered
+  currentOpItem = opFiltered.find(i => i.id_item === idItem) || null;
   if (!currentOpItem) return;
   opPdfBase64  = null;
   opPdfName    = null;
@@ -2428,7 +2646,7 @@ function buildOpModalActions(item) {
   if (esPendiente) {
     html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Analizar PDF</button>`;
     html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarVentaDirecta()">💾 Guardar venta directa</button>`;
-    html += `<button class="btn-primary" style="background:#1565C0" onclick="closeOpModal();abrirModalInventario(opFiltered.indexOf(item))">📦 Inventario</button>`;
+    html += `<button class="btn-primary" style="background:#1565C0" onclick="closeOpModal();abrirModalInventarioPorId('${esc(item.id_item)}')">📦 Inventario</button>`;
   }
   if (esInventario) {
     html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Vincular factura</button>`;
@@ -2688,6 +2906,16 @@ let invItemActual = null;
 function abrirModalInventario(idx) {
   const item = opFiltered[idx];
   if (!item) return;
+  _abrirInvModalConItem(item);
+}
+
+function abrirModalInventarioPorId(idItem) {
+  const item = opFiltered.find(i => i.id_item === idItem) || null;
+  if (!item) return;
+  _abrirInvModalConItem(item);
+}
+
+function _abrirInvModalConItem(item) {
   invItemActual = item;
   document.getElementById('invProductoDesc').textContent   = item.descripcion_prod || '—';
   document.getElementById('invProductoCodigo').textContent = item.codigo_prod ? 'Código: ' + item.codigo_prod : '';
@@ -2933,6 +3161,7 @@ let ingItems    = [];
 let ingFiltered = [];
 let ingSortCol  = 'fecha_ingreso';
 let ingSortAsc  = false;
+let ingFilter   = 'all';
 
 async function loadIngresos() {
   document.getElementById('ingresosBody').innerHTML =
@@ -2959,11 +3188,32 @@ function updateIngresoStats(items) {
     ? '$'+total.toLocaleString('es-PA',{minimumFractionDigits:2}) : '—';
 }
 
+document.querySelectorAll('[data-ing-filter]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-ing-filter]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ingFilter = btn.dataset.ingFilter;
+    applyIngresoFilters();
+  });
+});
 document.getElementById('searchIng').addEventListener('input', applyIngresoFilters);
 
 function applyIngresoFilters() {
   const q = document.getElementById('searchIng').value.toLowerCase().trim();
   let items = ingItems;
+  // Filtro por tipo
+  if (ingFilter !== 'all') {
+    items = items.filter(i => {
+      const t = (i.tipo_ingreso || '').toLowerCase();
+      const c = (i.categoria_ingreso || '').toLowerCase();
+      if (ingFilter === 'venta_producto')    return t.includes('venta') || c.includes('venta');
+      if (ingFilter === 'servicio_tecnico')  return t.includes('tecnico') || t.includes('técnico') || t === 'servicio_tecnico';
+      if (ingFilter === 'servicio_asesoria') return t.includes('asesoria') || t.includes('asesor') || t === 'servicio_asesoria';
+      if (ingFilter === 'comision')          return t.includes('comision') || t.includes('comisión');
+      if (ingFilter === 'otro')              return t === 'otro' || c.includes('otro');
+      return true;
+    });
+  }
   if (q) items = items.filter(i =>
     (i.nombre_cliente||'').toLowerCase().includes(q) ||
     (i.num_factura||'').toLowerCase().includes(q)    ||
@@ -3500,8 +3750,331 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════════════
-//  DASHBOARD P&L
+//  INVENTARIO
 // ══════════════════════════════════════════════════
+let invItems     = [];
+let invFiltered  = [];
+let invView      = 'grid';   // 'grid' | 'list'
+let invItemVenta = null;
+let invVMPdfB64  = null;
+let invVMPdfName = null;
+
+async function loadInventario() {
+  document.getElementById('invGrid').innerHTML =
+    '<div style="grid-column:1/-1"><div class="pl-loading"><div class="spinner"></div><span>Cargando inventario...</span></div></div>';
+  document.getElementById('invTableBody').innerHTML =
+    '<tr><td colspan="8"><div class="table-loading"><div class="spinner"></div><span>Cargando...</span></div></td></tr>';
+  try {
+    const data = await gasJsonp('getComprasVentas', {});
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    // Solo ítems en estado inventario
+    invItems = (data.items || []).filter(i => i.estado === 'inventario');
+    updateInvStats(invItems);
+    applyInvFilters();
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+    document.getElementById('invGrid').innerHTML =
+      '<div style="grid-column:1/-1"><div class="table-empty"><span style="font-size:2rem">⚠️</span><span>' + esc(err.message) + '</span></div></div>';
+  }
+}
+
+function updateInvStats(items) {
+  const totalCant  = items.reduce((s,i) => s + (parseInt(i.cantidad)||1), 0);
+  const totalValor = items.reduce((s,i) => s + (parseFloat(i.total_carbone)||0) * (parseInt(i.cantidad)||1), 0);
+  const facs       = new Set(items.map(i => i.num_fac_carbone).filter(Boolean)).size;
+  const sinImg     = items.filter(i => !i.drive_url_carb && !i._img).length;
+  document.getElementById('invStatTotal').textContent  = totalCant;
+  document.getElementById('invStatValor').textContent  = totalValor > 0 ? '$'+totalValor.toLocaleString('es-PA',{minimumFractionDigits:2}) : '—';
+  document.getElementById('invStatFacs').textContent   = facs;
+  document.getElementById('invStatSinImg').textContent = sinImg;
+}
+
+function applyInvFilters() {
+  const q    = (document.getElementById('searchInv').value || '').toLowerCase().trim();
+  const sort = document.getElementById('invSortSel').value;
+  let items  = invItems;
+
+  if (q) items = items.filter(i =>
+    (i.descripcion_prod || '').toLowerCase().includes(q) ||
+    (i.codigo_prod      || '').toLowerCase().includes(q) ||
+    (i.num_fac_carbone  || '').toLowerCase().includes(q)
+  );
+
+  items = [...items].sort((a, b) => {
+    if (sort === 'fecha_desc') return String(b.fecha_compra||'').localeCompare(String(a.fecha_compra||''));
+    if (sort === 'fecha_asc')  return String(a.fecha_compra||'').localeCompare(String(b.fecha_compra||''));
+    if (sort === 'costo_desc') return (parseFloat(b.total_carbone)||0) - (parseFloat(a.total_carbone)||0);
+    if (sort === 'costo_asc')  return (parseFloat(a.total_carbone)||0) - (parseFloat(b.total_carbone)||0);
+    if (sort === 'desc_asc')   return String(a.descripcion_prod||'').localeCompare(String(b.descripcion_prod||''));
+    return 0;
+  });
+
+  invFiltered = items;
+
+  if (invView === 'grid') renderInvGrid(items);
+  else                    renderInvList(items);
+}
+
+document.getElementById('searchInv').addEventListener('input', applyInvFilters);
+
+function setInvView(v) {
+  invView = v;
+  document.getElementById('invBtnGrid').classList.toggle('active', v === 'grid');
+  document.getElementById('invBtnList').classList.toggle('active', v === 'list');
+  document.getElementById('invGridView').style.display = v === 'grid' ? 'block' : 'none';
+  document.getElementById('invListView').style.display = v === 'list' ? 'block' : 'none';
+  applyInvFilters();
+}
+
+// ── Helpers de imagen ──
+function _invImgUrl(item) {
+  // Intenta extraer thumbnail de Drive si hay drive_url
+  if (item.drive_url_carb) {
+    const m = item.drive_url_carb.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+    if (m) return `https://drive.google.com/thumbnail?id=${m[1]}&sz=w200`;
+  }
+  return null;
+}
+
+function _invCardImg(item) {
+  const url = _invImgUrl(item);
+  if (url) {
+    return `<div class="inv-card-img">
+      <img src="${esc(url)}" alt="${esc(item.descripcion_prod||'')}"
+        style="max-width:100%;max-height:100%;object-fit:contain"
+        onerror="this.parentNode.innerHTML='<div style=\\'font-size:2.5rem;color:var(--chrome)\\'>📦</div>'">
+    </div>`;
+  }
+  return `<div class="inv-card-img-placeholder">📦</div>`;
+}
+
+// ── Render Grid ──
+function renderInvGrid(items) {
+  const grid = document.getElementById('invGrid');
+  if (!items.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay ítems en inventario</span></div></div>';
+    return;
+  }
+  grid.innerHTML = items.map(item => {
+    const costo   = parseFloat(item.total_carbone || '0') || 0;
+    const cant    = parseInt(item.cantidad || '1') || 1;
+    const imgHtml = _invCardImg(item);
+    return `<div class="inv-card" onclick="abrirInvVentaModal('${esc(item.id_item)}')">
+      ${imgHtml}
+      <div class="inv-card-body">
+        <div class="inv-card-codigo">${esc(item.codigo_prod || '—')}</div>
+        <div class="inv-card-desc" title="${esc(item.descripcion_prod||'')}">${esc(item.descripcion_prod || '—')}</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.15rem">
+          Fac. ${esc(item.num_fac_carbone||'—')} · ${esc(String(item.fecha_compra||'').substring(0,10))}
+        </div>
+      </div>
+      <div class="inv-card-footer">
+        <div>
+          <div class="inv-qty-badge">${cant}</div>
+          <div class="inv-qty-label">en stock</div>
+        </div>
+        <div class="inv-costo">${costo ? '$'+costo.toFixed(2) : '—'}</div>
+        <button class="btn-xs btn-confirm" style="font-size:.68rem" onclick="event.stopPropagation();abrirInvVentaModal('${esc(item.id_item)}')">
+          💰 Vender
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Render Lista ──
+function renderInvList(items) {
+  const tbody = document.getElementById('invTableBody');
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay ítems en inventario</span></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map(item => {
+    const costo   = parseFloat(item.total_carbone || '0') || 0;
+    const cant    = parseInt(item.cantidad || '1') || 1;
+    const imgUrl  = _invImgUrl(item);
+    const imgCell = imgUrl
+      ? `<img src="${esc(imgUrl)}" style="width:40px;height:40px;object-fit:contain;border-radius:4px;border:1px solid var(--border)" onerror="this.outerHTML='<span style=\\'font-size:1.4rem\\'>📦</span>'">`
+      : '<span style="font-size:1.4rem">📦</span>';
+    return `<tr>
+      <td style="text-align:center">${imgCell}</td>
+      <td>
+        <div style="font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.descripcion_prod||'')}">${esc((item.descripcion_prod||'').substring(0,60))}</div>
+      </td>
+      <td style="font-family:'DM Mono',monospace;font-size:.72rem">${esc(item.codigo_prod||'—')}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:.72rem">${esc(item.num_fac_carbone||'—')}</td>
+      <td style="color:var(--muted);font-size:.8rem;white-space:nowrap">${esc(String(item.fecha_compra||'').substring(0,10))}</td>
+      <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#E65100">${costo ? '$'+costo.toFixed(2) : '—'}</td>
+      <td style="text-align:center">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:#1565C0">${cant}</span>
+      </td>
+      <td>
+        <div class="action-btns">
+          <button class="btn-xs btn-confirm" onclick="abrirInvVentaModal('${esc(item.id_item)}')">💰 Vender</button>
+          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal('${esc(item.id_item)}')">Ver detalle</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════════════
+//  MODAL VENDER DESDE INVENTARIO
+// ══════════════════════════════════════════════════
+function abrirInvVentaModal(idItem) {
+  const item = invFiltered.find(i => i.id_item === idItem) ||
+               invItems.find(i => i.id_item === idItem);
+  if (!item) return;
+  invItemVenta = item;
+  invVMPdfB64  = null;
+  invVMPdfName = null;
+
+  document.getElementById('invVentaTitle').textContent  = 'Vender — ' + (item.descripcion_prod || item.id_item || '').substring(0, 40);
+  document.getElementById('invVentaDesc').textContent   = item.descripcion_prod || '—';
+  document.getElementById('invVentaCodigo').textContent = item.codigo_prod ? 'Código: ' + item.codigo_prod : '';
+  document.getElementById('invVentaCosto').textContent  = item.total_carbone ? '$' + parseFloat(item.total_carbone).toFixed(2) : '—';
+  document.getElementById('invVentaStock').textContent  = (parseInt(item.cantidad)||1) + ' uds';
+  document.getElementById('invVentaFacCarb').textContent= item.num_fac_carbone || '—';
+
+  // Imagen
+  const imgWrap = document.getElementById('invVentaImgWrap');
+  const imgUrl  = _invImgUrl(item);
+  if (imgUrl) {
+    imgWrap.innerHTML = `<img src="${esc(imgUrl)}" style="width:80px;height:80px;object-fit:contain" onerror="this.outerHTML='<span style=\\'font-size:1.8rem\\'>📦</span>'">`;
+  } else {
+    imgWrap.innerHTML = '📦';
+  }
+
+  // Reset campos
+  document.getElementById('invVMFacEmitida').value  = '';
+  document.getElementById('invVMFechaVenta').value  = new Date().toISOString().substring(0,10);
+  document.getElementById('invVMCliente').value     = '';
+  document.getElementById('invVMRuc').value         = '';
+  document.getElementById('invVMDv').value          = '';
+  document.getElementById('invVMTotal').value       = '';
+  document.getElementById('invVMEsDirecta').checked = false;
+  document.getElementById('invVMFacEmitida').readOnly = false;
+  document.getElementById('invVMMargen').textContent  = '—';
+  document.getElementById('invVMMargen').style.color  = 'var(--green)';
+  document.getElementById('invVMPdfFileName').textContent = '';
+  document.getElementById('invVMDropZone').classList.remove('has-file');
+  document.getElementById('invVMBtnAnalizar').disabled = true;
+
+  document.getElementById('invVentaModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeInvVentaModal() {
+  document.getElementById('invVentaModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  invItemVenta = null;
+}
+
+function recalcInvMargen() {
+  const venta = parseFloat(document.getElementById('invVMTotal').value) || 0;
+  const costo = parseFloat((invItemVenta || {}).total_carbone || '0') || 0;
+  const m     = venta - costo;
+  const el    = document.getElementById('invVMMargen');
+  el.textContent = venta ? '$' + m.toFixed(2) : '—';
+  el.style.color = m >= 0 ? 'var(--green)' : 'var(--red)';
+}
+
+function toggleInvVentaDirecta() {
+  const esDirecta = document.getElementById('invVMEsDirecta').checked;
+  document.getElementById('invVMFacEmitida').value   = esDirecta ? 'VENTA-DIRECTA' : '';
+  document.getElementById('invVMFacEmitida').readOnly = esDirecta;
+  document.getElementById('invVMUploadSection').style.display = esDirecta ? 'none' : 'block';
+}
+
+// ── PDF en modal venta inventario ──
+function handleInvVMPdfSelect(e) {
+  const file = e.target.files[0];
+  if (file) _readInvVMPdf(file);
+}
+function handleInvVMPdfDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) _readInvVMPdf(file);
+}
+function _readInvVMPdf(file) {
+  if (file.type !== 'application/pdf') { showToast('⚠️ Solo se aceptan archivos PDF'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    invVMPdfB64  = ev.target.result.split(',')[1];
+    invVMPdfName = file.name;
+    document.getElementById('invVMPdfFileName').textContent = '📎 ' + file.name;
+    document.getElementById('invVMDropZone').classList.add('has-file');
+    document.getElementById('invVMBtnAnalizar').disabled = false;
+    showToast('📎 PDF listo — presiona ✦ Analizar PDF');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analizarPdfInvVenta() {
+  if (!invVMPdfB64) return;
+  const btn = document.getElementById('invVMBtnAnalizar');
+  btn.disabled = true; btn.textContent = '⏳ Analizando...';
+  try {
+    const data = await gasJsonp('analizarFacturaPendiente', {
+      id_item:   invItemVenta.id_item,
+      pdfBase64: invVMPdfB64,
+      tipo:      'emitida',
+    });
+    if (!data.success) throw new Error(data.error || 'Error en análisis');
+    const p = data.data;
+    if (p.num_factura)    document.getElementById('invVMFacEmitida').value = p.num_factura;
+    if (p.fecha_emision)  document.getElementById('invVMFechaVenta').value = p.fecha_emision;
+    if (p.nombre_cliente) document.getElementById('invVMCliente').value    = p.nombre_cliente;
+    if (p.ruc_cliente)    document.getElementById('invVMRuc').value        = p.ruc_cliente;
+    if (p.dv_cliente)     document.getElementById('invVMDv').value         = p.dv_cliente;
+    if (p.total)          document.getElementById('invVMTotal').value      = parseFloat(p.total).toFixed(2);
+    recalcInvMargen();
+    showToast('✅ PDF analizado — revisa y guarda');
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+  }
+  btn.disabled = false; btn.textContent = '✦ Analizar PDF';
+}
+
+async function guardarVentaInv() {
+  if (!invItemVenta) return;
+  const nombre = document.getElementById('invVMCliente').value.trim();
+  const total  = parseFloat(document.getElementById('invVMTotal').value) || 0;
+  const fecha  = document.getElementById('invVMFechaVenta').value;
+  const facEm  = document.getElementById('invVMFacEmitida').value.trim();
+
+  if (!nombre)  { showToast('⚠️ Ingresa el nombre del cliente'); return; }
+  if (!total)   { showToast('⚠️ Ingresa el monto de venta');     return; }
+
+  const btn = document.querySelector('#invVentaModalOverlay .btn-primary');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+
+  try {
+    const params = {
+      id_item: invItemVenta.id_item,
+      nombre:  nombre,
+      ruc:     document.getElementById('invVMRuc').value.trim(),
+      dv:      document.getElementById('invVMDv').value.trim(),
+      total:   total,
+      fecha:   fecha,
+      notas:   facEm && facEm !== 'VENTA-DIRECTA' ? 'Fac: ' + facEm : '',
+    };
+    const data = await gasJsonp('registrarVentaDirecta', params);
+    if (!data.success) throw new Error(data.error || 'Error al guardar');
+    showToast('✅ Venta registrada correctamente');
+    closeInvVentaModal();
+    // Remover del inventario local
+    invItems = invItems.filter(i => i.id_item !== invItemVenta.id_item);
+    updateInvStats(invItems);
+    applyInvFilters();
+    // Invalidar cache de operaciones para que refleje el cambio
+    opItems = [];
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+  }
+  btn.disabled = false; btn.textContent = '💾 Registrar venta';
+}
+</script>
 let plIngresos  = [];
 let plEgresos   = [];
 let plOpItems   = [];
@@ -3943,18 +4516,20 @@ function plRenderGap() {
         <div style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--orange)">${plFmt(totalGap)}</div>
       </div>
     </div>
+    <div style="overflow-x:auto;max-width:100%">
     <table class="pl-breakdown">
       <thead><tr><th>Factura emitida</th><th>Cliente</th><th style="text-align:right">Venta</th></tr></thead>
       <tbody>
         ${cvSinOrden.slice(0,8).map(i => `
           <tr>
-            <td style="font-family:'DM Mono',monospace;font-size:.72rem">${esc(i.num_fac_emitida||'—')}</td>
-            <td style="font-size:.78rem">${esc(i.nombre_cliente||'—')}</td>
-            <td style="text-align:right;font-family:'DM Mono',monospace;font-size:.75rem">${plFmt(parseFloat(i.total_venta)||0)}</td>
+            <td style="font-family:'DM Mono',monospace;font-size:.72rem;white-space:nowrap">${esc(i.num_fac_emitida||'—')}</td>
+            <td style="font-size:.78rem;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(i.nombre_cliente||'—')}</td>
+            <td style="text-align:right;font-family:'DM Mono',monospace;font-size:.75rem;white-space:nowrap">${plFmt(parseFloat(i.total_venta)||0)}</td>
           </tr>`).join('')}
         ${cvSinOrden.length > 8 ? `<tr><td colspan="3" style="text-align:center;color:var(--muted);font-size:.72rem">+${cvSinOrden.length-8} más...</td></tr>` : ''}
       </tbody>
-    </table>`;
+    </table>
+    </div>`;
 }
 
 function plFmt(n) {
