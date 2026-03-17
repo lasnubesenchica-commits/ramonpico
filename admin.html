@@ -876,6 +876,17 @@ tr:hover td{background:rgba(0,0,0,.015)}
             </select>
           </div>
           <div class="modal-field full">
+            <label>Categoría fiscal (DGI)</label>
+            <select id="iCategoriaFiscal" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+              <option value="gravado_itbms">🟢 Gravado ITBMS (7%)</option>
+              <option value="exento_itbms">⚪ Exento de ITBMS</option>
+              <option value="servicios_gravados">🔵 Servicios gravados</option>
+              <option value="servicios_exentos">⚪ Servicios exentos</option>
+              <option value="exportacion">📦 Exportación</option>
+              <option value="otro">📋 Otro</option>
+            </select>
+          </div>
+          <div class="modal-field full">
             <label>Descripción</label>
             <input type="text" id="iDescripcion" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%;box-sizing:border-box">
           </div>
@@ -975,20 +986,35 @@ tr:hover td{background:rgba(0,0,0,.015)}
       <div class="modal-section">
         <div class="modal-grid">
           <div class="modal-field full">
+          <div class="modal-field">
             <label>Tipo de egreso</label>
-            <select id="eTipo" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+            <select id="eTipo" onchange="sugerirCategoriaEgreso()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+              <option value="costo_mercancia">📦 Costo mercancía</option>
               <option value="costo_operativo">🏢 Costo operativo</option>
               <option value="nomina">👤 Nómina / empleado</option>
               <option value="servicios">⚡ Servicios</option>
             </select>
           </div>
-          <div class="modal-field full">
-            <label>Descripción *</label>
-            <input type="text" id="eDescripcion" placeholder="Ej: Gasolina visita clientes, alquiler oficina..." style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%;box-sizing:border-box">
-          </div>
           <div class="modal-field">
-            <label>Categoría</label>
-            <input type="text" id="eCategoria" placeholder="Gasolina, Oficina..." style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+            <label>Categoría fiscal (DGI)</label>
+            <select id="eCategoria" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+              <option value="costo_mercancia">📦 Costo de mercancía</option>
+              <option value="gastos_personal">👤 Gastos de personal</option>
+              <option value="alquileres">🏠 Alquileres</option>
+              <option value="servicios_publicos">💡 Servicios públicos</option>
+              <option value="combustible_transporte">⛽ Combustible / Transporte</option>
+              <option value="publicidad_mercadeo">📣 Publicidad / Mercadeo</option>
+              <option value="honorarios_profesionales">📋 Honorarios profesionales</option>
+              <option value="mantenimiento_reparacion">🔧 Mantenimiento / Reparación</option>
+              <option value="seguros">🛡️ Seguros</option>
+              <option value="depreciacion">📉 Depreciación</option>
+              <option value="gastos_financieros">🏦 Gastos financieros</option>
+              <option value="otros_deducibles">📂 Otros deducibles</option>
+            </select>
+          </div>
+          <div class="modal-field full">
+            <label>Descripción</label>
+            <input type="text" id="eDescripcion" placeholder="Ej: Gasolina visita clientes, alquiler oficina..." style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%;box-sizing:border-box">
           </div>
           <div class="modal-field">
             <label>Fecha del gasto *</label>
@@ -2768,8 +2794,9 @@ function renderIngresosTable(items) {
 }
 
 function abrirModalNuevoIngreso() {
-  document.getElementById('iTipo').value     = 'servicio_asesoria';
-  document.getElementById('iTipoComp').value = 'yappy';
+  document.getElementById('iTipo').value          = 'servicio_asesoria';
+  document.getElementById('iTipoComp').value      = 'yappy';
+  document.getElementById('iCategoriaFiscal').value = 'gravado_itbms';
   document.getElementById('iDescripcion').value = '';
   document.getElementById('iFecha').value       = new Date().toISOString().substring(0,10);
   document.getElementById('iNumFac').value      = '';
@@ -2806,6 +2833,7 @@ function recalcIngreso() {
   const aplica   = document.getElementById('iItbmsCheck').checked;
   const desglose = document.getElementById('iDesglose');
   const tag      = document.getElementById('iItbmsTag');
+  const catFiscal = document.getElementById('iCategoriaFiscal');
 
   if (aplica && total > 0) {
     const subtotal = parseFloat((total / 1.07).toFixed(2));
@@ -2816,11 +2844,19 @@ function recalcIngreso() {
     document.getElementById('iItbmsDisp').textContent    = '$' + itbms.toFixed(2);
     desglose.style.display = 'block';
     tag.style.display      = 'inline';
+    // sugerir categoría fiscal si aún está en valor por defecto o exento
+    if (catFiscal && ['exento_itbms','servicios_exentos'].includes(catFiscal.value)) {
+      catFiscal.value = 'gravado_itbms';
+    }
   } else {
     document.getElementById('iSubtotal').value = total > 0 ? total.toFixed(2) : '';
     document.getElementById('iItbms').value    = '0';
     desglose.style.display = 'none';
     tag.style.display      = 'none';
+    // sugerir exento si el usuario desmarcó ITBMS
+    if (catFiscal && ['gravado_itbms','servicios_gravados'].includes(catFiscal.value)) {
+      catFiscal.value = 'exento_itbms';
+    }
   }
 }
 
@@ -2952,10 +2988,11 @@ async function guardarNuevoIngreso() {
   btn.disabled = true; btn.textContent = '⏳ Guardando...';
   try {
     const data = await gasJsonp('registrarIngresoManual', {
-      fecha:           fecha,
-      tipo:            document.getElementById('iTipo').value,
+      fecha:            fecha,
+      tipo:             document.getElementById('iTipo').value,
       tipo_comprobante: document.getElementById('iTipoComp').value,
-      descripcion:     descripcion,
+      categoria_fiscal: document.getElementById('iCategoriaFiscal').value,
+      descripcion:      descripcion,
       num_factura:     document.getElementById('iNumFac').value.trim(),
       subtotal:        document.getElementById('iSubtotal').value||'',
       itbms:           document.getElementById('iItbms').value||'',
@@ -3104,7 +3141,6 @@ function llenarCamposEgreso(parsed) {
     }
     recalcEgreso();
   } else if (parsed.subtotal) {
-    // Si no vino total pero sí subtotal, calcular
     const sub  = parseFloat(parsed.subtotal) || 0;
     const itb  = parseFloat(parsed.itbms)    || 0;
     document.getElementById('eTotal').value = (sub + itb).toFixed(2);
@@ -3115,13 +3151,11 @@ function llenarCamposEgreso(parsed) {
   // Descripción automática: proveedor + resumen de ítems únicos
   if (parsed.items && parsed.items.length) {
     egresoIAItems = parsed.items;
-    // Agrupar descripciones únicas (evitar "FERRETERIA, FERRETERIA, FERRETERIA...")
     const descsUnicas = [...new Set(parsed.items.map(i=>i.descripcion).filter(Boolean))];
     const proveedor   = parsed.proveedor ? parsed.proveedor + ' — ' : '';
     const desc        = proveedor + descsUnicas.join(', ');
     if (desc) document.getElementById('eDescripcion').value = desc.substring(0,120);
 
-    // Mostrar lista de items
     const section = document.getElementById('eItemsSection');
     const list    = document.getElementById('eItemsList');
     section.style.display = 'block';
@@ -3132,12 +3166,56 @@ function llenarCamposEgreso(parsed) {
       </div>`
     ).join('');
   }
+
+  // Sugerir categoría DGI basada en proveedor/ítems detectados por la IA
+  _sugerirCategoriaDesdeParsed(parsed);
+}
+
+function _sugerirCategoriaDesdeParsed(parsed) {
+  const texto = ((parsed.proveedor || '') + ' ' +
+                 (parsed.items ? parsed.items.map(i => i.descripcion||'').join(' ') : '')).toLowerCase();
+  const cat  = document.getElementById('eCategoria');
+  const tipo = document.getElementById('eTipo');
+
+  if (/carbone|ferreteria|ferretería|herramienta|equipo|maquinaria|repuesto/.test(texto)) {
+    tipo.value = 'costo_mercancia'; cat.value = 'costo_mercancia';
+  } else if (/gasolina|combustible|texaco|delta|puma|petro|taxi|uber/.test(texto)) {
+    tipo.value = 'costo_operativo'; cat.value = 'combustible_transporte';
+  } else if (/alquiler|renta|arrendamiento|local|oficina|bodega/.test(texto)) {
+    tipo.value = 'costo_operativo'; cat.value = 'alquileres';
+  } else if (/cable.*onda|claro|movistar|natcom|internet|telefon|celular|electricidad|ensa|edemet|agua|anam/.test(texto)) {
+    tipo.value = 'servicios'; cat.value = 'servicios_publicos';
+  } else if (/publicidad|meta|facebook|google|instagram|ads|impresion|imprenta|diseño/.test(texto)) {
+    tipo.value = 'costo_operativo'; cat.value = 'publicidad_mercadeo';
+  } else if (/contador|abogado|legal|auditoria|consultor|honorario|asesor/.test(texto)) {
+    tipo.value = 'servicios'; cat.value = 'honorarios_profesionales';
+  } else if (/seguro|assa|mapfre|sura/.test(texto)) {
+    tipo.value = 'costo_operativo'; cat.value = 'seguros';
+  } else if (/banco|comision bancaria|financiero|interes/.test(texto)) {
+    tipo.value = 'servicios'; cat.value = 'gastos_financieros';
+  } else if (/nomina|salario|empleado|planilla|sueldo|css|seguro social/.test(texto)) {
+    tipo.value = 'nomina'; cat.value = 'gastos_personal';
+  } else if (/manten|repara|taller|servicio tecnico/.test(texto)) {
+    tipo.value = 'costo_operativo'; cat.value = 'mantenimiento_reparacion';
+  }
+}
+
+function sugerirCategoriaEgreso() {
+  const tipo = document.getElementById('eTipo').value;
+  const cat  = document.getElementById('eCategoria');
+  const mapa = {
+    costo_mercancia: 'costo_mercancia',
+    nomina:          'gastos_personal',
+    servicios:       'honorarios_profesionales',
+    costo_operativo: 'otros_deducibles',
+  };
+  if (mapa[tipo]) cat.value = mapa[tipo];
 }
 
 function abrirModalNuevoEgreso() {
   document.getElementById('eTipo').value        = 'costo_operativo';
+  document.getElementById('eCategoria').value   = 'otros_deducibles';
   document.getElementById('eDescripcion').value = '';
-  document.getElementById('eCategoria').value   = '';
   document.getElementById('eFecha').value       = new Date().toISOString().substring(0,10);
   document.getElementById('eSubtotal').value    = '';
   document.getElementById('eItbms').value       = '';
