@@ -985,6 +985,10 @@ tr:hover td{background:rgba(0,0,0,.015)}
             <label>RUC proveedor</label>
             <input type="text" id="eRucProv" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
           </div>
+          <div class="modal-field">
+            <label>DV proveedor</label>
+            <input type="text" id="eDvProv" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          </div>
           <div class="modal-field full">
             <label>Notas internas</label>
             <input type="text" id="eNotas" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%;box-sizing:border-box">
@@ -1141,6 +1145,7 @@ function doLogin() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     loadOrdenes();
+    loadOperaciones();  // tab default al login
   } else {
     document.getElementById('loginError').style.display = 'block';
     document.getElementById('loginPwd').value = '';
@@ -2549,6 +2554,7 @@ async function guardarEgresoOperativo() {
       categoria:   document.getElementById('eCategoria').value.trim(),
       proveedor:   document.getElementById('eProveedor').value.trim(),
       ruc_prov:    document.getElementById('eRucProv').value.trim(),
+      dv_prov:     document.getElementById('eDvProv').value.trim(),
       num_fac:     document.getElementById('eNumFac').value.trim(),
       subtotal:    document.getElementById('eSubtotal').value || '',
       itbms:       document.getElementById('eItbms').value    || '',
@@ -2896,18 +2902,22 @@ async function analizarFacturaEgresoConClaude(b64, mime) {
 }
 
 function llenarCamposEgreso(parsed) {
-  if (parsed.num_factura) document.getElementById('eNumFac').value    = parsed.num_factura;
-  if (parsed.fecha)       document.getElementById('eFecha').value     = parsed.fecha;
-  if (parsed.proveedor)   document.getElementById('eProveedor').value = parsed.proveedor;
-  if (parsed.ruc_proveedor) document.getElementById('eRucProv').value = parsed.ruc_proveedor;
-  if (parsed.subtotal)    document.getElementById('eSubtotal').value  = parsed.subtotal;
-  if (parsed.itbms)       document.getElementById('eItbms').value     = parsed.itbms;
-  if (parsed.total)       document.getElementById('eTotal').value     = parsed.total;
+  if (parsed.num_factura)   document.getElementById('eNumFac').value    = parsed.num_factura;
+  if (parsed.fecha)         document.getElementById('eFecha').value     = parsed.fecha;
+  if (parsed.proveedor)     document.getElementById('eProveedor').value = parsed.proveedor;
+  if (parsed.ruc_proveedor) document.getElementById('eRucProv').value   = parsed.ruc_proveedor;
+  if (parsed.dv_proveedor)  document.getElementById('eDvProv').value    = parsed.dv_proveedor;
+  if (parsed.subtotal)      document.getElementById('eSubtotal').value  = parsed.subtotal;
+  if (parsed.itbms)         document.getElementById('eItbms').value     = parsed.itbms;
+  if (parsed.total)         document.getElementById('eTotal').value     = parsed.total;
 
-  // Descripción automática a partir de items
+  // Descripción automática: proveedor + resumen de ítems únicos
   if (parsed.items && parsed.items.length) {
     egresoIAItems = parsed.items;
-    const desc = parsed.items.map(i=>i.descripcion).filter(Boolean).join(', ');
+    // Agrupar descripciones únicas (evitar "FERRETERIA, FERRETERIA, FERRETERIA...")
+    const descsUnicas = [...new Set(parsed.items.map(i=>i.descripcion).filter(Boolean))];
+    const proveedor   = parsed.proveedor ? parsed.proveedor + ' — ' : '';
+    const desc        = proveedor + descsUnicas.join(', ');
     if (desc) document.getElementById('eDescripcion').value = desc.substring(0,120);
 
     // Mostrar lista de items
@@ -2934,6 +2944,7 @@ function abrirModalNuevoEgreso() {
   document.getElementById('eNumFac').value      = '';
   document.getElementById('eProveedor').value   = '';
   document.getElementById('eRucProv').value     = '';
+  document.getElementById('eDvProv').value      = '';
   document.getElementById('eNotas').value       = '';
   document.getElementById('eDropLabel').innerHTML = '📎 Adjuntar factura (imagen o PDF) — la IA llenará los campos automáticamente';
   document.getElementById('eAIStatus').style.display  = 'none';
