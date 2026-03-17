@@ -628,10 +628,10 @@ tr:hover td{background:rgba(0,0,0,.015)}
   <!-- MAIN TABS -->
   <div class="main-tabs">
     <button class="main-tab active" id="tabOperaciones" onclick="switchTab('operaciones')">⚙️ Operaciones</button>
-    <button class="main-tab" id="tabIngresos"   onclick="switchTab('ingresos')">💰 Ingresos</button>
-    <button class="main-tab" id="tabEgresos"    onclick="switchTab('egresos')">📤 Egresos</button>
-    <button class="main-tab" id="tabVentasWeb"  onclick="switchTab('ventasWeb')">🛒 Ventas Web</button>
-    <button class="main-tab" id="tabDashboard"   onclick="switchTab('dashboard')">📊 Dashboard</button>
+    <button class="main-tab" id="tabVentasWeb"   onclick="switchTab('ventasWeb')">🛒 Ventas Web</button>
+    <button class="main-tab" id="tabIngresos"    onclick="switchTab('ingresos')">💰 Ingresos</button>
+    <button class="main-tab" id="tabEgresos"     onclick="switchTab('egresos')">📤 Egresos</button>
+    <button class="main-tab" id="tabDashboard"   onclick="switchTab('dashboard')">📊 Estado de Resultados</button>
     <button class="main-tab" id="tabInventario"  onclick="switchTab('inventario')">📦 Inventario</button>
   </div>
 
@@ -2475,16 +2475,28 @@ function renderOpTable(items) {
       <td>${estadoBadge}${ordenWebBadge}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" onclick="openOpModal('${esc(item.id_item)}')">Ver</button>
-          ${flagRev ? `<button class="btn-xs btn-confirm" onclick="aprobarMatch('${esc(item.id_item)}')">✓ Aprobar</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" onclick="openOpModal('${esc(item.id_item)}',true)">+ Vincular</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" onclick="abrirModalInventarioPorId('${esc(item.id_item)}')" title="Mover a inventario">📦</button>` : ''}
-          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" onclick="buscarOrdenWeb('${esc(item.id_item)}')" title="Buscar orden web vinculada">🔗</button>` : ''}
+          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" data-op-ver="${item.id_item}">Ver</button>
+          ${flagRev ? `<button class="btn-xs btn-confirm" data-op-aprobar="${item.id_item}">✓ Aprobar</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" data-op-vincular="${item.id_item}">+ Vincular</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" data-op-inv="${item.id_item}" title="Mover a inventario">📦</button>` : ''}
+          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" data-op-orden="${item.id_item}" title="Buscar orden web vinculada">🔗</button>` : ''}
         </div>
       </td>
     </tr>`;
   }).join('');
 }
+
+// ── Event delegation para acciones de Operaciones ──
+document.getElementById('opBody').addEventListener('click', function(e) {
+  const btn = e.target.closest('button[data-op-ver], button[data-op-aprobar], button[data-op-vincular], button[data-op-inv], button[data-op-orden]');
+  if (!btn) return;
+  e.stopPropagation();
+  if (btn.dataset.opVer)     openOpModal(btn.dataset.opVer);
+  if (btn.dataset.opAprobar) aprobarMatch(btn.dataset.opAprobar);
+  if (btn.dataset.opVincular)openOpModal(btn.dataset.opVincular, true);
+  if (btn.dataset.opInv)     abrirModalInventarioPorId(btn.dataset.opInv);
+  if (btn.dataset.opOrden)   buscarOrdenWeb(btn.dataset.opOrden);
+});
 
 // ── Sort Operaciones ──
 let opSortCol = 'fecha_venta';
@@ -2641,12 +2653,12 @@ function buildOpModalActions(item) {
 
   let html = '';
   if (flagRev) {
-    html += `<button class="btn-primary" onclick="aprobarMatch('${esc(item.id_item)}');closeOpModal()">✓ Aprobar match</button>`;
+    html += `<button class="btn-primary" data-modal-aprobar="${item.id_item}">✓ Aprobar match</button>`;
   }
   if (esPendiente) {
     html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Analizar PDF</button>`;
     html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarVentaDirecta()">💾 Guardar venta directa</button>`;
-    html += `<button class="btn-primary" style="background:#1565C0" onclick="closeOpModal();abrirModalInventarioPorId('${esc(item.id_item)}')">📦 Inventario</button>`;
+    html += `<button class="btn-primary" style="background:#1565C0" data-modal-inv="${item.id_item}">📦 Inventario</button>`;
   }
   if (esInventario) {
     html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Vincular factura</button>`;
@@ -2671,6 +2683,14 @@ function buildOpModalActions(item) {
     if (btn) btn.disabled = false;
   }
 }
+
+// ── Event delegation para botones del modal de Operaciones ──
+document.getElementById('opModalActions').addEventListener('click', function(e) {
+  const btn = e.target.closest('button[data-modal-aprobar], button[data-modal-inv]');
+  if (!btn) return;
+  if (btn.dataset.modalAprobar) { aprobarMatch(btn.dataset.modalAprobar); closeOpModal(); }
+  if (btn.dataset.modalInv)     { closeOpModal(); abrirModalInventarioPorId(btn.dataset.modalInv); }
+});
 
 function closeOpModal() {
   document.getElementById('opModalOverlay').classList.remove('open');
