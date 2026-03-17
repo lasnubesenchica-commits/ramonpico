@@ -4279,6 +4279,8 @@ function plFiltrarIngresos() {
 function plFiltrarEgresos() {
   return plEgresos.filter(e => {
     if (!e.fecha_egreso) return false;
+    // Excluir egresos de inventario pendiente — no son COGS realizados hasta que se venda
+    if ((e.categoria || '').toLowerCase() === 'inventario') return false;
     const d = new Date(e.fecha_egreso + 'T12:00:00');
     if (d.getFullYear() !== plYear) return false;
     if (plMonth !== 'ytd' && d.getMonth() + 1 !== plMonth) return false;
@@ -4383,6 +4385,8 @@ function plRenderBarChart(year) {
 
   const egrYear = plEgresos.filter(e => {
     if (!e.fecha_egreso) return false;
+    // Excluir inventario pendiente de venta
+    if ((e.categoria || '').toLowerCase() === 'inventario') return false;
     if (new Date(e.fecha_egreso + 'T12:00:00').getFullYear() !== year) return false;
     if (plTipo !== 'todos' && plTipo !== 'venta_producto') {
       if ((e.tipo_egreso || '') === 'costo_mercancia') return false;
