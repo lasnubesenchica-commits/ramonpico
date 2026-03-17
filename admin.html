@@ -546,13 +546,14 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <table class="op-table" id="opTable">
       <thead>
         <tr>
-          <th>ID</th>
-          <th>Producto (Carbone)</th>
-          <th>Costo</th>
-          <th>Cliente (Factura)</th>
-          <th>Venta</th>
-          <th>Margen</th>
-          <th>Estado</th>
+          <th onclick="sortOpTable('fecha_compra')"   style="cursor:pointer;user-select:none" title="Ordenar por fecha">Fecha <span id="sort-fecha_compra"></span></th>
+          <th onclick="sortOpTable('num_fac_carbone')" style="cursor:pointer;user-select:none" title="Ordenar por factura">Factura <span id="sort-num_fac_carbone"></span></th>
+          <th onclick="sortOpTable('descripcion_prod')" style="cursor:pointer;user-select:none" title="Ordenar por producto">Producto (Carbone) <span id="sort-descripcion_prod"></span></th>
+          <th onclick="sortOpTable('total_carbone')"  style="cursor:pointer;user-select:none" title="Ordenar por costo">Costo <span id="sort-total_carbone"></span></th>
+          <th onclick="sortOpTable('nombre_cliente')" style="cursor:pointer;user-select:none" title="Ordenar por cliente">Cliente (Factura) <span id="sort-nombre_cliente"></span></th>
+          <th onclick="sortOpTable('total_venta')"    style="cursor:pointer;user-select:none" title="Ordenar por venta">Venta <span id="sort-total_venta"></span></th>
+          <th onclick="sortOpTable('margen')"         style="cursor:pointer;user-select:none" title="Ordenar por margen">Margen <span id="sort-margen"></span></th>
+          <th onclick="sortOpTable('estado')"         style="cursor:pointer;user-select:none" title="Ordenar por estado">Estado <span id="sort-estado"></span></th>
           <th>Acciones</th>
         </tr>
       </thead>
@@ -1754,7 +1755,7 @@ function renderOpTable(items) {
     tbody.innerHTML = '<tr><td colspan="8"><div class="table-empty"><span style="font-size:2rem">📭</span><span>No hay ítems</span></div></td></tr>';
     return;
   }
-  tbody.innerHTML = items.map((item, i) => {
+  tbody.innerHTML = getSortedItems(items).map((item, i) => {
     const estado    = item.estado || 'pendiente';
     const flagRev   = item.flag_revision === true || item.flag_revision === 'TRUE';
     const conf      = parseInt(item.confianza_match || '0') || 0;
@@ -1779,20 +1780,27 @@ function renderOpTable(items) {
            <span style="font-family:'DM Mono',monospace;font-size:.65rem">${conf}%</span>
          </div>` : '';
 
-    const margen   = parseFloat(item.margen || '0') || 0;
-    const margenFmt = margen ? `<span style="font-weight:700;color:${margen>0?'var(--green)':'var(--red)'}">$${margen.toFixed(2)}</span>` : '—';
-    const costoFmt  = item.total_carbone ? `$${parseFloat(item.total_carbone).toFixed(2)}` : '—';
-    const ventaFmt  = item.total_venta   ? `$${parseFloat(item.total_venta).toFixed(2)}`   : '—';
+    const margen    = parseFloat(item.margen || '0') || 0;
+    const costo     = parseFloat(item.total_carbone || '0') || 0;
+    const margenPct = costo > 0 ? (margen / costo * 100) : 0;
+    const margenColor = margen > 0 ? 'var(--green)' : 'var(--red)';
+    const margenFmt = margen
+      ? `<span style="font-weight:700;color:${margenColor}">$${margen.toFixed(2)}</span>
+         <div style="font-size:.68rem;color:${margenColor};opacity:.8">${margenPct.toFixed(1)}%</div>`
+      : '—';
+    const costoFmt  = costo  ? `$${costo.toFixed(2)}`                                      : '—';
+    const ventaFmt  = item.total_venta ? `$${parseFloat(item.total_venta).toFixed(2)}`      : '—';
+    const fechaFmt  = esc((item.fecha_compra||'').toString().substring(0,10));
     const cantBadge = estado === 'inventario'
       ? `<span style="font-family:'DM Mono',monospace;font-size:.7rem;background:#E3F2FD;color:#1565C0;padding:.15rem .45rem;border-radius:4px;margin-left:.3rem">×${cantidad}</span>`
       : '';
 
     return `<tr>
-      <td><span style="font-family:'DM Mono',monospace;font-size:.72rem">${esc(item.id_item||'')}</span>
-          <div style="font-size:.65rem;color:var(--chrome)">${esc(item.num_fac_carbone||'')}</div></td>
+      <td style="white-space:nowrap;color:var(--muted);font-size:.82rem">${fechaFmt}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:.72rem;font-weight:600">${esc(item.num_fac_carbone||'—')}</span></td>
       <td>
         <div style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.descripcion_prod||'')}">${esc((item.descripcion_prod||'').substring(0,50))}${cantBadge}</div>
-        <div style="font-size:.7rem;color:var(--muted)">${esc(item.codigo_prod||'')} · ${esc(item.fecha_compra||'').substring(0,10)}</div>
+        <div style="font-size:.7rem;color:var(--muted)">${esc(item.codigo_prod||'')}</div>
         ${confBar}
       </td>
       <td style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:#E65100">${costoFmt}</td>
@@ -1814,6 +1822,46 @@ function renderOpTable(items) {
       </td>
     </tr>`;
   }).join('');
+}
+
+// ── Sort Operaciones ──
+let opSortCol = 'fecha_compra';
+let opSortAsc = false;
+
+function sortOpTable(col) {
+  if (opSortCol === col) {
+    opSortAsc = !opSortAsc;
+  } else {
+    opSortCol = col;
+    opSortAsc = col === 'fecha_compra' ? false : true;
+  }
+  // Limpiar todos los indicadores
+  document.querySelectorAll('[id^="sort-"]').forEach(el => el.textContent = '');
+  const el = document.getElementById('sort-' + col);
+  if (el) el.textContent = opSortAsc ? ' ▲' : ' ▼';
+  // Re-renderizar con el filtro activo actual
+  const activeFilter = document.querySelector('[data-op-filter].active');
+  const filter = activeFilter ? activeFilter.dataset.opFilter : 'all';
+  const q = document.getElementById('opSearch').value.trim().toLowerCase();
+  renderFilteredOp(filter, q);
+}
+
+function getSortedItems(items) {
+  const col = opSortCol;
+  const asc = opSortAsc;
+  return [...items].sort((a, b) => {
+    let va = a[col] || '';
+    let vb = b[col] || '';
+    const numCols = ['total_carbone','total_venta','margen','confianza_match'];
+    if (numCols.includes(col)) {
+      va = parseFloat(va) || 0;
+      vb = parseFloat(vb) || 0;
+      return asc ? va - vb : vb - va;
+    }
+    va = va.toString().toLowerCase();
+    vb = vb.toString().toLowerCase();
+    return asc ? va.localeCompare(vb) : vb.localeCompare(va);
+  });
 }
 
 function updateOpStats(items) {
