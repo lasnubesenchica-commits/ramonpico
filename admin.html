@@ -877,18 +877,41 @@ tr:hover td{background:rgba(0,0,0,.015)}
             <label>N° Factura</label>
             <input type="text" id="iNumFac" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
           </div>
-          <div class="modal-field">
-            <label>Subtotal (sin ITBMS)</label>
-            <input type="number" id="iSubtotal" min="0" step="0.01" placeholder="0.00" oninput="recalcIngreso()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          <!-- Zona de carga IA: Yappy, transferencia, factura -->
+          <div class="modal-field full">
+            <div style="border:2px dashed var(--border);border-radius:10px;padding:1rem;text-align:center;cursor:pointer;transition:border-color .2s"
+                 id="iDropZone"
+                 ondragover="event.preventDefault();this.style.borderColor='var(--green)'"
+                 ondragleave="this.style.borderColor='var(--border)'"
+                 ondrop="handleIngresoFileDrop(event)"
+                 onclick="document.getElementById('iVoucherInput').click()">
+              <input type="file" id="iVoucherInput" accept="image/*,application/pdf" style="display:none" onchange="handleIngresoFileSelect(event)">
+              <div id="iDropLabel" style="color:var(--muted);font-size:.85rem">
+                📎 Adjuntar comprobante (Yappy, transferencia o factura) — la IA llenará los campos
+              </div>
+              <div id="iAIStatus" style="display:none;margin-top:.5rem"></div>
+            </div>
           </div>
-          <div class="modal-field">
-            <label>ITBMS (7%)</label>
-            <input type="number" id="iItbms" min="0" step="0.01" placeholder="0.00" oninput="recalcIngreso()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          <div class="modal-field full" style="display:flex;align-items:center;gap:.75rem;padding:.5rem .75rem;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
+            <label style="margin:0;display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;font-weight:500">
+              <input type="checkbox" id="iItbmsCheck" onchange="recalcIngreso()" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer">
+              Aplica ITBMS (7%)
+            </label>
+            <span id="iItbmsTag" style="display:none;font-size:.78rem;background:var(--green);color:#fff;padding:.15rem .5rem;border-radius:4px;font-weight:600">+7%</span>
           </div>
           <div class="modal-field full">
             <label>Total (USD) *</label>
-            <input type="number" id="iTotal" min="0" step="0.01" placeholder="0.00" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;font-weight:700;font-size:1rem">
+            <input type="number" id="iTotal" min="0" step="0.01" placeholder="0.00" oninput="recalcIngreso()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;font-weight:700;font-size:1rem">
           </div>
+          <div class="modal-field full" id="iDesglose" style="display:none">
+            <div style="background:var(--bg2);border-radius:8px;padding:.6rem .75rem;font-size:.83rem;display:flex;gap:2rem">
+              <div style="display:flex;justify-content:space-between;flex:1"><span style="color:var(--muted)">Subtotal:</span><span id="iSubtotalDisp">$0.00</span></div>
+              <div style="display:flex;justify-content:space-between;flex:1"><span style="color:var(--muted)">ITBMS 7%:</span><span id="iItbmsDisp">$0.00</span></div>
+            </div>
+          </div>
+          <!-- campos hidden para compatibilidad con guardarNuevoIngreso() -->
+          <input type="hidden" id="iSubtotal">
+          <input type="hidden" id="iItbms">
           <div class="modal-field full" style="border-top:1px solid var(--border);padding-top:.75rem;margin-top:.25rem">
             <label style="color:var(--muted)">CLIENTE</label>
           </div>
@@ -961,18 +984,26 @@ tr:hover td{background:rgba(0,0,0,.015)}
             <label>Fecha del gasto *</label>
             <input type="date" id="eFecha" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
           </div>
-          <div class="modal-field">
-            <label>Subtotal (sin ITBMS)</label>
-            <input type="number" id="eSubtotal" min="0" step="0.01" placeholder="0.00" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
-          </div>
-          <div class="modal-field">
-            <label>ITBMS</label>
-            <input type="number" id="eItbms" min="0" step="0.01" placeholder="0.00" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+          <div class="modal-field full" style="display:flex;align-items:center;gap:.75rem;padding:.5rem .75rem;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
+            <label style="margin:0;display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;font-weight:500">
+              <input type="checkbox" id="eItbmsCheck" onchange="recalcEgreso()" style="width:16px;height:16px;accent-color:var(--orange);cursor:pointer">
+              Aplica ITBMS (7%)
+            </label>
+            <span id="eItbmsTag" style="display:none;font-size:.78rem;background:var(--orange);color:#fff;padding:.15rem .5rem;border-radius:4px;font-weight:600">+7%</span>
           </div>
           <div class="modal-field">
             <label>Total (USD) *</label>
-            <input type="number" id="eTotal" min="0" step="0.01" placeholder="0.00" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
+            <input type="number" id="eTotal" min="0" step="0.01" placeholder="0.00" oninput="recalcEgreso()" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;font-weight:700">
           </div>
+          <div class="modal-field" id="eDesglose" style="display:none">
+            <div style="background:var(--bg2);border-radius:8px;padding:.6rem .75rem;font-size:.83rem;display:flex;flex-direction:column;gap:.25rem">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Subtotal:</span><span id="eSubtotalDisp">$0.00</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">ITBMS 7%:</span><span id="eItbmsDisp">$0.00</span></div>
+            </div>
+          </div>
+          <!-- campos hidden para mantener compatibilidad con guardarEgresoOperativo() -->
+          <input type="hidden" id="eSubtotal">
+          <input type="hidden" id="eItbms">
           <div class="modal-field">
             <label>N° Factura / Recibo</label>
             <input type="text" id="eNumFac" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none">
@@ -2734,6 +2765,17 @@ function abrirModalNuevoIngreso() {
   document.getElementById('iSubtotal').value    = '';
   document.getElementById('iItbms').value       = '';
   document.getElementById('iTotal').value       = '';
+  document.getElementById('iItbmsCheck').checked = false;
+  document.getElementById('iDesglose').style.display = 'none';
+  document.getElementById('iItbmsTag').style.display  = 'none';
+  document.getElementById('iNombreCli').value   = '';
+  document.getElementById('iRucCli').value      = '';
+  document.getElementById('iDvCli').value       = '';
+  document.getElementById('iNotas').value       = '';
+  document.getElementById('iDropLabel').innerHTML = '📎 Adjuntar comprobante (Yappy, transferencia o factura) — la IA llenará los campos';
+  document.getElementById('iAIStatus').style.display = 'none';
+  document.getElementById('iVoucherInput').value = '';
+  ingresoFileB64 = null; ingresoFileMime = null;
   document.getElementById('iNombreCli').value   = '';
   document.getElementById('iRucCli').value      = '';
   document.getElementById('iDvCli').value       = '';
@@ -2747,10 +2789,143 @@ function closeIngresoModal() {
   document.body.style.overflow = '';
 }
 
+// ── RECALC INGRESO ──────────────────────────────────────────
 function recalcIngreso() {
-  const sub   = parseFloat(document.getElementById('iSubtotal').value)||0;
-  const itbms = parseFloat(document.getElementById('iItbms').value)||0;
-  if (sub>0 || itbms>0) document.getElementById('iTotal').value = (sub+itbms).toFixed(2);
+  const total    = parseFloat(document.getElementById('iTotal').value) || 0;
+  const aplica   = document.getElementById('iItbmsCheck').checked;
+  const desglose = document.getElementById('iDesglose');
+  const tag      = document.getElementById('iItbmsTag');
+
+  if (aplica && total > 0) {
+    const subtotal = parseFloat((total / 1.07).toFixed(2));
+    const itbms    = parseFloat((total - subtotal).toFixed(2));
+    document.getElementById('iSubtotal').value      = subtotal;
+    document.getElementById('iItbms').value         = itbms;
+    document.getElementById('iSubtotalDisp').textContent = '$' + subtotal.toFixed(2);
+    document.getElementById('iItbmsDisp').textContent    = '$' + itbms.toFixed(2);
+    desglose.style.display = 'block';
+    tag.style.display      = 'inline';
+  } else {
+    document.getElementById('iSubtotal').value = total > 0 ? total.toFixed(2) : '';
+    document.getElementById('iItbms').value    = '0';
+    desglose.style.display = 'none';
+    tag.style.display      = 'none';
+  }
+}
+
+// ── RECALC EGRESO ───────────────────────────────────────────
+function recalcEgreso() {
+  const total    = parseFloat(document.getElementById('eTotal').value) || 0;
+  const aplica   = document.getElementById('eItbmsCheck').checked;
+  const desglose = document.getElementById('eDesglose');
+  const tag      = document.getElementById('eItbmsTag');
+
+  if (aplica && total > 0) {
+    const subtotal = parseFloat((total / 1.07).toFixed(2));
+    const itbms    = parseFloat((total - subtotal).toFixed(2));
+    document.getElementById('eSubtotal').value      = subtotal;
+    document.getElementById('eItbms').value         = itbms;
+    document.getElementById('eSubtotalDisp').textContent = '$' + subtotal.toFixed(2);
+    document.getElementById('eItbmsDisp').textContent    = '$' + itbms.toFixed(2);
+    desglose.style.display = 'block';
+    tag.style.display      = 'inline';
+  } else {
+    document.getElementById('eSubtotal').value = total > 0 ? total.toFixed(2) : '';
+    document.getElementById('eItbms').value    = '0';
+    desglose.style.display = 'none';
+    tag.style.display      = 'none';
+  }
+}
+
+// ── IA INGRESOS — leer Yappy / transferencia / factura ──────
+let ingresoFileB64  = null;
+let ingresoFileMime = null;
+
+function handleIngresoFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('iDropZone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) procesarArchivoIngreso(file);
+}
+
+function handleIngresoFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) procesarArchivoIngreso(file);
+}
+
+function procesarArchivoIngreso(file) {
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    let b64  = ev.target.result.split(',')[1];
+    let mime = file.type || 'image/jpeg';
+
+    if (mime !== 'application/pdf' && ev.target.result.length > 1_000_000) {
+      try {
+        const result = await _comprimirImagen(ev.target.result, 1200);
+        b64  = result.split(',')[1];
+        mime = 'image/jpeg';
+      } catch(e) { /* usar original */ }
+    }
+
+    ingresoFileB64  = b64;
+    ingresoFileMime = mime;
+
+    document.getElementById('iDropLabel').innerHTML =
+      `📎 <strong>${esc(file.name)}</strong> — analizando con IA...`;
+    const status = document.getElementById('iAIStatus');
+    status.style.display = 'block';
+    status.innerHTML = '<span style="color:var(--green)">⏳ Extrayendo datos del comprobante...</span>';
+
+    try {
+      const parsed = await analizarComprobanteIngresoConClaude(b64, mime);
+      llenarCamposIngreso(parsed);
+      status.innerHTML = '<span style="color:var(--green)">✅ Datos extraídos — revisa y confirma</span>';
+    } catch(err) {
+      status.innerHTML = '<span style="color:var(--red)">⚠️ ' + esc(err.message) + '</span>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analizarComprobanteIngresoConClaude(b64, mime) {
+  let res;
+  try {
+    res = await fetch(GAS_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body:    JSON.stringify({
+        action:      'parseComprobanteIngreso',
+        imageBase64: b64,
+        mimeType:    mime,
+      }),
+    });
+  } catch(netErr) {
+    throw new Error('Error de red: ' + netErr.message);
+  }
+  if (!res.ok) throw new Error('Servidor respondió ' + res.status);
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'No se pudo analizar el comprobante');
+  return data;
+}
+
+function llenarCamposIngreso(parsed) {
+  if (parsed.monto)         { document.getElementById('iTotal').value = parsed.monto; recalcIngreso(); }
+  if (parsed.fecha)           document.getElementById('iFecha').value       = parsed.fecha;
+  if (parsed.num_factura)     document.getElementById('iNumFac').value      = parsed.num_factura;
+  if (parsed.nombre_pagador)  document.getElementById('iNombreCli').value   = parsed.nombre_pagador;
+  if (parsed.ruc_pagador)     document.getElementById('iRucCli').value      = parsed.ruc_pagador;
+  if (parsed.dv_pagador)      document.getElementById('iDvCli').value       = parsed.dv_pagador;
+  if (parsed.descripcion)     document.getElementById('iDescripcion').value = parsed.descripcion;
+  if (parsed.tiene_itbms) {
+    document.getElementById('iItbmsCheck').checked = true;
+    recalcIngreso();
+  }
+  if (parsed.tipo_comprobante) {
+    const tipos = { yappy:'servicio_asesoria', transferencia:'venta_producto', factura:'venta_producto' };
+    const t = document.getElementById('iTipo');
+    if (tipos[parsed.tipo_comprobante]) t.value = tipos[parsed.tipo_comprobante];
+  }
+  if (parsed.notas) document.getElementById('iNotas').value = parsed.notas;
 }
 
 async function guardarNuevoIngreso() {
@@ -2908,9 +3083,22 @@ function llenarCamposEgreso(parsed) {
   if (parsed.proveedor)     document.getElementById('eProveedor').value = parsed.proveedor;
   if (parsed.ruc_proveedor) document.getElementById('eRucProv').value   = parsed.ruc_proveedor;
   if (parsed.dv_proveedor)  document.getElementById('eDvProv').value    = parsed.dv_proveedor;
-  if (parsed.subtotal)      document.getElementById('eSubtotal').value  = parsed.subtotal;
-  if (parsed.itbms)         document.getElementById('eItbms').value     = parsed.itbms;
-  if (parsed.total)         document.getElementById('eTotal').value     = parsed.total;
+
+  // Si la IA detectó ITBMS, activar el toggle y poner el total
+  if (parsed.total) {
+    document.getElementById('eTotal').value = parsed.total;
+    if (parsed.itbms && parseFloat(parsed.itbms) > 0) {
+      document.getElementById('eItbmsCheck').checked = true;
+    }
+    recalcEgreso();
+  } else if (parsed.subtotal) {
+    // Si no vino total pero sí subtotal, calcular
+    const sub  = parseFloat(parsed.subtotal) || 0;
+    const itb  = parseFloat(parsed.itbms)    || 0;
+    document.getElementById('eTotal').value = (sub + itb).toFixed(2);
+    if (itb > 0) document.getElementById('eItbmsCheck').checked = true;
+    recalcEgreso();
+  }
 
   // Descripción automática: proveedor + resumen de ítems únicos
   if (parsed.items && parsed.items.length) {
@@ -2942,6 +3130,9 @@ function abrirModalNuevoEgreso() {
   document.getElementById('eSubtotal').value    = '';
   document.getElementById('eItbms').value       = '';
   document.getElementById('eTotal').value       = '';
+  document.getElementById('eItbmsCheck').checked = false;
+  document.getElementById('eDesglose').style.display = 'none';
+  document.getElementById('eItbmsTag').style.display  = 'none';
   document.getElementById('eNumFac').value      = '';
   document.getElementById('eProveedor').value   = '';
   document.getElementById('eRucProv').value     = '';
