@@ -2583,10 +2583,11 @@ function applyOpFilters() {
 //  MODAL OPERACIONES
 // ══════════════════════════════════════════════════
 function openOpModal(idItem, vincularMode) {
-  console.log('openOpModal llamado con:', idItem);
-  console.log('ids en opItems:', opItems.map(i => i.id_item));
-  currentOpItem = opFiltered.find(i => String(i.id_item) === String(idItem))
-               || opItems.find(i => String(i.id_item) === String(idItem))
+  const idClean = String(idItem).trim();
+  console.log('openOpModal | recibido:', JSON.stringify(idItem), '| trimmed:', JSON.stringify(idClean));
+  console.log('ids en opItems:', opItems.map(i => JSON.stringify(i.id_item)));
+  currentOpItem = opFiltered.find(i => String(i.id_item).trim() === idClean)
+               || opItems.find(i => String(i.id_item).trim() === idClean)
                || null;
   if (!currentOpItem) {
     console.warn('openOpModal: ítem no encontrado:', idItem, '| opFiltered:', opFiltered.length, '| opItems:', opItems.length);
