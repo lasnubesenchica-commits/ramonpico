@@ -546,11 +546,11 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <table class="op-table" id="opTable">
       <thead>
         <tr>
+          <th onclick="sortOpTable('fecha_venta')"    style="cursor:pointer;user-select:none" title="Ordenar por fecha">Fecha <span id="sort-fecha_venta"></span></th>
           <th onclick="sortOpTable('num_fac_emitida')" style="cursor:pointer;user-select:none" title="Ordenar por factura venta">Factura Venta <span id="sort-num_fac_emitida"></span></th>
-          <th onclick="sortOpTable('num_fac_carbone')" style="cursor:pointer;user-select:none" title="Ordenar por factura compra">Factura Compra <span id="sort-num_fac_carbone"></span></th>
-          <th onclick="sortOpTable('descripcion_prod')" style="cursor:pointer;user-select:none" title="Ordenar por producto">Producto (Carbone) <span id="sort-descripcion_prod"></span></th>
+          <th onclick="sortOpTable('descripcion_prod')" style="cursor:pointer;user-select:none" title="Ordenar por producto">Producto <span id="sort-descripcion_prod"></span></th>
           <th onclick="sortOpTable('total_carbone')"  style="cursor:pointer;user-select:none" title="Ordenar por costo">Costo <span id="sort-total_carbone"></span></th>
-          <th onclick="sortOpTable('nombre_cliente')" style="cursor:pointer;user-select:none" title="Ordenar por cliente">Cliente (Factura) <span id="sort-nombre_cliente"></span></th>
+          <th onclick="sortOpTable('nombre_cliente')" style="cursor:pointer;user-select:none" title="Ordenar por cliente">Cliente <span id="sort-nombre_cliente"></span></th>
           <th onclick="sortOpTable('total_venta')"    style="cursor:pointer;user-select:none" title="Ordenar por venta">Venta <span id="sort-total_venta"></span></th>
           <th onclick="sortOpTable('margen')"         style="cursor:pointer;user-select:none" title="Ordenar por margen">Margen <span id="sort-margen"></span></th>
           <th onclick="sortOpTable('estado')"         style="cursor:pointer;user-select:none" title="Ordenar por estado">Estado <span id="sort-estado"></span></th>
@@ -1796,11 +1796,8 @@ function renderOpTable(items) {
       : '';
 
     return `<tr>
-      <td>
-        <span style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:600">${esc(item.num_fac_emitida||'—')}</span>
-        <div style="font-size:.65rem;color:var(--muted)">${esc((item.fecha_venta||item.fecha_compra||'').toString().substring(0,10))}</div>
-      </td>
-      <td><span style="font-family:'DM Mono',monospace;font-size:.72rem;font-weight:600">${esc(item.num_fac_carbone||'—')}</span></td>
+      <td style="white-space:nowrap;color:var(--muted);font-size:.82rem">${esc((item.fecha_venta||item.fecha_compra||'').toString().substring(0,10))}</td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:.78rem;font-weight:600">${esc(item.num_fac_emitida||'—')}</span></td>
       <td>
         <div style="font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(item.descripcion_prod||'')}">${esc((item.descripcion_prod||'').substring(0,50))}${cantBadge}</div>
         <div style="font-size:.7rem;color:var(--muted)">${esc(item.codigo_prod||'')}</div>
@@ -1827,8 +1824,8 @@ function renderOpTable(items) {
 }
 
 // ── Sort Operaciones ──
-let opSortCol = 'num_fac_emitida';
-let opSortAsc = true;
+let opSortCol = 'fecha_venta';
+let opSortAsc = false;
 
 function sortOpTable(col) {
   if (opSortCol === col) {
