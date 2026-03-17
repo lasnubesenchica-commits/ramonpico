@@ -2379,7 +2379,13 @@ async function loadOperaciones() {
   try {
     const data = await gasJsonp('getComprasVentas', {});
     if (!data.success) throw new Error(data.error || 'Error desconocido');
-    opItems = data.items || [];
+    opItems = (data.items || []).map(i => {
+      // El GAS a veces devuelve id_item con comillas extra — limpiarlas
+      if (i.id_item && typeof i.id_item === 'string') {
+        i.id_item = i.id_item.replace(/^"|"$/g, '').trim();
+      }
+      return i;
+    });
     updateOpStats(opItems);
     applyOpFilters();
   } catch(err) {
@@ -2583,11 +2589,9 @@ function applyOpFilters() {
 //  MODAL OPERACIONES
 // ══════════════════════════════════════════════════
 function openOpModal(idItem, vincularMode) {
-  const idClean = String(idItem).trim();
-  console.log('openOpModal | recibido:', JSON.stringify(idItem), '| trimmed:', JSON.stringify(idClean));
-  console.log('ids en opItems:', opItems.map(i => JSON.stringify(i.id_item)));
-  currentOpItem = opFiltered.find(i => String(i.id_item).trim() === idClean)
-               || opItems.find(i => String(i.id_item).trim() === idClean)
+  const idClean = String(idItem).replace(/^"|"$/g,'').trim();
+  currentOpItem = opFiltered.find(i => String(i.id_item).replace(/^"|"$/g,'').trim() === idClean)
+               || opItems.find(i => String(i.id_item).replace(/^"|"$/g,'').trim() === idClean)
                || null;
   if (!currentOpItem) {
     console.warn('openOpModal: ítem no encontrado:', idItem, '| opFiltered:', opFiltered.length, '| opItems:', opItems.length);
