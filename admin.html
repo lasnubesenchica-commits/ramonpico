@@ -550,6 +550,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
 
 /* ── INVENTARIO ── */
 #sectionInventario { display:none }
+#sectionReporte    { display:none }
 .inv-grid {
   display:grid;
   grid-template-columns:repeat(auto-fill, minmax(260px,1fr));
@@ -664,10 +665,10 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <div class="main-tab-group">
       <button class="main-tab" id="tabReportes">📈 Reportes <span class="main-tab-arrow">▾</span></button>
       <div class="dropdown-menu">
-        <a href="reportes/margenes.html"            target="_blank">📊 Márgenes por producto</a>
-        <a href="reportes/inventario_valorado.html" target="_blank">📦 Inventario valorado</a>
-        <a href="reportes/cuentas_por_cobrar.html"  target="_blank">💳 Cuentas por cobrar</a>
-        <a href="reportes/flujo_caja.html"          target="_blank">💵 Flujo de caja</a>
+        <a onclick="switchTab('reporte:reportes/margenes.html')"            style="cursor:pointer">📊 Márgenes por producto</a>
+        <a onclick="switchTab('reporte:reportes/inventario_valorado.html')" style="cursor:pointer">📦 Inventario valorado</a>
+        <a onclick="switchTab('reporte:reportes/cuentas_por_cobrar.html')"  style="cursor:pointer">💳 Cuentas por cobrar</a>
+        <a onclick="switchTab('reporte:reportes/flujo_caja.html')"          style="cursor:pointer">💵 Flujo de caja</a>
       </div>
     </div>
 
@@ -1083,6 +1084,13 @@ tr:hover td{background:rgba(0,0,0,.015)}
   </div>
 
 </div><!-- /sectionInventario -->
+
+<!-- ═══════════ SECCIÓN: REPORTE DINÁMICO ═══════════ -->
+<div id="sectionReporte" style="display:none">
+  <div id="reporteContainer">
+    <!-- El HTML del reporte se inyecta aquí dinámicamente -->
+  </div>
+</div><!-- /sectionReporte -->
 
 <!-- ═══════════ MODAL: VENDER DESDE INVENTARIO ═══════════ -->
 <div class="modal-overlay" id="invVentaModalOverlay" onclick="if(event.target===this)closeInvVentaModal()">
@@ -2369,33 +2377,80 @@ let activeTab = 'operaciones';
 
 function switchTab(tab) {
   activeTab = tab;
+  const isReporte = tab.startsWith('reporte:');
   document.getElementById('sectionVentasWeb').style.display   = tab === 'ventasWeb'   ? 'block' : 'none';
   document.getElementById('sectionOperaciones').style.display = tab === 'operaciones' ? 'block' : 'none';
   document.getElementById('sectionEgresos').style.display     = tab === 'egresos'     ? 'block' : 'none';
   document.getElementById('sectionIngresos').style.display    = tab === 'ingresos'    ? 'block' : 'none';
   document.getElementById('sectionDashboard').style.display   = tab === 'dashboard'   ? 'block' : 'none';
   document.getElementById('sectionInventario').style.display  = tab === 'inventario'  ? 'block' : 'none';
+  document.getElementById('sectionReporte').style.display     = isReporte             ? 'block' : 'none';
   document.getElementById('tabVentasWeb').classList.toggle('active',     tab === 'ventasWeb');
   document.getElementById('tabOperaciones').classList.toggle('active',   tab === 'operaciones');
   document.getElementById('tabDashboard').classList.toggle('active',     tab === 'dashboard');
   document.getElementById('tabInventario').classList.toggle('active',    tab === 'inventario');
-  // Contabilidad: highlight parent when ingresos or egresos active
   document.getElementById('tabContabilidad').classList.toggle('active',  tab === 'ingresos' || tab === 'egresos');
+  document.getElementById('tabReportes').classList.toggle('active',      isReporte);
   if (tab === 'operaciones' && !opItems.length)  loadOperaciones();
   if (tab === 'egresos'     && !egrItems.length) loadEgresos();
   if (tab === 'ingresos'    && !ingItems.length) loadIngresos();
   if (tab === 'ventasWeb'   && !document.getElementById('ordenesBody').children.length) loadOrdenes();
-  if (tab === 'dashboard')                       loadDashboard();
-  if (tab === 'inventario')                      loadInventario();
+  if (tab === 'dashboard')   loadDashboard();
+  if (tab === 'inventario')  loadInventario();
+  if (isReporte)             loadReporte(tab.replace('reporte:', ''));
 }
 
 function refreshCurrentSection() {
-  if (activeTab === 'ventasWeb')        loadOrdenes();
-  else if (activeTab === 'egresos')     loadEgresos();
-  else if (activeTab === 'ingresos')    loadIngresos();
-  else if (activeTab === 'dashboard')   { plLoaded = false; loadDashboard(); }
-  else if (activeTab === 'inventario')  loadInventario();
-  else                                  loadOperaciones();
+  if (activeTab === 'ventasWeb')             loadOrdenes();
+  else if (activeTab === 'egresos')          loadEgresos();
+  else if (activeTab === 'ingresos')         loadIngresos();
+  else if (activeTab === 'dashboard')        { plLoaded = false; loadDashboard(); }
+  else if (activeTab === 'inventario')       loadInventario();
+  else if (activeTab.startsWith('reporte:')) loadReporte(activeTab.replace('reporte:', ''), true);
+  else                                       loadOperaciones();
+}
+
+// ══════════════════════════════════════════════════
+//  CARGAR REPORTE DINÁMICO
+// ══════════════════════════════════════════════════
+let reporteActual = null;
+
+async function loadReporte(path, forceReload) {
+  if (reporteActual === path && !forceReload) return;
+  reporteActual = path;
+  const container = document.getElementById('reporteContainer');
+  container.innerHTML =
+    '<div style="display:flex;align-items:center;justify-content:center;gap:.75rem;padding:4rem;color:#6C6C70">' +
+    '<div class="spinner"></div><span>Cargando reporte...</span></div>';
+  try {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error('No se pudo cargar el reporte (' + res.status + ')');
+    const html = await res.text();
+    container.innerHTML = html;
+    // Ejecutar los scripts del módulo inyectado
+    container.querySelectorAll('script').forEach(oldScript => {
+      const newScript = document.createElement('script');
+      if (oldScript.src) {
+        newScript.src = oldScript.src;
+      } else {
+        newScript.textContent = oldScript.textContent;
+      }
+      document.head.appendChild(newScript);
+      oldScript.remove();
+    });
+    // Inyectar estilos del módulo
+    container.querySelectorAll('link[rel="stylesheet"], style').forEach(el => {
+      document.head.appendChild(el.cloneNode(true));
+    });
+  } catch(err) {
+    container.innerHTML =
+      '<div style="display:flex;flex-direction:column;align-items:center;gap:.75rem;padding:4rem;color:#C62828">' +
+      '<span style="font-size:2rem">⚠️</span>' +
+      '<span>' + err.message + '</span>' +
+      '<button onclick="loadReporte(\'' + path + '\',true)" ' +
+      'style="margin-top:.5rem;padding:.5rem 1.25rem;background:#E05A00;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.85rem">Reintentar</button>' +
+      '</div>';
+  }
 }
 
 // ══════════════════════════════════════════════════
