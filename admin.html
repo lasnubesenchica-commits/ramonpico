@@ -322,6 +322,25 @@ tr:hover td{background:rgba(0,0,0,.015)}
 .main-tab:hover{color:var(--text)}
 .main-tab.active{color:var(--orange);border-bottom-color:var(--orange)}
 
+/* ── DROPDOWN REPORTES ── */
+.main-tab-group{position:relative;display:flex;align-items:stretch}
+.main-tab-group:hover .dropdown-menu{display:block}
+.dropdown-menu{
+  display:none;position:absolute;top:100%;left:0;z-index:200;
+  background:var(--white);border:1px solid var(--border);
+  border-radius:0 0 var(--r2) var(--r2);
+  box-shadow:0 8px 24px rgba(0,0,0,0.08);
+  min-width:220px;padding:.4rem 0;
+}
+.dropdown-menu a{
+  display:block;padding:.6rem 1.25rem;font-size:.82rem;font-weight:500;
+  color:var(--muted);transition:all .15s;text-decoration:none;
+  white-space:nowrap;
+}
+.dropdown-menu a:hover{background:var(--bg);color:var(--orange)}
+.dropdown-divider{height:1px;background:var(--border);margin:.3rem 0}
+.main-tab-arrow{font-size:.6rem;margin-left:.3rem;opacity:.6}
+
 /* ── OPERACIONES SECTION ── */
 #sectionOperaciones{display:block}
 #sectionVentasWeb{display:none}
@@ -629,9 +648,29 @@ tr:hover td{background:rgba(0,0,0,.015)}
   <div class="main-tabs">
     <button class="main-tab active" id="tabOperaciones" onclick="switchTab('operaciones')">⚙️ Operaciones</button>
     <button class="main-tab" id="tabVentasWeb"   onclick="switchTab('ventasWeb')">🛒 Ventas Web</button>
-    <button class="main-tab" id="tabIngresos"    onclick="switchTab('ingresos')">💰 Ingresos</button>
-    <button class="main-tab" id="tabEgresos"     onclick="switchTab('egresos')">📤 Egresos</button>
+
+    <!-- Contabilidad dropdown -->
+    <div class="main-tab-group">
+      <button class="main-tab" id="tabContabilidad">📒 Contabilidad <span class="main-tab-arrow">▾</span></button>
+      <div class="dropdown-menu">
+        <a onclick="switchTab('ingresos')"  style="cursor:pointer">💰 Ingresos</a>
+        <a onclick="switchTab('egresos')"   style="cursor:pointer">📤 Egresos</a>
+      </div>
+    </div>
+
     <button class="main-tab" id="tabDashboard"   onclick="switchTab('dashboard')">📊 Estado de Resultados</button>
+
+    <!-- Reportes dropdown -->
+    <div class="main-tab-group">
+      <button class="main-tab" id="tabReportes">📈 Reportes <span class="main-tab-arrow">▾</span></button>
+      <div class="dropdown-menu">
+        <a href="reportes/margenes.html"            target="_blank">📊 Márgenes por producto</a>
+        <a href="reportes/inventario_valorado.html" target="_blank">📦 Inventario valorado</a>
+        <a href="reportes/cuentas_por_cobrar.html"  target="_blank">💳 Cuentas por cobrar</a>
+        <a href="reportes/flujo_caja.html"          target="_blank">💵 Flujo de caja</a>
+      </div>
+    </div>
+
     <button class="main-tab" id="tabInventario"  onclick="switchTab('inventario')">📦 Inventario</button>
   </div>
 
@@ -2336,12 +2375,12 @@ function switchTab(tab) {
   document.getElementById('sectionIngresos').style.display    = tab === 'ingresos'    ? 'block' : 'none';
   document.getElementById('sectionDashboard').style.display   = tab === 'dashboard'   ? 'block' : 'none';
   document.getElementById('sectionInventario').style.display  = tab === 'inventario'  ? 'block' : 'none';
-  document.getElementById('tabVentasWeb').classList.toggle('active',   tab === 'ventasWeb');
-  document.getElementById('tabOperaciones').classList.toggle('active', tab === 'operaciones');
-  document.getElementById('tabEgresos').classList.toggle('active',     tab === 'egresos');
-  document.getElementById('tabIngresos').classList.toggle('active',    tab === 'ingresos');
-  document.getElementById('tabDashboard').classList.toggle('active',   tab === 'dashboard');
-  document.getElementById('tabInventario').classList.toggle('active',  tab === 'inventario');
+  document.getElementById('tabVentasWeb').classList.toggle('active',     tab === 'ventasWeb');
+  document.getElementById('tabOperaciones').classList.toggle('active',   tab === 'operaciones');
+  document.getElementById('tabDashboard').classList.toggle('active',     tab === 'dashboard');
+  document.getElementById('tabInventario').classList.toggle('active',    tab === 'inventario');
+  // Contabilidad: highlight parent when ingresos or egresos active
+  document.getElementById('tabContabilidad').classList.toggle('active',  tab === 'ingresos' || tab === 'egresos');
   if (tab === 'operaciones' && !opItems.length)  loadOperaciones();
   if (tab === 'egresos'     && !egrItems.length) loadEgresos();
   if (tab === 'ingresos'    && !ingItems.length) loadIngresos();
