@@ -739,6 +739,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <div class="stat-pill"><div class="stat-pill-num orange" id="opStatTotal">—</div><div class="stat-pill-label">Total ítems</div></div>
     <div class="stat-pill"><div class="stat-pill-num" style="color:#E65100" id="opStatPendiente">—</div><div class="stat-pill-label">Pendientes</div></div>
     <div class="stat-pill"><div class="stat-pill-num" style="color:#1565C0" id="opStatInventario">—</div><div class="stat-pill-label">Inventario</div></div>
+    <div class="stat-pill"><div class="stat-pill-num" style="color:#075985" id="opStatFacturado">—</div><div class="stat-pill-label">Facturados</div></div>
     <div class="stat-pill"><div class="stat-pill-num" style="color:#795548" id="opStatRevision">—</div><div class="stat-pill-label">Para revisar</div></div>
     <div class="stat-pill"><div class="stat-pill-num green" id="opStatCerrado">—</div><div class="stat-pill-label">Cerrados</div></div>
     <div class="stat-pill"><div class="stat-pill-num orange" id="opStatMargen">—</div><div class="stat-pill-label">Margen total</div></div>
@@ -1355,6 +1356,98 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <div class="modal-actions">
       <button class="btn-primary" style="background:#1565C0" onclick="confirmarMoverInventario()">📦 Confirmar inventario</button>
       <button class="btn-secondary" onclick="closeInvModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL: PAGO OPERACION ═══════════ -->
+<div class="modal-overlay" id="pagoOpModalOverlay" onclick="if(event.target===this)closePagoOpModal()">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title">💳 Registrar Comprobante de Pago</div>
+      <button class="modal-close" onclick="closePagoOpModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg2);border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem" id="pagoOpInfo"></div>
+      <div class="modal-section">
+        <div class="modal-grid">
+          <div class="modal-field full">
+            <label>Forma de pago *</label>
+            <select id="pagoOpFormaPago" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%">
+              <option value="">— Seleccionar —</option>
+              <option value="Yappy">📱 Yappy</option>
+              <option value="Transferencia">🏦 Transferencia / ACH</option>
+              <option value="Efectivo">💵 Efectivo</option>
+              <option value="Cheque">📝 Cheque</option>
+              <option value="Tarjeta">💳 Tarjeta</option>
+              <option value="Otro">📋 Otro</option>
+            </select>
+          </div>
+          <div class="modal-field full">
+            <div style="border:2px dashed var(--border);border-radius:10px;padding:1rem;text-align:center;cursor:pointer;transition:border-color .2s"
+                 id="pagoOpDropZone"
+                 ondragover="event.preventDefault();this.style.borderColor='var(--green)'"
+                 ondragleave="this.style.borderColor='var(--border)'"
+                 ondrop="handlePagoOpFileDrop(event)"
+                 onclick="document.getElementById('pagoOpFileInput').click()">
+              <input type="file" id="pagoOpFileInput" accept="image/*,application/pdf" style="display:none" onchange="handlePagoOpFileSelect(event)">
+              <div id="pagoOpDropLabel" style="color:var(--muted);font-size:.85rem">
+                📎 Adjuntar comprobante (Yappy, transferencia, ACH) — la IA llenará los campos
+              </div>
+              <div id="pagoOpAIStatus" style="display:none;margin-top:.5rem"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" style="background:#0288D1" onclick="guardarPagoOp()">💳 Confirmar pago</button>
+      <button class="btn-secondary" onclick="closePagoOpModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MODAL: COSTO OPERATIVO ═══════════ -->
+<div class="modal-overlay" id="costoOpModalOverlay" onclick="if(event.target===this)closeCostoOpModal()">
+  <div class="modal-box" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title">⚙ Registrar como Costo Operativo</div>
+      <button class="modal-close" onclick="closeCostoOpModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:#F3E5F5;border-radius:8px;padding:.75rem 1rem;margin-bottom:1rem;font-size:.85rem;border:1px solid #CE93D8" id="costoOpInfo"></div>
+      <p style="font-size:.82rem;color:var(--muted);margin:0 0 1rem">Este ítem no se facturará como venta. Se registrará como egreso operativo y quedará cerrado.</p>
+      <div class="modal-section">
+        <div class="modal-grid">
+          <div class="modal-field full">
+            <label>Categoría</label>
+            <select id="costoOpCategoria" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%">
+              <option value="gastos_personal">👤 Nómina / Personal</option>
+              <option value="alquileres">🏠 Alquileres</option>
+              <option value="servicios_publicos">💡 Servicios públicos</option>
+              <option value="combustible_transporte">⛽ Combustible / Transporte</option>
+              <option value="publicidad_mercadeo">📣 Publicidad / Mercadeo</option>
+              <option value="honorarios_profesionales">📋 Honorarios profesionales</option>
+              <option value="mantenimiento_reparacion">🔧 Mantenimiento / Reparación</option>
+              <option value="seguros">🛡️ Seguros</option>
+              <option value="gastos_financieros">🏦 Gastos financieros</option>
+              <option value="otros_deducibles" selected>📂 Otros deducibles</option>
+            </select>
+          </div>
+          <div class="modal-field full">
+            <label>Descripción</label>
+            <input type="text" id="costoOpDescripcion" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%;box-sizing:border-box">
+          </div>
+          <div class="modal-field full">
+            <label>Notas internas</label>
+            <input type="text" id="costoOpNotas" placeholder="Opcional" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%;box-sizing:border-box">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" style="background:#7B1FA2" onclick="guardarCostoOperativo()">⚙ Registrar como costo operativo</button>
+      <button class="btn-secondary" onclick="closeCostoOpModal()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -2552,6 +2645,7 @@ function renderOpTable(items) {
           pendiente:  '<span class="badge badge-pendiente">● Pendiente</span>',
           inventario: '<span class="badge badge-inventario">📦 Inventario</span>',
           vinculado:  '<span class="badge badge-vinculado">● Vinculado</span>',
+          facturado:  '<span class="badge" style="background:#E0F2FE;color:#075985;border:1px solid #BAE6FD">📋 Facturado</span>',
           cerrado:    '<span class="badge badge-cerrado">✓ Cerrado</span>',
         }[estado] || `<span class="badge">${esc(estado)}</span>`;
 
@@ -2601,6 +2695,8 @@ function renderOpTable(items) {
           ${flagRev ? `<button class="btn-xs btn-confirm" data-op-aprobar="${i}">✓ Aprobar</button>` : ''}
           ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" data-op-vincular="${i}">+ Vincular</button>` : ''}
           ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" data-op-inv="${i}" title="Mover a inventario">📦</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs" style="background:#7B1FA2;color:#fff" data-op-operativo="${i}" title="Registrar como costo operativo">⚙</button>` : ''}
+          ${estado==='facturado' ? `<button class="btn-xs" style="background:#0288D1;color:#fff" data-op-pago="${i}" title="Registrar comprobante de pago">💳</button>` : ''}
           ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" data-op-orden="${i}" title="Buscar orden web vinculada">🔗</button>` : ''}
         </div>
       </td>
@@ -2610,18 +2706,20 @@ function renderOpTable(items) {
 
 // ── Event delegation para acciones de Operaciones ──
 document.addEventListener('click', function(e) {
-  const btn = e.target.closest('[data-op-ver],[data-op-aprobar],[data-op-vincular],[data-op-inv],[data-op-orden]');
+  const btn = e.target.closest('[data-op-ver],[data-op-aprobar],[data-op-vincular],[data-op-inv],[data-op-orden],[data-op-pago],[data-op-operativo]');
   if (!btn) return;
   if (!document.getElementById('opBody').contains(btn)) return;
   e.stopPropagation();
-  const idx = parseInt(btn.dataset.opVer ?? btn.dataset.opAprobar ?? btn.dataset.opVincular ?? btn.dataset.opInv ?? btn.dataset.opOrden);
+  const idx = parseInt(btn.dataset.opVer ?? btn.dataset.opAprobar ?? btn.dataset.opVincular ?? btn.dataset.opInv ?? btn.dataset.opOrden ?? btn.dataset.opPago ?? btn.dataset.opOperativo);
   const item = opFiltered[idx];
   if (!item) return;
-  if (btn.dataset.opVer      !== undefined) openOpModal(idx);
-  if (btn.dataset.opAprobar  !== undefined) aprobarMatch(item.id_item);
-  if (btn.dataset.opVincular !== undefined) openOpModal(idx, true);
-  if (btn.dataset.opInv      !== undefined) abrirModalInventarioPorId(item.id_item);
-  if (btn.dataset.opOrden    !== undefined) buscarOrdenWeb(item.id_item);
+  if (btn.dataset.opVer       !== undefined) openOpModal(idx);
+  if (btn.dataset.opAprobar   !== undefined) aprobarMatch(item.id_item);
+  if (btn.dataset.opVincular  !== undefined) openOpModal(idx, true);
+  if (btn.dataset.opInv       !== undefined) abrirModalInventarioPorId(item.id_item);
+  if (btn.dataset.opOrden     !== undefined) buscarOrdenWeb(item.id_item);
+  if (btn.dataset.opPago      !== undefined) abrirModalPagoOp(item);
+  if (btn.dataset.opOperativo !== undefined) abrirModalCostoOperativo(item);
 });
 
 // ── Sort Operaciones ──
@@ -2666,6 +2764,8 @@ function updateOpStats(items) {
   document.getElementById('opStatInventario').textContent = items.filter(i=>i.estado==='inventario').length;
   document.getElementById('opStatRevision').textContent   = items.filter(i=>i.flag_revision===true||i.flag_revision==='TRUE').length;
   document.getElementById('opStatCerrado').textContent    = items.filter(i=>i.estado==='cerrado').length;
+  const elFact = document.getElementById('opStatFacturado');
+  if (elFact) elFact.textContent = items.filter(i=>i.estado==='facturado').length;
   const margen = items.reduce((s,i)=>s+(parseFloat(i.margen||'0')||0),0);
   document.getElementById('opStatMargen').textContent     = margen>0?'$'+margen.toLocaleString('es-PA',{minimumFractionDigits:2}):'—';
 }
@@ -2753,10 +2853,11 @@ function openOpModal(idx, vincularMode) {
   document.getElementById('opMOrdenWeb').value = item.id_orden_web || '—';
   document.getElementById('opMNotas').value    = item.notas        || '';
 
-  // Mostrar zona upload si pendiente, inventario, o si se forzó vincularMode
+  // Mostrar zona upload si pendiente, inventario, facturado, o si se forzó vincularMode
   const esPendiente  = item.estado === 'pendiente' && !item.num_fac_emitida;
   const esInventario = item.estado === 'inventario';
-  document.getElementById('opUploadZone').style.display = (esPendiente || esInventario || vincularMode) ? 'block' : 'none';
+  const esFacturado  = item.estado === 'facturado';
+  document.getElementById('opUploadZone').style.display = (esPendiente || esInventario || esFacturado || vincularMode) ? 'block' : 'none';
   document.getElementById('opPdfFileName').textContent  = '';
   document.getElementById('opDropZone').classList.remove('has-file');
 
@@ -2764,6 +2865,7 @@ function openOpModal(idx, vincularMode) {
   ['opMFacEmitida','opMFechaVenta','opMCliente','opMRucCliente','opMDvCliente','opMTotalVenta'].forEach(id => {
     const el = document.getElementById(id);
     el.readOnly = !(esPendiente || esInventario || vincularMode);
+    // facturado: campos de venta son readonly (ya vinculados)
   });
 
   // Acciones dinámicas
@@ -2791,6 +2893,10 @@ function buildOpModalActions(item) {
     html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Analizar PDF</button>`;
     html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarVentaDirecta()">💾 Guardar venta directa</button>`;
     html += `<button class="btn-primary" style="background:#1565C0" data-modal-inv="${idx}">📦 Inventario</button>`;
+    html += `<button class="btn-primary" style="background:#7B1FA2" onclick="abrirModalCostoOperativo(currentOpItem)">⚙ Costo operativo</button>`;
+  }
+  if (item.estado === 'facturado') {
+    html += `<button class="btn-primary" style="background:#0288D1" onclick="abrirModalPagoOp(currentOpItem)">💳 Registrar pago</button>`;
   }
   if (esInventario) {
     html += `<button class="btn-primary" style="background:#4527A0" id="opBtnAnalizarPdf" onclick="analizarPdfPendiente()" disabled>✦ Vincular factura</button>`;
@@ -3624,6 +3730,155 @@ function llenarCamposIngreso(parsed) {
     cat.value = 'venta_producto_gravado';
   }
   inferirItbmsIngreso();
+}
+
+// ══════════════════════════════════════════════════════════
+//  MODAL PAGO OPERACION — registrar comprobante de pago para item 'facturado'
+// ══════════════════════════════════════════════════════════
+let pagoOpFileB64  = null;
+let pagoOpFileMime = null;
+let pagoOpItem     = null;
+
+function abrirModalPagoOp(item) {
+  pagoOpItem    = item;
+  pagoOpFileB64 = null; pagoOpFileMime = null;
+  // Pre-llenar info del ítem
+  document.getElementById('pagoOpInfo').innerHTML =
+    `<strong>${esc(item.num_fac_emitida||'')}</strong> — ${esc(item.nombre_cliente||'')} — <strong style="color:var(--green)">$${parseFloat(item.total_venta||0).toFixed(2)}</strong>`;
+  document.getElementById('pagoOpFormaPago').value  = '';
+  document.getElementById('pagoOpDropLabel').innerHTML = '📎 Adjuntar comprobante (Yappy, transferencia, ACH) — la IA llenará los campos';
+  document.getElementById('pagoOpAIStatus').style.display = 'none';
+  document.getElementById('pagoOpFileInput').value = '';
+  document.getElementById('pagoOpModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePagoOpModal() {
+  document.getElementById('pagoOpModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  pagoOpItem = null; pagoOpFileB64 = null; pagoOpFileMime = null;
+}
+
+function handlePagoOpFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) procesarArchivoPagoOp(file);
+}
+function handlePagoOpFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('pagoOpDropZone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) procesarArchivoPagoOp(file);
+}
+
+function procesarArchivoPagoOp(file) {
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    let b64  = ev.target.result.split(',')[1];
+    let mime = file.type || 'image/jpeg';
+    if (mime !== 'application/pdf' && ev.target.result.length > 1_000_000) {
+      try { const r = await _comprimirImagen(ev.target.result, 1200); b64 = r.split(',')[1]; mime = 'image/jpeg'; } catch(e) {}
+    }
+    pagoOpFileB64  = b64;
+    pagoOpFileMime = mime;
+    document.getElementById('pagoOpDropLabel').innerHTML = `📎 <strong>${esc(file.name)}</strong> — analizando con IA...`;
+    const status = document.getElementById('pagoOpAIStatus');
+    status.style.display = 'block';
+    status.innerHTML = '<span style="color:var(--green)">⏳ Extrayendo datos del comprobante...</span>';
+    try {
+      const parsed = await analizarComprobanteIngresoConClaude(b64, mime);
+      // Auto-inferir forma de pago
+      if (parsed.tipo_comprobante) {
+        const sel = document.getElementById('pagoOpFormaPago');
+        const map = { yappy: 'Yappy', transferencia: 'Transferencia', efectivo: 'Efectivo', factura: 'Otro' };
+        sel.value = map[parsed.tipo_comprobante] || 'Otro';
+      }
+      status.innerHTML = '<span style="color:var(--green)">✅ Comprobante analizado — selecciona forma de pago y guarda</span>';
+    } catch(err) {
+      status.innerHTML = '<span style="color:var(--red)">⚠️ ' + esc(err.message) + '</span>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function guardarPagoOp() {
+  if (!pagoOpItem) return;
+  const formaPago = document.getElementById('pagoOpFormaPago').value;
+  if (!formaPago) { showToast('⚠️ Selecciona la forma de pago'); return; }
+  if (formaPago !== 'Efectivo' && !pagoOpFileB64) { showToast('⚠️ Adjunta el comprobante de pago'); return; }
+
+  const btn = document.querySelector('#pagoOpModalOverlay .btn-primary');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+
+  try {
+    const payload = {
+      action:      'registrarPagoOperacion',
+      id_item:     pagoOpItem.id_item,
+      forma_pago:  formaPago,
+      imageBase64: pagoOpFileB64  || '',
+      imageMime:   pagoOpFileMime || 'image/jpeg',
+      imageName:   'pago_' + pagoOpItem.num_fac_emitida + '_' + Date.now() + '.jpg',
+    };
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    showToast('✅ Pago registrado. Ingreso: ' + (data.ingresoId || ''));
+    closePagoOpModal();
+    // Actualizar en memoria y re-renderizar
+    const idx = opItems.findIndex(i => i.id_item === pagoOpItem.id_item);
+    if (idx !== -1) { opItems[idx].estado = 'cerrado'; opItems[idx].ingreso_id = data.ingresoId || ''; }
+    applyOpFilters();
+    // Si CxC está abierto, recargar
+    if (typeof window.cc_applyFilters === 'function') cc_applyFilters();
+  } catch(err) { showToast('⚠️ ' + err.message); }
+
+  btn.disabled = false; btn.textContent = '💳 Confirmar pago';
+}
+
+// ══════════════════════════════════════════════════════════
+//  MODAL COSTO OPERATIVO — marcar ítem pendiente como costo_operativo
+// ══════════════════════════════════════════════════════════
+let costoOpItem = null;
+
+function abrirModalCostoOperativo(item) {
+  costoOpItem = item;
+  document.getElementById('costoOpInfo').innerHTML =
+    `<strong>${esc(item.descripcion_prod||'')}</strong> — Costo: <strong style="color:#E65100">$${parseFloat(item.total_carbone||0).toFixed(2)}</strong>`;
+  document.getElementById('costoOpCategoria').value   = 'otros_deducibles';
+  document.getElementById('costoOpDescripcion').value = item.descripcion_prod || '';
+  document.getElementById('costoOpNotas').value       = '';
+  document.getElementById('costoOpModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeCostoOpModal() {
+  document.getElementById('costoOpModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+  costoOpItem = null;
+}
+
+async function guardarCostoOperativo() {
+  if (!costoOpItem) return;
+  const btn = document.querySelector('#costoOpModalOverlay .btn-primary');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+  try {
+    const data = await gasJsonp('marcarCostoOperativo', {
+      id_item:     costoOpItem.id_item,
+      categoria:   document.getElementById('costoOpCategoria').value,
+      descripcion: document.getElementById('costoOpDescripcion').value.trim(),
+      notas:       document.getElementById('costoOpNotas').value.trim(),
+    });
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    showToast('✅ Egreso operativo registrado: ' + data.egresoId);
+    closeCostoOpModal();
+    const idx = opItems.findIndex(i => i.id_item === costoOpItem.id_item);
+    if (idx !== -1) { opItems[idx].estado = 'cerrado'; opItems[idx].ingreso_id = 'OPERATIVO-' + data.egresoId; }
+    applyOpFilters();
+  } catch(err) { showToast('⚠️ ' + err.message); }
+  btn.disabled = false; btn.textContent = '⚙ Registrar como costo operativo';
 }
 
 async function guardarNuevoIngreso() {
