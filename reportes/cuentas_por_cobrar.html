@@ -1,0 +1,665 @@
+<!-- MÓDULO: Cuentas por Cobrar | Prefijo: cc- | IIFE independiente -->
+<!-- Sin <html>/<head>/<body> — inyectable en #reporteContainer del admin -->
+<style>
+  .cc-wrap {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    padding: 0 4px;
+    color: #1a2535;
+  }
+
+  /* ── Encabezado ── */
+  .cc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #e2e8f0;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .cc-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a2535;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .cc-header h2 span.cc-icon {
+    font-size: 1.2rem;
+  }
+  .cc-last-update {
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  /* ── KPI Cards ── */
+  .cc-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .cc-kpi {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cc-kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .cc-kpi.total::before  { background: #3b82f6; }
+  .cc-kpi.rango0::before { background: #22c55e; }
+  .cc-kpi.rango1::before { background: #f59e0b; }
+  .cc-kpi.rango2::before { background: #ef4444; }
+  .cc-kpi-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #64748b;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .cc-kpi-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #1a2535;
+    line-height: 1.1;
+  }
+  .cc-kpi-sub {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    margin-top: 2px;
+  }
+
+  /* ── Barra de antigüedad ── */
+  .cc-aging-bar-wrap {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 18px;
+    margin-bottom: 22px;
+  }
+  .cc-aging-bar-wrap h3 {
+    margin: 0 0 10px;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #64748b;
+    font-weight: 600;
+  }
+  .cc-aging-bar {
+    display: flex;
+    height: 22px;
+    border-radius: 6px;
+    overflow: hidden;
+    gap: 2px;
+    margin-bottom: 8px;
+  }
+  .cc-aging-seg {
+    transition: width .4s ease;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: #fff;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .cc-aging-seg.s0 { background: #22c55e; border-radius: 6px 0 0 6px; }
+  .cc-aging-seg.s1 { background: #f59e0b; }
+  .cc-aging-seg.s2 { background: #ef4444; border-radius: 0 6px 6px 0; }
+  .cc-aging-legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .cc-aging-leg-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    color: #475569;
+  }
+  .cc-aging-leg-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .cc-aging-leg-dot.s0 { background: #22c55e; }
+  .cc-aging-leg-dot.s1 { background: #f59e0b; }
+  .cc-aging-leg-dot.s2 { background: #ef4444; }
+
+  /* ── Filtros y buscador ── */
+  .cc-toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    align-items: center;
+  }
+  .cc-search {
+    flex: 1;
+    min-width: 180px;
+    padding: 7px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 0.82rem;
+    outline: none;
+    transition: border-color .2s;
+    background: #fff;
+  }
+  .cc-search:focus { border-color: #3b82f6; }
+  .cc-filter-btn {
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: 1.5px solid #e2e8f0;
+    background: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .15s;
+    color: #475569;
+  }
+  .cc-filter-btn:hover { border-color: #94a3b8; background: #f8fafc; }
+  .cc-filter-btn.active { background: #1a2535; color: #fff; border-color: #1a2535; }
+
+  /* ── Tabla ── */
+  .cc-table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+  }
+  .cc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.81rem;
+  }
+  .cc-table thead tr {
+    background: #f1f5f9;
+  }
+  .cc-table th {
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #64748b;
+    white-space: nowrap;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .cc-table th.num { text-align: right; }
+  .cc-table td {
+    padding: 9px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+    vertical-align: middle;
+  }
+  .cc-table td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .cc-table tbody tr:last-child td { border-bottom: none; }
+  .cc-table tbody tr:hover td { background: #f8fafc; }
+
+  /* Badges de antigüedad */
+  .cc-badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 0.67rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .cc-badge.s0 { background: #dcfce7; color: #15803d; }
+  .cc-badge.s1 { background: #fef9c3; color: #a16207; }
+  .cc-badge.s2 { background: #fee2e2; color: #b91c1c; }
+
+  /* Estado pago */
+  .cc-ep {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.67rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+  .cc-ep.pendiente { background: #fff7ed; color: #c2410c; }
+  .cc-ep.parcial   { background: #eff6ff; color: #1d4ed8; }
+  .cc-ep.sin-pago  { background: #fef2f2; color: #991b1b; }
+
+  /* Empty state */
+  .cc-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 0.85rem;
+  }
+  .cc-empty .cc-empty-icon { font-size: 2.2rem; margin-bottom: 8px; }
+
+  /* Resumen pie tabla */
+  .cc-table-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 10px 14px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-radius: 0 0 10px 10px;
+    font-size: 0.78rem;
+    color: #64748b;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .cc-table-footer strong { color: #1a2535; }
+</style>
+
+<div class="cc-wrap" id="cc-root">
+
+  <!-- Encabezado -->
+  <div class="cc-header">
+    <h2><span class="cc-icon">📋</span> Cuentas por Cobrar</h2>
+    <span class="cc-last-update" id="cc-update-ts"></span>
+  </div>
+
+  <!-- KPIs -->
+  <div class="cc-kpis">
+    <div class="cc-kpi total">
+      <div class="cc-kpi-label">Total por cobrar</div>
+      <div class="cc-kpi-value" id="cc-kpi-total">$0.00</div>
+      <div class="cc-kpi-sub" id="cc-kpi-total-sub">0 órdenes</div>
+    </div>
+    <div class="cc-kpi rango0">
+      <div class="cc-kpi-label">0–30 días</div>
+      <div class="cc-kpi-value" id="cc-kpi-r0">$0.00</div>
+      <div class="cc-kpi-sub" id="cc-kpi-r0-sub">0 órdenes</div>
+    </div>
+    <div class="cc-kpi rango1">
+      <div class="cc-kpi-label">31–60 días</div>
+      <div class="cc-kpi-value" id="cc-kpi-r1">$0.00</div>
+      <div class="cc-kpi-sub" id="cc-kpi-r1-sub">0 órdenes</div>
+    </div>
+    <div class="cc-kpi rango2">
+      <div class="cc-kpi-label">+60 días</div>
+      <div class="cc-kpi-value" id="cc-kpi-r2">$0.00</div>
+      <div class="cc-kpi-sub" id="cc-kpi-r2-sub">0 órdenes</div>
+    </div>
+  </div>
+
+  <!-- Barra de antigüedad -->
+  <div class="cc-aging-bar-wrap">
+    <h3>Distribución por antigüedad</h3>
+    <div class="cc-aging-bar">
+      <div class="cc-aging-seg s0" id="cc-seg0" style="width:0%"></div>
+      <div class="cc-aging-seg s1" id="cc-seg1" style="width:0%"></div>
+      <div class="cc-aging-seg s2" id="cc-seg2" style="width:0%"></div>
+    </div>
+    <div class="cc-aging-legend">
+      <div class="cc-aging-leg-item">
+        <div class="cc-aging-leg-dot s0"></div>0–30 días (corriente)
+      </div>
+      <div class="cc-aging-leg-item">
+        <div class="cc-aging-leg-dot s1"></div>31–60 días (atención)
+      </div>
+      <div class="cc-aging-leg-item">
+        <div class="cc-aging-leg-dot s2"></div>+60 días (vencido)
+      </div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="cc-toolbar">
+    <input type="text" class="cc-search" id="cc-search"
+           placeholder="Buscar por cliente, orden, cédula…"
+           oninput="window.cc_applyFilters()">
+    <button class="cc-filter-btn active" id="cc-btn-all"
+            onclick="window.cc_setRangeFilter('all')">Todas</button>
+    <button class="cc-filter-btn" id="cc-btn-r0"
+            onclick="window.cc_setRangeFilter('r0')">0–30 d</button>
+    <button class="cc-filter-btn" id="cc-btn-r1"
+            onclick="window.cc_setRangeFilter('r1')">31–60 d</button>
+    <button class="cc-filter-btn" id="cc-btn-r2"
+            onclick="window.cc_setRangeFilter('r2')">+60 d</button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="cc-table-wrap">
+    <table class="cc-table">
+      <thead>
+        <tr>
+          <th>Orden</th>
+          <th>Fecha</th>
+          <th>Cliente</th>
+          <th>Cédula/RUC</th>
+          <th>Método Pago</th>
+          <th class="num">Total</th>
+          <th class="num">Pagado</th>
+          <th class="num">Saldo</th>
+          <th>Est. Pago</th>
+          <th>Antigüedad</th>
+          <th>Días</th>
+        </tr>
+      </thead>
+      <tbody id="cc-tbody">
+        <tr><td colspan="11" class="cc-empty">
+          <div class="cc-empty-icon">📂</div>Cargando datos…
+        </td></tr>
+      </tbody>
+    </table>
+    <div class="cc-table-footer" id="cc-table-footer" style="display:none">
+      <span>Mostrando <strong id="cc-showing">0</strong> de <strong id="cc-total-rows">0</strong> registros</span>
+      <span>Saldo filtrado: <strong id="cc-saldo-filtrado">$0.00</strong></span>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Estado del módulo ──────────────────────────────────────────
+  var cc_state = {
+    data: [],       // todas las filas con saldo > 0
+    filtered: [],   // resultado del filtro activo
+    rangeFilter: 'all',
+    searchTerm: ''
+  };
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function cc_fmt(n) {
+    if (isNaN(n) || n === null || n === undefined) return '$0.00';
+    return '$' + parseFloat(n).toLocaleString('es-PA', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2
+    });
+  }
+
+  function cc_parseDate(str) {
+    if (!str) return null;
+    // soporta "14/03/2026 18:40" y "2026-03-14" y Date object
+    if (str instanceof Date) return isNaN(str) ? null : str;
+    var s = String(str).trim();
+    // DD/MM/YYYY [HH:MM]
+    var m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+    // YYYY-MM-DD
+    var m2 = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m2) return new Date(+m2[1], +m2[2] - 1, +m2[3]);
+    var d = new Date(s);
+    return isNaN(d) ? null : d;
+  }
+
+  function cc_diasAntiguedad(fechaStr) {
+    var d = cc_parseDate(fechaStr);
+    if (!d) return null;
+    var hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return Math.floor((hoy - d) / 86400000);
+  }
+
+  function cc_rangoKey(dias) {
+    if (dias === null) return 'r0';
+    if (dias <= 30) return 'r0';
+    if (dias <= 60) return 'r1';
+    return 'r2';
+  }
+
+  function cc_badgeHtml(dias) {
+    var key = cc_rangoKey(dias);
+    var label = dias === null ? '?' : (dias === 0 ? 'Hoy' : dias + ' días');
+    var cls = { r0: 's0', r1: 's1', r2: 's2' }[key];
+    return '<span class="cc-badge ' + cls + '">' +
+           (key === 'r0' ? '✓ ' : key === 'r1' ? '⚠ ' : '🔴 ') +
+           label + '</span>';
+  }
+
+  function cc_epBadge(ep) {
+    if (!ep || ep === '' || ep === 'NaN') ep = 'sin pago';
+    var ep_l = String(ep).toLowerCase().trim();
+    var cls = ep_l === 'pendiente' ? 'pendiente'
+            : ep_l === 'parcial'   ? 'parcial'
+            : 'sin-pago';
+    return '<span class="cc-ep ' + cls + '">' + ep_l + '</span>';
+  }
+
+  function cc_fmtFecha(str) {
+    var d = cc_parseDate(str);
+    if (!d) return '—';
+    return d.getDate().toString().padStart(2,'0') + '/' +
+           (d.getMonth()+1).toString().padStart(2,'0') + '/' +
+           d.getFullYear();
+  }
+
+  // ── Carga de datos ────────────────────────────────────────────
+  function cc_loadData() {
+    var raw = [];
+
+    // Intentar usar ordenes[] del admin si ya están cargadas
+    if (typeof ordenes !== 'undefined' && Array.isArray(ordenes) && ordenes.length > 0) {
+      raw = ordenes;
+    } else if (typeof window.ordenes !== 'undefined' && Array.isArray(window.ordenes)) {
+      raw = window.ordenes;
+    } else {
+      // Fallback: solicitar fetch al admin via GAS
+      cc_fetchFromGAS();
+      return;
+    }
+
+    cc_processData(raw);
+  }
+
+  function cc_fetchFromGAS() {
+    // Detectar GAS_URL del admin
+    var gasUrl = (typeof GAS_URL !== 'undefined') ? GAS_URL
+               : (typeof window.GAS_URL !== 'undefined') ? window.GAS_URL
+               : null;
+
+    if (!gasUrl) {
+      cc_renderError('No se encontraron datos de órdenes. Asegúrese de cargar la sección "Ventas Web" primero.');
+      return;
+    }
+
+    var url = gasUrl + '?action=getOrdenes&_=' + Date.now();
+    fetch(url)
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var rows = d.data || d.ordenes || d || [];
+        cc_processData(rows);
+      })
+      .catch(function(e){
+        cc_renderError('Error al cargar órdenes: ' + e.message);
+      });
+  }
+
+  function cc_processData(raw) {
+    var hoy = new Date();
+    hoy.setHours(0,0,0,0);
+
+    // Normalizar claves — el admin puede usar distintos naming
+    var items = [];
+    raw.forEach(function(row) {
+      // Soporte para objetos del admin (camelCase o snake_case o columnas originales)
+      var saldo = parseFloat(
+        row['Saldo Pendiente'] ?? row.saldoPendiente ?? row.saldo_pendiente ?? row.SALDO_PEND ?? 0
+      );
+      if (isNaN(saldo) || saldo <= 0) return; // solo pendientes
+
+      var fecha   = row['Fecha']       ?? row.fecha       ?? row.FECHA       ?? '';
+      var orden   = row['Orden #']     ?? row.orden       ?? row.ORDEN       ?? row.id ?? '—';
+      var cliente = row['Nombre']      ?? row.nombre      ?? row.NOMBRE      ?? row.cliente ?? '—';
+      var cedula  = row['Cédula/RUC']  ?? row.cedula      ?? row.ruc         ?? '—';
+      var metodo  = row['Método de Pago'] ?? row.metodoPago ?? row.metodo_pago ?? '—';
+      var total   = parseFloat(row['Total (num)'] ?? row.total ?? row.TOTAL ?? 0) || 0;
+      var pagado  = parseFloat(row['Monto Pagado'] ?? row.montoPagado ?? row.monto_pagado ?? 0) || 0;
+      var ep      = row['Estado Pago'] ?? row.estadoPago  ?? row.estado_pago ?? '';
+
+      var dias = cc_diasAntiguedad(fecha);
+
+      items.push({
+        orden: orden,
+        fecha: fecha,
+        cliente: cliente,
+        cedula: cedula,
+        metodo: metodo,
+        total: total,
+        pagado: pagado,
+        saldo: saldo,
+        ep: ep,
+        dias: dias,
+        rango: cc_rangoKey(dias)
+      });
+    });
+
+    // Ordenar por días descendente (más viejos primero)
+    items.sort(function(a,b){
+      return (b.dias || 0) - (a.dias || 0);
+    });
+
+    cc_state.data = items;
+    cc_computeKPIs();
+    cc_applyFilters();
+
+    document.getElementById('cc-update-ts').textContent =
+      'Actualizado: ' + new Date().toLocaleTimeString('es-PA', {hour:'2-digit', minute:'2-digit'});
+  }
+
+  // ── KPIs ──────────────────────────────────────────────────────
+  function cc_computeKPIs() {
+    var data = cc_state.data;
+    var totales = { total: 0, r0: 0, r1: 0, r2: 0 };
+    var counts  = { total: 0, r0: 0, r1: 0, r2: 0 };
+
+    data.forEach(function(row) {
+      totales.total += row.saldo;
+      totales[row.rango] += row.saldo;
+      counts.total++;
+      counts[row.rango]++;
+    });
+
+    document.getElementById('cc-kpi-total').textContent     = cc_fmt(totales.total);
+    document.getElementById('cc-kpi-total-sub').textContent = counts.total + ' órdenes';
+    document.getElementById('cc-kpi-r0').textContent        = cc_fmt(totales.r0);
+    document.getElementById('cc-kpi-r0-sub').textContent    = counts.r0 + ' órdenes';
+    document.getElementById('cc-kpi-r1').textContent        = cc_fmt(totales.r1);
+    document.getElementById('cc-kpi-r1-sub').textContent    = counts.r1 + ' órdenes';
+    document.getElementById('cc-kpi-r2').textContent        = cc_fmt(totales.r2);
+    document.getElementById('cc-kpi-r2-sub').textContent    = counts.r2 + ' órdenes';
+
+    // Barra de antigüedad
+    if (totales.total > 0) {
+      var p0 = (totales.r0 / totales.total * 100).toFixed(1);
+      var p1 = (totales.r1 / totales.total * 100).toFixed(1);
+      var p2 = (totales.r2 / totales.total * 100).toFixed(1);
+      var s0 = document.getElementById('cc-seg0');
+      var s1 = document.getElementById('cc-seg1');
+      var s2 = document.getElementById('cc-seg2');
+      s0.style.width = p0 + '%';
+      s1.style.width = p1 + '%';
+      s2.style.width = p2 + '%';
+      if (parseFloat(p0) > 8) s0.textContent = p0 + '%';
+      if (parseFloat(p1) > 8) s1.textContent = p1 + '%';
+      if (parseFloat(p2) > 8) s2.textContent = p2 + '%';
+    }
+  }
+
+  // ── Filtros ───────────────────────────────────────────────────
+  window.cc_setRangeFilter = function(range) {
+    cc_state.rangeFilter = range;
+    ['all','r0','r1','r2'].forEach(function(k) {
+      var btn = document.getElementById('cc-btn-' + k);
+      if (btn) btn.classList.toggle('active', k === range);
+    });
+    cc_applyFilters();
+  };
+
+  window.cc_applyFilters = function() {
+    var term = (document.getElementById('cc-search')?.value || '').toLowerCase().trim();
+    cc_state.searchTerm = term;
+
+    var result = cc_state.data.filter(function(row) {
+      // Filtro rango
+      if (cc_state.rangeFilter !== 'all' && row.rango !== cc_state.rangeFilter) return false;
+      // Filtro texto
+      if (term) {
+        var haystack = [row.orden, row.cliente, row.cedula, row.metodo]
+          .join(' ').toLowerCase();
+        if (haystack.indexOf(term) === -1) return false;
+      }
+      return true;
+    });
+
+    cc_state.filtered = result;
+    cc_renderTable(result);
+  };
+
+  // ── Render tabla ──────────────────────────────────────────────
+  function cc_renderTable(rows) {
+    var tbody = document.getElementById('cc-tbody');
+    var footer = document.getElementById('cc-table-footer');
+
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="11" class="cc-empty">' +
+        '<div class="cc-empty-icon">🔍</div>' +
+        (cc_state.data.length === 0
+          ? 'No hay órdenes con saldo pendiente.'
+          : 'Sin resultados para los filtros aplicados.') +
+        '</td></tr>';
+      footer.style.display = 'none';
+      return;
+    }
+
+    var html = '';
+    rows.forEach(function(row) {
+      html += '<tr>';
+      html += '<td><strong>' + cc_esc(row.orden) + '</strong></td>';
+      html += '<td>' + cc_fmtFecha(row.fecha) + '</td>';
+      html += '<td>' + cc_esc(row.cliente) + '</td>';
+      html += '<td>' + cc_esc(row.cedula) + '</td>';
+      html += '<td>' + cc_esc(row.metodo) + '</td>';
+      html += '<td class="num">' + cc_fmt(row.total) + '</td>';
+      html += '<td class="num">' + cc_fmt(row.pagado) + '</td>';
+      html += '<td class="num" style="color:#ef4444">' + cc_fmt(row.saldo) + '</td>';
+      html += '<td>' + cc_epBadge(row.ep) + '</td>';
+      html += '<td>' + cc_badgeHtml(row.dias) + '</td>';
+      html += '<td style="text-align:right;color:#64748b">' +
+              (row.dias !== null ? row.dias : '?') + '</td>';
+      html += '</tr>';
+    });
+    tbody.innerHTML = html;
+
+    // Footer con totales filtrados
+    var saldoTotal = rows.reduce(function(s, r){ return s + r.saldo; }, 0);
+    document.getElementById('cc-showing').textContent = rows.length;
+    document.getElementById('cc-total-rows').textContent = cc_state.data.length;
+    document.getElementById('cc-saldo-filtrado').textContent = cc_fmt(saldoTotal);
+    footer.style.display = 'flex';
+  }
+
+  function cc_esc(str) {
+    return String(str || '—')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function cc_renderError(msg) {
+    var tbody = document.getElementById('cc-tbody');
+    tbody.innerHTML = '<tr><td colspan="11" class="cc-empty">' +
+      '<div class="cc-empty-icon">⚠️</div>' + cc_esc(msg) + '</td></tr>';
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+  // Esperar a que el DOM esté listo (setTimeout 0 lo garantiza cuando el admin inyecta el módulo)
+  setTimeout(function() {
+    cc_loadData();
+  }, 0);
+
+})();
+</script>
