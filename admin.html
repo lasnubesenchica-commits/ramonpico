@@ -3921,11 +3921,18 @@ async function guardarPagoOp() {
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Error desconocido');
     showToast('✅ Pago registrado. Ingreso: ' + (data.ingresoId || ''));
+    // Guardar referencia antes de cerrar (closePagoOpModal pone pagoOpItem = null)
+    const itemCerrado = pagoOpItem;
     closePagoOpModal();
-    // Actualizar en memoria y re-renderizar
-    const idx = opItems.findIndex(i => i.id_item === pagoOpItem.id_item);
-    if (idx !== -1) { opItems[idx].estado = 'cerrado'; opItems[idx].ingreso_id = data.ingresoId || ''; }
+    // Actualizar en memoria
+    const idx = opItems.findIndex(i => i.id_item === itemCerrado.id_item);
+    if (idx !== -1) {
+      opItems[idx].estado     = 'cerrado';
+      opItems[idx].ingreso_id = data.ingresoId || '';
+    }
+    // Re-renderizar tabla y stats
     applyOpFilters();
+    updateOpStats(opItems);
     // Si CxC está abierto, recargar
     if (typeof window.cc_applyFilters === 'function') cc_applyFilters();
   } catch(err) { showToast('⚠️ ' + err.message); }
