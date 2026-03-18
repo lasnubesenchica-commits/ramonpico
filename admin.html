@@ -752,6 +752,7 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <button class="op-filter-btn" data-op-filter="inventario">📦 Inventario</button>
     <button class="op-filter-btn" data-op-filter="revision">⚠️ Revisar</button>
     <button class="op-filter-btn" data-op-filter="vinculado">Vinculado</button>
+    <button class="op-filter-btn" data-op-filter="facturado">📋 Facturado</button>
     <button class="op-filter-btn" data-op-filter="cerrado">Cerrado</button>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
@@ -1734,7 +1735,12 @@ tr:hover td{background:rgba(0,0,0,.015)}
             <label>Margen estimado</label>
             <div id="opMMargen" style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--green);margin-top:.2rem">—</div>
           </div>
-          <div class="modal-field full"><label>Orden web vinculada</label><input type="text" id="opMOrdenWeb" readonly></div>
+          <div class="modal-field full">
+            <label>Orden web vinculada</label>
+            <select id="opMOrdenWeb" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.5rem .75rem;font-family:'DM Sans',sans-serif;font-size:.88rem;outline:none;width:100%">
+              <option value="">— Sin orden web vinculada —</option>
+            </select>
+          </div>
           <div class="modal-field full"><label>Notas del match</label><input type="text" id="opMNotas" readonly></div>
         </div>
       </div>
@@ -2691,13 +2697,12 @@ function renderOpTable(items) {
       <td>${estadoBadge}${ordenWebBadge}</td>
       <td>
         <div class="action-btns">
-          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" data-op-ver="${i}">Ver</button>
-          ${flagRev ? `<button class="btn-xs btn-confirm" data-op-aprobar="${i}">✓ Aprobar</button>` : ''}
-          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" data-op-vincular="${i}">+ Vincular</button>` : ''}
+          <button class="btn-xs" style="background:var(--bg2);color:var(--text)" title="Ver detalle" data-op-ver="${i}">📄</button>
+          ${flagRev ? `<button class="btn-xs btn-confirm" data-op-aprobar="${i}" title="Aprobar match">✓ Aprobar</button>` : ''}
+          ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" data-op-vincular="${i}" title="Subir factura emitida">📋</button>` : ''}
           ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" data-op-inv="${i}" title="Mover a inventario">📦</button>` : ''}
           ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs" style="background:#7B1FA2;color:#fff" data-op-operativo="${i}" title="Registrar como costo operativo">⚙</button>` : ''}
           ${estado==='facturado' ? `<button class="btn-xs" style="background:#0288D1;color:#fff" data-op-pago="${i}" title="Registrar comprobante de pago">💳</button>` : ''}
-          ${(!item.id_orden_web && item.num_fac_emitida && item.num_fac_emitida!=='VENTA-DIRECTA') ? `<button class="btn-xs btn-deliver" data-op-orden="${i}" title="Buscar orden web vinculada">🔗</button>` : ''}
         </div>
       </td>
     </tr>`;
@@ -2850,7 +2855,8 @@ function openOpModal(idx, vincularMode) {
   margenEl.textContent = margen ? '$'+margen.toFixed(2) : '—';
   margenEl.style.color = margen > 0 ? 'var(--green)' : 'var(--red)';
 
-  document.getElementById('opMOrdenWeb').value = item.id_orden_web || '—';
+  // Poblar select de órdenes web disponibles
+  _poblarSelectOrdenesWeb(item.id_orden_web || '');
   document.getElementById('opMNotas').value    = item.notas        || '';
 
   // Mostrar zona upload si pendiente, inventario, facturado, o si se forzó vincularMode
@@ -2906,12 +2912,7 @@ function buildOpModalActions(item) {
   if (!esPendiente && !esInventario && !flagRev && item.estado !== 'cerrado') {
     html += `<button class="btn-primary" style="background:var(--green)" onclick="guardarCambiosOp()">💾 Guardar cambios</button>`;
   }
-  if (item.num_fac_emitida && item.num_fac_emitida !== 'VENTA-DIRECTA' && !item.id_orden_web) {
-    html += `<button class="btn-secondary" id="opBtnBuscarOrden" onclick="buscarOrdenWebModal()">🔗 Buscar orden web</button>`;
-  }
-  if (item.id_orden_web) {
-    html += `<span style="font-size:.75rem;color:var(--green);display:flex;align-items:center;gap:.3rem">✅ Orden web: <strong>${esc(item.id_orden_web)}</strong></span>`;
-  }
+  // El vínculo de orden web se maneja desde el select en el modal
   html += `<button class="btn-secondary" onclick="closeOpModal()">Cerrar</button>`;
   actions.innerHTML = html;
 
@@ -3095,6 +3096,92 @@ async function buscarOrdenWeb(idItem) {
 }
 
 // ── Buscar orden web — desde modal ──
+// ── Poblar select de órdenes web en modal de Operaciones ──
+function _poblarSelectOrdenesWeb(ordenActual) {
+  const sel = document.getElementById('opMOrdenWeb');
+  if (!sel) return;
+
+  // Limpiar opciones previas
+  sel.innerHTML = '<option value="">— Sin orden web vinculada —</option>';
+
+  // Órdenes ya vinculadas a otros ítems (excluir)
+  const ordenesYaUsadas = new Set(
+    opItems
+      .filter(i => i.id_orden_web && i.id_item !== (currentOpItem ? currentOpItem.id_item : ''))
+      .map(i => i.id_orden_web)
+  );
+
+  // Filtrar ordenes: Confirmada o Entregada, no vinculadas a otro ítem
+  const disponibles = (ordenes || []).filter(o => {
+    const estado = String(o[COL.ESTADO] || '').trim();
+    if (estado !== 'Confirmada' && estado !== 'Entregada') return false;
+    const num = String(o[COL.ORDEN_NUM] || '').trim();
+    if (!num) return false;
+    // Permitir la que ya tiene vinculada este ítem aunque esté "usada"
+    if (num === ordenActual) return true;
+    if (ordenesYaUsadas.has(num)) return false;
+    return true;
+  });
+
+  // Ordenar por fecha desc
+  disponibles.sort((a, b) => {
+    const fa = String(a[COL.FECHA] || '');
+    const fb = String(b[COL.FECHA] || '');
+    return fb.localeCompare(fa);
+  });
+
+  disponibles.forEach(o => {
+    const num    = String(o[COL.ORDEN_NUM] || '').trim();
+    const nombre = String(o[COL.NOMBRE]    || '').trim();
+    const total  = o[COL.TOTAL_STR] || o[COL.TOTAL_NUM] || '';
+    const fecha  = String(o[COL.FECHA]     || '').substring(0, 10);
+    const opt    = document.createElement('option');
+    opt.value    = num;
+    opt.textContent = `${num} — ${nombre} — ${total} — ${fecha}`;
+    if (num === ordenActual) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  // Si la orden actual no está en la lista (caso edge: ya cancelada etc.)
+  // la agregamos igual para no perder el vínculo
+  if (ordenActual && ordenActual !== '—' && ![...sel.options].some(o => o.value === ordenActual)) {
+    const opt = document.createElement('option');
+    opt.value = ordenActual;
+    opt.textContent = ordenActual + ' (vinculada)';
+    opt.selected = true;
+    sel.appendChild(opt);
+  }
+
+  // Al cambiar la selección, guardar inmediatamente via GAS
+  sel.onchange = async function() {
+    const nuevaOrden = sel.value;
+    if (!currentOpItem) return;
+
+    // Actualizar en memoria inmediatamente (optimistic)
+    const idx = opItems.findIndex(i => i.id_item === currentOpItem.id_item);
+    const ordenAnterior = currentOpItem.id_orden_web || '';
+    if (idx !== -1) opItems[idx].id_orden_web = nuevaOrden;
+    currentOpItem.id_orden_web = nuevaOrden;
+
+    try {
+      const data = await gasJsonp('vincularOrdenWeb', {
+        id_item:   currentOpItem.id_item,
+        orden_num: nuevaOrden,
+      });
+      if (!data.success) throw new Error(data.error || 'Error');
+      showToast(nuevaOrden ? '✅ Orden ' + nuevaOrden + ' vinculada' : '✅ Vínculo eliminado');
+      applyOpFilters();
+      buildOpModalActions(currentOpItem);
+    } catch(err) {
+      // Revertir en memoria si falla
+      if (idx !== -1) opItems[idx].id_orden_web = ordenAnterior;
+      currentOpItem.id_orden_web = ordenAnterior;
+      sel.value = ordenAnterior;
+      showToast('⚠️ ' + err.message);
+    }
+  };
+}
+
 async function buscarOrdenWebModal() {
   if (!currentOpItem) return;
   const btn = document.getElementById('opBtnBuscarOrden');
@@ -3110,7 +3197,15 @@ async function buscarOrdenWebModal() {
       currentOpItem.id_orden_web = data.ordenNum;
       // Actualizar badge en modal
       buildOpModalActions(currentOpItem);
-      document.getElementById('opMOrdenWeb').value = data.ordenNum;
+      // Actualizar select
+  const selOW = document.getElementById('opMOrdenWeb');
+  // Agregar opción si no existe y seleccionar
+  if (![...selOW.options].some(o => o.value === data.ordenNum)) {
+    const opt = document.createElement('option');
+    opt.value = data.ordenNum; opt.textContent = data.ordenNum;
+    selOW.appendChild(opt);
+  }
+  selOW.value = data.ordenNum;
       applyOpFilters();
     } else {
       showToast('ℹ️ No se encontró orden web — revisa nombre y monto del cliente');
