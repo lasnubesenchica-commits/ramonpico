@@ -665,10 +665,10 @@ tr:hover td{background:rgba(0,0,0,.015)}
     <div class="main-tab-group">
       <button class="main-tab" id="tabReportes">📈 Reportes <span class="main-tab-arrow">▾</span></button>
       <div class="dropdown-menu">
-        <a onclick="switchTab('reporte:reportes/margenes.html')"            style="cursor:pointer">📊 Márgenes por producto</a>
-        <a onclick="switchTab('reporte:reportes/inventario_valorado.html')" style="cursor:pointer">📦 Inventario valorado</a>
-        <a onclick="switchTab('reporte:reportes/cuentas_por_cobrar.html')"  style="cursor:pointer">💳 Cuentas por cobrar</a>
-        <a onclick="switchTab('reporte:reportes/flujo_caja.html')"          style="cursor:pointer">💵 Flujo de caja</a>
+        <a href="javascript:void(0)" onclick="switchTab('reporte:reportes/margenes.html')">📊 Márgenes por producto</a>
+        <a href="javascript:void(0)" onclick="switchTab('reporte:reportes/inventario_valorado.html')">📦 Inventario valorado</a>
+        <a href="javascript:void(0)" onclick="switchTab('reporte:reportes/cuentas_por_cobrar.html')">💳 Cuentas por cobrar</a>
+        <a href="javascript:void(0)" onclick="switchTab('reporte:reportes/flujo_caja.html')">💵 Flujo de caja</a>
       </div>
     </div>
 
@@ -2426,27 +2426,49 @@ async function loadReporte(path, forceReload) {
     const res = await fetch(path);
     if (!res.ok) throw new Error('No se pudo cargar el reporte (' + res.status + ')');
     const html = await res.text();
-    container.innerHTML = html;
-    // Ejecutar los scripts del módulo inyectado
-    container.querySelectorAll('script').forEach(oldScript => {
-      const newScript = document.createElement('script');
-      if (oldScript.src) {
-        newScript.src = oldScript.src;
-      } else {
-        newScript.textContent = oldScript.textContent;
-      }
-      document.head.appendChild(newScript);
-      oldScript.remove();
-    });
-    // Inyectar estilos del módulo
-    container.querySelectorAll('link[rel="stylesheet"], style').forEach(el => {
-      document.head.appendChild(el.cloneNode(true));
-    });
+
+    // Separar estilos y scripts del HTML
+    const parser   = new DOMParser();
+    const doc      = parser.parseFromString(html, 'text/html');
+
+    // Inyectar estilos en <head> (solo una vez por path)
+    const styleKey = 'reporte-style-' + path.replace(/[^a-z0-9]/gi,'_');
+    if (!document.getElementById(styleKey)) {
+      doc.querySelectorAll('style').forEach(s => {
+        const tag = document.createElement('style');
+        tag.id = styleKey;
+        tag.textContent = s.textContent;
+        document.head.appendChild(tag);
+      });
+    }
+
+    // Poner solo el HTML (sin script/style) en el contenedor
+    const bodyHTML = doc.body ? doc.body.innerHTML : html;
+    // Limpiar scripts del HTML antes de insertar
+    const tmp = document.createElement('div');
+    tmp.innerHTML = bodyHTML;
+    tmp.querySelectorAll('script, style').forEach(el => el.remove());
+    container.innerHTML = tmp.innerHTML;
+
+    // Ejecutar scripts DESPUÉS de que el DOM esté listo
+    setTimeout(() => {
+      doc.querySelectorAll('script').forEach(oldScript => {
+        const newScript = document.createElement('script');
+        if (oldScript.src) {
+          newScript.src   = oldScript.src;
+          newScript.async = false;
+        } else {
+          newScript.textContent = oldScript.textContent;
+        }
+        document.head.appendChild(newScript);
+      });
+    }, 0);
+
   } catch(err) {
     container.innerHTML =
       '<div style="display:flex;flex-direction:column;align-items:center;gap:.75rem;padding:4rem;color:#C62828">' +
       '<span style="font-size:2rem">⚠️</span>' +
-      '<span>' + err.message + '</span>' +
+      '<span>' + esc(err.message) + '</span>' +
       '<button onclick="loadReporte(\'' + path + '\',true)" ' +
       'style="margin-top:.5rem;padding:.5rem 1.25rem;background:#E05A00;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.85rem">Reintentar</button>' +
       '</div>';
