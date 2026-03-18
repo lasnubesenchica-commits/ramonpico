@@ -244,8 +244,9 @@ function mgApplyFilters() {
 
   mg_filtered = base;
   mgRenderKPIs();
-  mgRenderChart();
   mgRenderTable();
+  // Chart needs canvas to be in DOM — requestAnimationFrame guarantees it
+  requestAnimationFrame(function() { mgRenderChart(); });
 }
 window.mgApplyFilters = mgApplyFilters;
 
