@@ -1,0 +1,4 @@
+# Credenciales clasp — contiene Script ID, no commitear si el repo es público
+# Comenta la siguiente línea si el repo es PRIVADO y quieres que clasp funcione
+# automáticamente para otros colaboradores
+#.clasp.json  (repo privado — incluido para facilitar clasp)
