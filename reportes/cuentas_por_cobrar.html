@@ -250,6 +250,11 @@
   };
 
   window.cc_applyFilters = function() {
+        // Re-procesar desde opItems vivo para reflejar cambios en tiempo real
+    var raw = (typeof opItems!=='undefined'&&Array.isArray(opItems)) ? opItems
+            : (typeof window.opItems!=='undefined'&&Array.isArray(window.opItems)) ? window.opItems
+            : null;
+    if (raw) { cc_processData(raw); }
     var term=(document.getElementById('cc-search')||{value:''}).value.toLowerCase().trim();
     var result=cc_state.data.filter(function(row){
       if(cc_state.rangeFilter!=='all'&&row.rango!==cc_state.rangeFilter) return false;
