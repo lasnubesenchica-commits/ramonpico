@@ -38,6 +38,27 @@
 .fc-pill.active { background: var(--orange); border-color: var(--orange); color: #fff; font-weight: 600; }
 .fc-pill.green.active  { background: var(--green);  border-color: var(--green); }
 .fc-pill.blue.active   { background: #1565C0; border-color: #1565C0; }
+.fc-toggle-wrap {
+  display: flex; align-items: center; gap: .45rem;
+  padding: .3rem .75rem; border-radius: 100px;
+  border: 1px solid var(--border); background: var(--bg);
+  cursor: pointer; transition: all .2s; user-select: none;
+}
+.fc-toggle-wrap:hover { border-color: #888; }
+.fc-toggle-wrap.on { border-color: #E65100; background: #FFF3E0; }
+.fc-toggle-switch {
+  width: 28px; height: 16px; border-radius: 8px; background: #ccc;
+  position: relative; transition: background .2s; flex-shrink: 0;
+}
+.fc-toggle-wrap.on .fc-toggle-switch { background: #E65100; }
+.fc-toggle-knob {
+  position: absolute; top: 2px; left: 2px;
+  width: 12px; height: 12px; border-radius: 50%;
+  background: #fff; transition: left .2s;
+}
+.fc-toggle-wrap.on .fc-toggle-knob { left: 14px; }
+.fc-toggle-label { font-size: .78rem; font-weight: 500; color: var(--muted); white-space: nowrap; }
+.fc-toggle-wrap.on .fc-toggle-label { color: #E65100; font-weight: 600; }
 
 /* ── KPI row ────────────────────────────────────── */
 .fc-kpi-row {
@@ -229,7 +250,11 @@
     <span class="fc-ctrl-label" style="margin-left:.4rem">Vista</span>
     <button class="fc-pill active" id="fcPillMes"   onclick="fcSetVista('mes',this)">Mensual</button>
     <button class="fc-pill"        id="fcPillAcum"  onclick="fcSetVista('acum',this)">Acumulado</button>
-    <button class="fc-pill" style="margin-left:auto" onclick="fcLoaded=false;fcLoad()">↺ Actualizar</button>
+    <div class="fc-toggle-wrap on" id="fcToggleInv" onclick="fcToggleInventario()" style="margin-left:auto" title="Incluye egresos de mercancía e inventario en el flujo">
+      <div class="fc-toggle-switch"><div class="fc-toggle-knob"></div></div>
+      <span class="fc-toggle-label">Incluir inventario</span>
+    </div>
+    <button class="fc-pill" onclick="fcLoaded=false;fcLoad()">↺ Actualizar</button>
   </div>
 
   <!-- KPIs -->
@@ -334,7 +359,8 @@ let fc_ing    = [];   // todos los ingresos
 let fc_egr    = [];   // todos los egresos
 let fc_op     = [];   // opItems para pendientes
 let fc_year   = new Date().getFullYear();
-let fc_vista  = 'mes';  // 'mes' | 'acum'
+let fc_vista       = 'mes';  // 'mes' | 'acum'
+let fc_inv_on      = true;   // incluir costo_mercancia en egresos
 let fc_chart  = null;
 let fcLoaded  = false;
 
@@ -420,7 +446,10 @@ function fcPopulateYears() {
 function fcApply() {
   fc_year = Number(document.getElementById('fcSelAnio').value);
   const ing = fc_ing.filter(i => Number(i.anio_fiscal) === fc_year);
-  const egr = fc_egr.filter(i => Number(i.anio || i.anio_fiscal) === fc_year);
+  const egrAll = fc_egr.filter(i => Number(i.anio || i.anio_fiscal) === fc_year);
+  const egr = fc_inv_on
+    ? egrAll
+    : egrAll.filter(i => i.tipo_egreso !== 'costo_mercancia' && i.categoria !== 'Inventario');
   fcRenderKpis(ing, egr);
   fcRenderChart(ing, egr);
   fcRenderTable(ing, egr);
@@ -755,8 +784,19 @@ function fcSetVista(v, btn) {
   document.querySelectorAll('.fc-pill').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const ing = fc_ing.filter(i => Number(i.anio_fiscal)===fc_year);
-  const egr = fc_egr.filter(i => Number(i.anio || i.anio_fiscal)===fc_year);
+  const egrAll = fc_egr.filter(i => Number(i.anio || i.anio_fiscal)===fc_year);
+  const egr = fc_inv_on
+    ? egrAll
+    : egrAll.filter(i => i.tipo_egreso !== 'costo_mercancia' && i.categoria !== 'Inventario');
   fcRenderChart(ing, egr);
+}
+
+// ── Toggle inventario ─────────────────────────────
+function fcToggleInventario() {
+  fc_inv_on = !fc_inv_on;
+  const el = document.getElementById('fcToggleInv');
+  if (fc_inv_on) el.classList.add('on'); else el.classList.remove('on');
+  fcApply();
 }
 
 // ── Error ────────────────────────────────────────
