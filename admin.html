@@ -1706,8 +1706,13 @@ tr:hover td{background:rgba(0,0,0,.015)}
           <div class="modal-field"><label>RUC cliente</label><input type="text" id="opMRucCliente"></div>
           <div class="modal-field"><label>DV cliente</label><input type="text" id="opMDvCliente"></div>
           <div class="modal-field"><label>Total venta (con ITBMS)</label><input type="text" id="opMTotalVenta" placeholder="0.00" oninput="recalcMargen()"></div>
-          <div class="modal-field" style="grid-column:1/-1">
+          <div class="modal-field" style="grid-column:1/-1;display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
             <a id="opMLinkEmitida" href="#" target="_blank" style="font-size:.78rem;color:var(--green);display:none">📄 Ver factura emitida →</a>
+            <button id="btnCorregirComp" onclick="corregirComprobante()"
+              style="display:none;background:#5C6BC0;color:#fff;border:none;border-radius:6px;
+                     padding:.3rem .75rem;font-size:.78rem;cursor:pointer;opacity:.45;pointer-events:none">
+              🔄 Corregir comprobante
+            </button>
           </div>
         </div>
 
@@ -2583,6 +2588,7 @@ let opFilter     = 'all';
 let currentOpItem = null;
 let opPdfBase64  = null;
 let opPdfName    = null;
+let opPdfMime    = null;
 
 // ══════════════════════════════════════════════════
 //  CARGAR OPERACIONES
@@ -2815,6 +2821,7 @@ function openOpModal(idx, vincularMode) {
   try {
   opPdfBase64  = null;
   opPdfName    = null;
+  opPdfMime    = null;
 
   const item = currentOpItem;
   document.getElementById('opModalTitle').textContent = item.id_item || 'Ítem';
@@ -2863,9 +2870,31 @@ function openOpModal(idx, vincularMode) {
   const esPendiente  = item.estado === 'pendiente' && !item.num_fac_emitida;
   const esInventario = item.estado === 'inventario';
   const esFacturado  = item.estado === 'facturado';
-  document.getElementById('opUploadZone').style.display = (esPendiente || esInventario || esFacturado || vincularMode) ? 'block' : 'none';
+  const esCerrado = item.estado === 'cerrado';
+  document.getElementById('opUploadZone').style.display = (esPendiente || esInventario || esFacturado || esCerrado || vincularMode) ? 'block' : 'none';
   document.getElementById('opPdfFileName').textContent  = '';
   document.getElementById('opDropZone').classList.remove('has-file');
+
+  // Botón corregir comprobante: solo visible en cerrado, deshabilitado hasta cargar archivo
+  const btnCorr = document.getElementById('btnCorregirComp');
+  if (btnCorr) {
+    if (esCerrado) {
+      btnCorr.style.display       = 'inline-block';
+      btnCorr.style.opacity       = '.45';
+      btnCorr.style.pointerEvents = 'none';
+    } else {
+      btnCorr.style.display = 'none';
+    }
+  }
+  // Ajustar label y accept del drop zone
+  const dropLabel = document.querySelector('#opDropZone div[style*="font-size:.78rem"]');
+  if (dropLabel) {
+    dropLabel.textContent = esCerrado
+      ? 'Sube el comprobante correcto (imagen o PDF) — reemplazará el archivo actual'
+      : 'Sube la factura emitida (PDF) para que la IA extraiga los datos';
+  }
+  const pdfInput = document.getElementById('opPdfInput');
+  if (pdfInput) pdfInput.accept = esCerrado ? 'image/*,application/pdf' : 'application/pdf';
 
   // Campos venta editables solo si pendiente o inventario
   ['opMFacEmitida','opMFechaVenta','opMCliente','opMRucCliente','opMDvCliente','opMTotalVenta'].forEach(id => {
@@ -2971,16 +3000,29 @@ function handleOpPdfDrop(e) {
   if (file) _readOpPdf(file);
 }
 function _readOpPdf(file) {
-  if (file.type !== 'application/pdf') { showToast('⚠️ Solo se aceptan archivos PDF'); return; }
+  const esCerradoNow = currentOpItem && currentOpItem.estado === 'cerrado';
+  const esImagen     = file.type.startsWith('image/');
+  const esPdf        = file.type === 'application/pdf';
+
+  if (!esCerradoNow && !esPdf) { showToast('⚠️ Solo se aceptan archivos PDF'); return; }
+  if (esCerradoNow && !esPdf && !esImagen) { showToast('⚠️ Solo se aceptan PDF o imágenes'); return; }
+
   const reader = new FileReader();
   reader.onload = ev => {
     opPdfBase64 = ev.target.result.split(',')[1];
     opPdfName   = file.name;
+    opPdfMime   = file.type || (esPdf ? 'application/pdf' : 'image/jpeg');
     document.getElementById('opPdfFileName').textContent = '📎 ' + file.name;
     document.getElementById('opDropZone').classList.add('has-file');
-    const btn = document.getElementById('opBtnAnalizarPdf');
-    if (btn) btn.disabled = false;
-    showToast('📎 PDF listo — presiona ✦ Analizar PDF');
+    if (esCerradoNow) {
+      const btnCorr = document.getElementById('btnCorregirComp');
+      if (btnCorr) { btnCorr.style.opacity = '1'; btnCorr.style.pointerEvents = 'auto'; }
+      showToast('📎 Archivo listo — presiona 🔄 Corregir comprobante');
+    } else {
+      const btn = document.getElementById('opBtnAnalizarPdf');
+      if (btn) btn.disabled = false;
+      showToast('📎 PDF listo — presiona ✦ Analizar PDF');
+    }
   };
   reader.readAsDataURL(file);
 }
@@ -3948,6 +3990,54 @@ async function guardarPagoOp() {
     btn.disabled = false; btn.textContent = '💳 Confirmar pago';
   }
 }
+
+// ══════════════════════════════════════════════════════════
+//  CORREGIR COMPROBANTE — ítem cerrado
+// ══════════════════════════════════════════════════════════
+async function corregirComprobante() {
+  if (!currentOpItem || currentOpItem.estado !== 'cerrado') return;
+  if (!opPdfBase64) { showToast('⚠️ Primero carga el archivo correcto'); return; }
+
+  const btn = document.getElementById('btnCorregirComp');
+  if (btn) { btn.style.opacity = '.6'; btn.style.pointerEvents = 'none'; btn.textContent = '⏳ Subiendo...'; }
+
+  try {
+    const ext      = (opPdfName || 'comprobante').split('.').pop() || 'jpg';
+    const payload  = {
+      action:      'corregirComprobante',
+      id_item:     currentOpItem.id_item,
+      ingreso_id:  currentOpItem.ingreso_id || '',
+      imageBase64: opPdfBase64,
+      imageMime:   opPdfMime || 'image/jpeg',
+      imageName:   'comp_corr_' + currentOpItem.id_item + '_' + Date.now() + '.' + ext,
+    };
+
+    const res = await fetch(GAS_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body:    JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+
+    // Actualizar en memoria
+    const idx = opItems.findIndex(i => i.id_item === currentOpItem.id_item);
+    if (idx !== -1) opItems[idx].drive_url_emit = data.driveUrl;
+
+    // Actualizar link en modal
+    const linkEmit = document.getElementById('opMLinkEmitida');
+    if (linkEmit && data.driveUrl) { linkEmit.href = data.driveUrl; linkEmit.style.display = 'inline'; }
+
+    showToast('✅ Comprobante actualizado');
+    closeOpModal();
+
+  } catch(err) {
+    showToast('⚠️ ' + err.message);
+    if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; btn.textContent = '🔄 Corregir comprobante'; }
+  }
+}
+
 
 // ══════════════════════════════════════════════════════════
 //  MODAL COSTO OPERATIVO — marcar ítem pendiente como costo_operativo
