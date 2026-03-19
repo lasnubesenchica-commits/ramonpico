@@ -449,7 +449,7 @@ function fcApply() {
   const egrAll = fc_egr.filter(i => Number(i.anio || i.anio_fiscal) === fc_year);
   const egr = fc_inv_on
     ? egrAll
-    : egrAll.filter(i => i.categoria !== 'Inventario');
+    : egrAll.filter(i => i.categoria !== 'Inventario' && i.categoria !== 'costo_mercancia');
   fcRenderKpis(ing, egr);
   fcRenderChart(ing, egr);
   fcRenderTable(ing, egr);
@@ -787,7 +787,7 @@ function fcSetVista(v, btn) {
   const egrAll = fc_egr.filter(i => Number(i.anio || i.anio_fiscal)===fc_year);
   const egr = fc_inv_on
     ? egrAll
-    : egrAll.filter(i => i.categoria !== 'Inventario');
+    : egrAll.filter(i => i.categoria !== 'Inventario' && i.categoria !== 'costo_mercancia');
   fcRenderChart(ing, egr);
 }
 
