@@ -250,11 +250,39 @@
   };
 
   window.cc_applyFilters = function() {
-        // Re-procesar desde opItems vivo para reflejar cambios en tiempo real
+    // Re-procesar desde opItems vivo para reflejar cambios en tiempo real
     var raw = (typeof opItems!=='undefined'&&Array.isArray(opItems)) ? opItems
             : (typeof window.opItems!=='undefined'&&Array.isArray(window.opItems)) ? window.opItems
             : null;
-    if (raw) { cc_processData(raw); }
+    if (raw) {
+      // Reprocesar sin triggear applyFilters de nuevo
+      var items = [];
+      raw.forEach(function(row) {
+        if (String(row.estado||'').trim().toLowerCase() !== 'facturado') return;
+        var dias = cc_dias(row.fecha_venta||'');
+        items.push({
+          id_item:         row.id_item          || '',
+          num_fac_emitida: row.num_fac_emitida  || '—',
+          num_fac_carbone: row.num_fac_carbone  || '—',
+          fecha_venta:     row.fecha_venta      || '',
+          nombre_cliente:  row.nombre_cliente   || '—',
+          ruc_cliente:     row.ruc_cliente      || '',
+          descripcion:     row.descripcion_prod || '—',
+          codigo:          row.codigo_prod      || '',
+          total_carbone:   parseFloat(row.total_carbone||'0')||0,
+          total_venta:     parseFloat(row.total_venta||'0')||0,
+          margen:          parseFloat(row.margen||'0')||0,
+          drive_url_carb:  row.drive_url_carb   || '',
+          drive_url_emit:  row.drive_url_emit   || '',
+          id_orden_web:    row.id_orden_web     || '',
+          dias:            dias,
+          rango:           cc_rango(dias),
+        });
+      });
+      items.sort(function(a,b){ return (b.dias||0)-(a.dias||0); });
+      cc_state.data = items;
+      cc_computeKPIs();
+    }
     var term=(document.getElementById('cc-search')||{value:''}).value.toLowerCase().trim();
     var result=cc_state.data.filter(function(row){
       if(cc_state.rangeFilter!=='all'&&row.rango!==cc_state.rangeFilter) return false;
