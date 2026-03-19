@@ -3083,7 +3083,7 @@ async function guardarVentaDirecta() {
     closeOpModal();
     const idx = opItems.findIndex(i => i.id_item === currentOpItem.id_item);
     if (idx !== -1) {
-      opItems[idx].estado = 'vinculado';
+      opItems[idx].estado = 'cerrado';
       opItems[idx].nombre_cliente = params.nombre;
       opItems[idx].total_venta = params.total;
       opItems[idx].num_fac_emitida = 'VENTA-DIRECTA';
@@ -3103,7 +3103,7 @@ async function aprobarMatch(idItem) {
     const idx = opItems.findIndex(i => i.id_item === idItem);
     if (idx !== -1) {
       opItems[idx].flag_revision = false;
-      opItems[idx].estado = 'vinculado';
+      opItems[idx].estado = 'facturado';
     }
     applyOpFilters();
   } catch(err) {
