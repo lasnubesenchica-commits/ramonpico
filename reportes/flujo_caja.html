@@ -254,7 +254,7 @@
       <div class="fc-toggle-switch"><div class="fc-toggle-knob"></div></div>
       <span class="fc-toggle-label">Incluir inventario</span>
     </div>
-    <button class="fc-pill" onclick="fcLoaded=false;fcLoad()">↺ Actualizar</button>
+    <button class="fc-pill" onclick="window.fcLoaded=false;window.fcLoad()">↺ Actualizar</button>
   </div>
 
   <!-- KPIs -->
@@ -805,7 +805,7 @@ function fcShowError(msg) {
     `<div class="fc-kpi" style="grid-column:1/-1">
       <div class="fc-kpi-label" style="color:var(--red)">Error cargando datos</div>
       <div style="font-size:.82rem;color:var(--muted);margin:.5rem 0">${msg}</div>
-      <button onclick="fcLoaded=false;fcLoad()" style="padding:.4rem 1rem;background:var(--orange);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.82rem">Reintentar</button>
+      <button onclick="window.fcLoaded=false;window.fcLoad()" style="padding:.4rem 1rem;background:var(--orange);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.82rem">Reintentar</button>
     </div>`;
 }
 
@@ -814,8 +814,16 @@ function fcEsc(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Exponer al admin padre ────────────────────────
-window.fcApplyFilters = fcApply;
+// ── Exponer al admin padre y al HTML inline ───────
+window.fcApplyFilters     = fcApply;
+window.fcToggleInventario = fcToggleInventario;
+window.fcSetVista         = fcSetVista;
+window.fcLoad             = fcLoad;
+// Exponer fcLoaded para que el botón Actualizar pueda resetearlo
+Object.defineProperty(window, 'fcLoaded', {
+  get: () => fcLoaded,
+  set: v  => { fcLoaded = v; },
+});
 
 // ── Init ─────────────────────────────────────────
 fcLoad();
