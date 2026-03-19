@@ -384,6 +384,14 @@ async function fcLoad() {
       fc_op = d.items || [];
     }
 
+    // Normalizar egresos: derivar mes y anio desde fecha_egreso si el GAS no los incluyó
+    fc_egr.forEach(i => {
+      if (!i.anio && !i.anio_fiscal && i.fecha_egreso) {
+        const d = new Date(String(i.fecha_egreso).substring(0,10) + 'T12:00:00');
+        if (!isNaN(d)) { i.anio = d.getFullYear(); i.mes = d.getMonth() + 1; }
+      }
+    });
+
     fcLoaded = true;
     fcPopulateYears();
     fcApply();
