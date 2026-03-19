@@ -396,7 +396,7 @@ async function fcLoad() {
 function fcPopulateYears() {
   const years = new Set();
   fc_ing.forEach(i => { if (i.anio_fiscal) years.add(Number(i.anio_fiscal)); });
-  fc_egr.forEach(i => { if (i.anio)        years.add(Number(i.anio)); });
+  fc_egr.forEach(i => { if (i.anio || i.anio_fiscal) years.add(Number(i.anio || i.anio_fiscal)); });
   if (!years.size) years.add(new Date().getFullYear());
   const sel = document.getElementById('fcSelAnio');
   sel.innerHTML = '';
@@ -412,7 +412,7 @@ function fcPopulateYears() {
 function fcApply() {
   fc_year = Number(document.getElementById('fcSelAnio').value);
   const ing = fc_ing.filter(i => Number(i.anio_fiscal) === fc_year);
-  const egr = fc_egr.filter(i => Number(i.anio)        === fc_year);
+  const egr = fc_egr.filter(i => Number(i.anio || i.anio_fiscal) === fc_year);
   fcRenderKpis(ing, egr);
   fcRenderChart(ing, egr);
   fcRenderTable(ing, egr);
@@ -747,7 +747,7 @@ function fcSetVista(v, btn) {
   document.querySelectorAll('.fc-pill').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const ing = fc_ing.filter(i => Number(i.anio_fiscal)===fc_year);
-  const egr = fc_egr.filter(i => Number(i.anio)===fc_year);
+  const egr = fc_egr.filter(i => Number(i.anio || i.anio_fiscal)===fc_year);
   fcRenderChart(ing, egr);
 }
 
