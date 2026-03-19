@@ -1932,7 +1932,7 @@ function updateStats(rows) {
   document.getElementById('statNuevas').textContent      = rows.filter(r=>r[COL.ESTADO]==='Nueva').length;
   document.getElementById('statConfirmadas').textContent = rows.filter(r=>r[COL.ESTADO]==='Confirmada').length;
   document.getElementById('statYappy').textContent       = rows.filter(r=>r[COL.PAGO]==='Yappy'&&!r[COL.ESTADO_PAGO]).length;
-  const total = rows.reduce((s,r)=>s+(parseFloat(String(r[COL.TOTAL_NUM]||'0').replace(/[^0-9.]/g,''))||0),0);
+  const total = rows.filter(r=>r[COL.ESTADO]==='Confirmada'||r[COL.ESTADO]==='Entregada').reduce((s,r)=>s+(parseFloat(String(r[COL.TOTAL_NUM]||'0').replace(/[^0-9.]/g,''))||0),0);
   document.getElementById('statMonto').textContent       = total > 0 ? '$'+total.toLocaleString('es-PA',{minimumFractionDigits:0}) : '—';
 }
 
