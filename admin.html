@@ -3886,10 +3886,11 @@ function llenarCamposIngreso(parsed) {
 let pagoOpFileB64  = null;
 let pagoOpFileMime = null;
 let pagoOpItem     = null;
+let pagoOpIAData   = null;   // datos extraídos por IA del comprobante
 
 function abrirModalPagoOp(item) {
   pagoOpItem    = item;
-  pagoOpFileB64 = null; pagoOpFileMime = null;
+  pagoOpFileB64 = null; pagoOpFileMime = null; pagoOpIAData = null;
   // Pre-llenar info del ítem
   document.getElementById('pagoOpInfo').innerHTML =
     `<strong>${esc(item.num_fac_emitida||'')}</strong> — ${esc(item.nombre_cliente||'')} — <strong style="color:var(--green)">$${parseFloat(item.total_venta||0).toFixed(2)}</strong>`;
@@ -3905,7 +3906,7 @@ function abrirModalPagoOp(item) {
 function closePagoOpModal() {
   document.getElementById('pagoOpModalOverlay').classList.remove('open');
   document.body.style.overflow = '';
-  pagoOpItem = null; pagoOpFileB64 = null; pagoOpFileMime = null;
+  pagoOpItem = null; pagoOpFileB64 = null; pagoOpFileMime = null; pagoOpIAData = null;
 }
 
 function handlePagoOpFileSelect(e) {
@@ -3935,6 +3936,7 @@ function procesarArchivoPagoOp(file) {
     status.innerHTML = '<span style="color:var(--green)">⏳ Extrayendo datos del comprobante...</span>';
     try {
       const parsed = await analizarComprobanteIngresoConClaude(b64, mime);
+      pagoOpIAData = parsed;   // ← guardar para enriquecer notas del ingreso
       // Auto-inferir forma de pago
       if (parsed.tipo_comprobante) {
         const sel = document.getElementById('pagoOpFormaPago');
@@ -3995,6 +3997,31 @@ async function guardarPagoOp() {
     // Guardar referencias antes de cerrar modal (closePagoOpModal pone pagoOpItem = null)
     const itemCerrado = pagoOpItem;
     const ingresoId   = data.ingresoId || '';
+
+    // ── Paso 2: Guardar datos del comprobante en notas_internas del Ingreso ──
+    if (ingresoId && pagoOpIAData) {
+      try {
+        const montoPagado = parseFloat(pagoOpIAData.monto || 0);
+        const datosPago = [
+          'PAGO_REAL: $' + montoPagado.toFixed(2),
+          'FORMA: ' + formaPago,
+          pagoOpIAData.tipo_comprobante ? 'TIPO_COMP: ' + pagoOpIAData.tipo_comprobante  : null,
+          pagoOpIAData.num_factura      ? 'COD: '       + pagoOpIAData.num_factura        : null,
+          pagoOpIAData.nombre_pagador   ? 'PAGADOR: '   + pagoOpIAData.nombre_pagador     : null,
+          pagoOpIAData.fecha            ? 'FECHA_PAGO: '+ pagoOpIAData.fecha              : null,
+          pagoOpIAData.notas            ? 'NOTA_COMP: ' + pagoOpIAData.notas              : null,
+        ].filter(Boolean).join(' | ');
+
+        await gasJsonp('actualizarNotasIngreso', {
+          ingreso_id: ingresoId,
+          datos_pago: datosPago,
+        });
+        console.log('Notas de pago guardadas en ingreso:', ingresoId, '→', datosPago);
+      } catch(notasErr) {
+        // Non-blocking: ciclo ya cerrado, las notas son bonus
+        console.warn('No se pudieron guardar notas de pago:', notasErr.message);
+      }
+    }
 
     // Resetear botón ANTES de cerrar (el modal aún existe en este punto)
     btn.disabled = false; btn.textContent = '💳 Confirmar pago';
