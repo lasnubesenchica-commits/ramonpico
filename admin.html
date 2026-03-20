@@ -4655,6 +4655,7 @@ async function guardarVentaInv() {
   const total  = parseFloat(document.getElementById('invVMTotal').value) || 0;
   const fecha  = document.getElementById('invVMFechaVenta').value;
   const facEm  = document.getElementById('invVMFacEmitida').value.trim();
+  const esDirecta = document.getElementById('invVMEsDirecta').checked;
 
   if (!nombre)  { showToast('⚠️ Ingresa el nombre del cliente'); return; }
   if (!total)   { showToast('⚠️ Ingresa el monto de venta');     return; }
@@ -4662,22 +4663,38 @@ async function guardarVentaInv() {
   const btn = document.querySelector('#invVentaModalOverlay .btn-primary');
   btn.disabled = true; btn.textContent = '⏳ Guardando...';
 
+  // Guardar referencia antes de cerrar modal (closeInvVentaModal pone invItemVenta = null)
+  const itemRef = invItemVenta;
+
   try {
-    const params = {
-      id_item: invItemVenta.id_item,
-      nombre:  nombre,
-      ruc:     document.getElementById('invVMRuc').value.trim(),
-      dv:      document.getElementById('invVMDv').value.trim(),
-      total:   total,
-      fecha:   fecha,
-      notas:   facEm && facEm !== 'VENTA-DIRECTA' ? 'Fac: ' + facEm : '',
-    };
-    const data = await gasJsonp('registrarVentaDirecta', params);
-    if (!data.success) throw new Error(data.error || 'Error al guardar');
-    showToast('✅ Venta registrada correctamente');
+    // Si se analizó un PDF de factura emitida (no es venta directa),
+    // el GAS ya vinculó la factura en analizarPdfInvVenta → estado 'facturado'.
+    // Solo registrar venta directa si es checkbox marcado o no hay factura emitida.
+    const yaVinculadaPorIA = invVMPdfB64 && facEm && facEm !== 'VENTA-DIRECTA' && !esDirecta;
+
+    if (yaVinculadaPorIA) {
+      // La factura ya fue vinculada server-side por analizarPdfInvVenta.
+      // El ítem ya está en estado 'facturado' — falta registrar el pago para cerrar ciclo.
+      showToast('✅ Factura vinculada. Registra el pago en Operaciones para cerrar el ciclo.');
+    } else {
+      // Venta directa o sin factura emitida — cerrar ciclo completo
+      const params = {
+        id_item: itemRef.id_item,
+        nombre:  nombre,
+        ruc:     document.getElementById('invVMRuc').value.trim(),
+        dv:      document.getElementById('invVMDv').value.trim(),
+        total:   total,
+        fecha:   fecha,
+        notas:   facEm && facEm !== 'VENTA-DIRECTA' ? 'Fac: ' + facEm : '',
+      };
+      const data = await gasJsonp('registrarVentaDirecta', params);
+      if (!data.success) throw new Error(data.error || 'Error al guardar');
+      showToast('✅ Venta registrada correctamente');
+    }
+
     closeInvVentaModal();
     // Remover del inventario local
-    invItems = invItems.filter(i => i.id_item !== invItemVenta.id_item);
+    invItems = invItems.filter(i => i.id_item !== itemRef.id_item);
     updateInvStats(invItems);
     applyInvFilters();
     // Invalidar cache de operaciones para que refleje el cambio
