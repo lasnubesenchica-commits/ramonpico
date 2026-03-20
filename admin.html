@@ -1398,6 +1398,13 @@ tr:hover td{background:rgba(0,0,0,.015)}
               <div id="pagoOpAIStatus" style="display:none;margin-top:.5rem"></div>
             </div>
           </div>
+          <!-- Preview de datos extraídos por IA -->
+          <div class="modal-field full" id="pagoOpPreview" style="display:none;margin-top:.75rem">
+            <div style="background:#F3E5F5;border:1px solid #CE93D8;border-radius:8px;padding:.85rem 1rem;font-size:.82rem">
+              <div style="font-family:'DM Mono',monospace;font-size:.62rem;letter-spacing:.08em;text-transform:uppercase;color:#6A1B9A;margin-bottom:.5rem;font-weight:600">✦ Datos extraídos por IA</div>
+              <div id="pagoOpPreviewBody" style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem .75rem"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -3886,6 +3893,7 @@ function abrirModalPagoOp(item) {
   document.getElementById('pagoOpFormaPago').value  = '';
   document.getElementById('pagoOpDropLabel').innerHTML = '📎 Adjuntar comprobante (Yappy, transferencia, ACH) — la IA llenará los campos';
   document.getElementById('pagoOpAIStatus').style.display = 'none';
+  document.getElementById('pagoOpPreview').style.display = 'none';
   document.getElementById('pagoOpFileInput').value = '';
   document.getElementById('pagoOpModalOverlay').classList.add('open');
   document.body.style.overflow = 'hidden';
@@ -3930,7 +3938,23 @@ function procesarArchivoPagoOp(file) {
         const map = { yappy: 'Yappy', transferencia: 'Transferencia', efectivo: 'Efectivo', factura: 'Otro' };
         sel.value = map[parsed.tipo_comprobante] || 'Otro';
       }
-      status.innerHTML = '<span style="color:var(--green)">✅ Comprobante analizado — selecciona forma de pago y guarda</span>';
+      // Mostrar preview de datos extraídos
+      const preview = document.getElementById('pagoOpPreview');
+      const body    = document.getElementById('pagoOpPreviewBody');
+      const fields  = [
+        ['Tipo', parsed.tipo_comprobante || '—'],
+        ['Monto', parsed.monto ? '$' + parsed.monto : '—'],
+        ['Fecha', parsed.fecha || '—'],
+        ['Pagador', parsed.nombre_pagador || '—'],
+        ['Referencia', parsed.num_factura || '—'],
+        ['Notas', parsed.notas || '—'],
+      ];
+      body.innerHTML = fields.map(([k,v]) =>
+        '<div style="color:var(--muted);font-size:.72rem">' + k + '</div>' +
+        '<div style="font-weight:600;font-size:.82rem">' + esc(v) + '</div>'
+      ).join('');
+      preview.style.display = 'block';
+      status.innerHTML = '<span style="color:var(--green)">✅ Comprobante analizado — verifica los datos y confirma</span>';
     } catch(err) {
       status.innerHTML = '<span style="color:var(--red)">⚠️ ' + esc(err.message) + '</span>';
     }
