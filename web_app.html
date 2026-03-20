@@ -498,6 +498,36 @@ select.field-input { padding-right:2rem; }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width:0; height:0; }
+
+/* ── IA RESULTS ── */
+.ia-result-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:.35rem 0;
+  border-bottom:1px solid var(--border);
+  font-size:.82rem;
+}
+.ia-result-row:last-child { border-bottom:none; }
+.ia-result-label {
+  font-size:.68rem; font-weight:600; letter-spacing:.04em;
+  text-transform:uppercase; color:var(--muted);
+}
+.ia-result-value {
+  font-weight:600; text-align:right;
+}
+.ia-result-value.big {
+  font-family:'DM Mono',monospace; font-size:1.1rem;
+}
+.ia-result-header {
+  display:flex; align-items:center; gap:.4rem;
+  font-size:.75rem; font-weight:600; color:var(--green);
+  margin-bottom:.5rem; padding-bottom:.4rem;
+  border-bottom:1px solid var(--border);
+}
+.ia-analyzing {
+  text-align:center; padding:1.5rem;
+  color:var(--muted); font-size:.85rem;
+}
+.ia-analyzing .spinner { margin:0 auto .5rem; display:block; width:24px; height:24px; }
 </style>
 </head>
 
@@ -559,30 +589,60 @@ select.field-input { padding-right:2rem; }
     </div>
     <div class="modal-body">
       <input type="hidden" id="pagoItemId">
-      <div class="field">
-        <label class="field-label">Forma de pago</label>
-        <select class="field-input" id="pagoForma">
-          <option value="Yappy">Yappy</option>
-          <option value="Transferencia">Transferencia</option>
-          <option value="Efectivo">Efectivo</option>
-          <option value="Cheque">Cheque</option>
-          <option value="ACH">ACH</option>
-        </select>
-      </div>
-      <div class="field">
-        <label class="field-label">Comprobante de pago</label>
-        <div class="upload-zone" id="pagoUploadZone" onclick="document.getElementById('pagoFile').click()">
-          <div class="upload-zone-text">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Toca para subir imagen
+
+      <!-- STEP 1: Upload & Analyze -->
+      <div id="pagoStep1">
+        <div class="field">
+          <label class="field-label">Comprobante de pago</label>
+          <div class="upload-zone" id="pagoUploadZone" onclick="document.getElementById('pagoFile').click()">
+            <div class="upload-zone-text">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Toca para subir imagen o PDF
+            </div>
+            <input type="file" id="pagoFile" accept="image/*,application/pdf" onchange="handleFileSelect(this,'pago')">
           </div>
-          <input type="file" id="pagoFile" accept="image/*,application/pdf" onchange="handleFileSelect(this,'pago')">
+          <div class="file-preview" id="pagoPreview" style="display:none"></div>
         </div>
-        <div class="file-preview" id="pagoPreview" style="display:none"></div>
+        <button class="action-btn primary" id="pagoAnalyzeBtn" onclick="analyzePago()" disabled>
+          🤖 Analizar Comprobante con IA
+        </button>
+        <div style="text-align:center;margin-top:.5rem">
+          <button class="action-btn secondary small" style="display:inline-block;width:auto" onclick="skipAnalysis()">
+            Omitir análisis → registro manual
+          </button>
+        </div>
       </div>
-      <button class="action-btn primary" id="pagoSubmitBtn" onclick="submitPago()">
-        Registrar Pago y Cerrar Ciclo
-      </button>
+
+      <!-- STEP 2: Review IA results & Confirm -->
+      <div id="pagoStep2" style="display:none">
+        <div id="pagoIAResults" style="
+          background:var(--bg); border:1px solid var(--border);
+          border-radius:var(--r); padding:.85rem; margin-bottom:.75rem;
+        ">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="field">
+          <label class="field-label">Forma de pago</label>
+          <select class="field-input" id="pagoForma">
+            <option value="Yappy">Yappy</option>
+            <option value="Transferencia">Transferencia</option>
+            <option value="Efectivo">Efectivo</option>
+            <option value="Cheque">Cheque</option>
+            <option value="ACH">ACH</option>
+          </select>
+        </div>
+
+        <div id="pagoDiscrepancy" style="display:none;
+          background:#FFF3E0; border:1px solid #FFB74D;
+          border-radius:var(--r); padding:.75rem; margin-bottom:.75rem;
+          font-size:.82rem; color:#E65100;
+        "></div>
+
+        <button class="action-btn success" id="pagoSubmitBtn" onclick="submitPago()">
+          ✅ Confirmar Pago y Cerrar Ciclo
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -1203,12 +1263,131 @@ async function marcarCostoOp(idItem) {
   }
 }
 
-// ── Registrar Pago ──
+// ── Registrar Pago (2-step: analyze → confirm) ──
+let pagoIAData = null;  // stores IA analysis results
+
 function openPagoModal(idItem) {
   document.getElementById('pagoItemId').value = String(idItem).trim();
   fileData.pago = null;
+  pagoIAData = null;
   resetUploadZone('pago');
+  // Reset to step 1
+  document.getElementById('pagoStep1').style.display = 'block';
+  document.getElementById('pagoStep2').style.display = 'none';
+  document.getElementById('pagoAnalyzeBtn').disabled = true;
   openModal('modalPago');
+}
+
+async function analyzePago() {
+  if (!fileData.pago) {
+    toast('Selecciona un comprobante primero', true);
+    return;
+  }
+
+  const btn = document.getElementById('pagoAnalyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analizando con IA...';
+
+  try {
+    const res = await postJSON({
+      action:      'parseComprobanteIngreso',
+      imageBase64: fileData.pago.b64,
+      mimeType:    fileData.pago.mime,
+    });
+
+    console.log('analyzePago IA result:', res);
+
+    if (res.success) {
+      pagoIAData = res;
+      showPagoStep2(res);
+    } else {
+      toast('IA no pudo analizar: ' + (res.error || ''), true);
+      // Still allow manual proceed
+      pagoIAData = null;
+      showPagoStep2(null);
+    }
+  } catch(e) {
+    console.error('analyzePago error:', e);
+    toast('Error analizando. Puedes continuar manualmente.', true);
+    pagoIAData = null;
+    showPagoStep2(null);
+  }
+
+  btn.disabled = false;
+  btn.innerHTML = '🤖 Analizar Comprobante con IA';
+}
+
+function skipAnalysis() {
+  pagoIAData = null;
+  showPagoStep2(null);
+}
+
+function showPagoStep2(iaData) {
+  document.getElementById('pagoStep1').style.display = 'none';
+  document.getElementById('pagoStep2').style.display = 'block';
+
+  const resultsEl = document.getElementById('pagoIAResults');
+  const discEl    = document.getElementById('pagoDiscrepancy');
+  discEl.style.display = 'none';
+
+  if (iaData) {
+    // Auto-select forma de pago based on IA
+    const tipo = String(iaData.tipo_comprobante || '').toLowerCase();
+    const select = document.getElementById('pagoForma');
+    if (tipo === 'yappy')         select.value = 'Yappy';
+    else if (tipo === 'transferencia') select.value = 'Transferencia';
+
+    const monto = iaData.monto || '—';
+
+    resultsEl.innerHTML = `
+      <div class="ia-result-header">🤖 Datos extraídos por IA</div>
+      <div class="ia-result-row">
+        <span class="ia-result-label">Monto pagado</span>
+        <span class="ia-result-value big">$${parseFloat(monto || 0).toFixed(2)}</span>
+      </div>
+      ${iaData.tipo_comprobante ? `<div class="ia-result-row">
+        <span class="ia-result-label">Tipo</span>
+        <span class="ia-result-value">${esc(iaData.tipo_comprobante)}</span>
+      </div>` : ''}
+      ${iaData.nombre_pagador ? `<div class="ia-result-row">
+        <span class="ia-result-label">Pagador</span>
+        <span class="ia-result-value">${esc(iaData.nombre_pagador)}</span>
+      </div>` : ''}
+      ${iaData.fecha ? `<div class="ia-result-row">
+        <span class="ia-result-label">Fecha</span>
+        <span class="ia-result-value">${esc(iaData.fecha)}</span>
+      </div>` : ''}
+      ${iaData.num_factura ? `<div class="ia-result-row">
+        <span class="ia-result-label">Referencia</span>
+        <span class="ia-result-value">${esc(iaData.num_factura)}</span>
+      </div>` : ''}
+      ${iaData.notas ? `<div class="ia-result-row">
+        <span class="ia-result-label">Notas</span>
+        <span class="ia-result-value">${esc(iaData.notas)}</span>
+      </div>` : ''}
+    `;
+
+    // Check discrepancy with factura amount
+    const idItem  = document.getElementById('pagoItemId').value;
+    const item    = allItems.find(it => it.id_item === idItem);
+    const totalFac = item ? parseFloat(item.total_venta || 0) : 0;
+    const montoPagado = parseFloat(monto || 0);
+
+    if (totalFac > 0 && montoPagado > 0 && Math.abs(totalFac - montoPagado) > 0.50) {
+      const diff = montoPagado - totalFac;
+      discEl.innerHTML = diff > 0
+        ? `⚠️ El cliente pagó <b>$${montoPagado.toFixed(2)}</b> pero la factura es por <b>$${totalFac.toFixed(2)}</b>. Diferencia: +$${diff.toFixed(2)} a favor del cobro real.`
+        : `⚠️ El cliente pagó <b>$${montoPagado.toFixed(2)}</b> pero la factura es por <b>$${totalFac.toFixed(2)}</b>. Diferencia: -$${Math.abs(diff).toFixed(2)}.`;
+      discEl.style.display = 'block';
+    }
+  } else {
+    resultsEl.innerHTML = `
+      <div class="ia-result-header" style="color:var(--muted)">📝 Registro manual</div>
+      <div style="font-size:.82rem;color:var(--muted);padding:.25rem 0">
+        Sin análisis IA. El pago se registrará con los datos de la factura.
+      </div>
+    `;
+  }
 }
 
 async function submitPago() {
@@ -1216,16 +1395,18 @@ async function submitPago() {
   const formaPago = document.getElementById('pagoForma').value;
   const btn       = document.getElementById('pagoSubmitBtn');
 
-  console.log('submitPago → id_item:', idItem, '| forma_pago:', formaPago, '| hasFile:', !!fileData.pago);
+  console.log('submitPago → id_item:', idItem, '| forma_pago:', formaPago, '| hasFile:', !!fileData.pago, '| hasIA:', !!pagoIAData);
 
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Procesando...';
+  btn.innerHTML = '<span class="spinner"></span> Cerrando ciclo...';
 
   try {
-    // If file attached, upload via doPost
+    let result;
+
     if (fileData.pago) {
+      // Upload comprobante + close cycle via doPost
       toast('Subiendo comprobante y cerrando ciclo...');
-      const uploadRes = await postJSON({
+      result = await postJSON({
         action:      'registrarPagoOperacion',
         id_item:     idItem,
         forma_pago:  formaPago,
@@ -1233,26 +1414,46 @@ async function submitPago() {
         imageMime:   fileData.pago.mime,
         imageName:   'pago_' + idItem.replace(/[^a-zA-Z0-9-]/g,'') + '_' + Date.now() + '.jpg',
       });
-      console.log('submitPago response:', uploadRes);
-      if (uploadRes.success) {
-        updateLocalItem(idItem, { estado: 'cerrado', ingreso_id: uploadRes.ingresoId || '' });
-        toast('✅ Pago registrado — Ciclo cerrado');
-        closeModal('modalPago');
-      } else {
-        toast('Error: ' + (uploadRes.error || 'Respuesta inválida'), true);
-      }
     } else {
-      // No file, use JSONP GET
+      // No file, close cycle via JSONP GET
       toast('Registrando pago...');
-      const data = await jsonpGet('registrarPagoOperacion', { id_item: idItem, forma_pago: formaPago }, 90000);
-      console.log('submitPago JSONP response:', data);
-      if (data.success) {
-        updateLocalItem(idItem, { estado: 'cerrado', ingreso_id: data.ingresoId || '' });
-        toast('✅ Pago registrado — Ciclo cerrado');
-        closeModal('modalPago');
-      } else {
-        toast('Error: ' + (data.error || ''), true);
+      result = await jsonpGet('registrarPagoOperacion', { id_item: idItem, forma_pago: formaPago }, 90000);
+    }
+
+    console.log('submitPago result:', result);
+
+    if (result.success) {
+      // Step 2: Append IA comprobante data to Ingreso notas_internas
+      const ingresoId = result.ingresoId || '';
+      if (ingresoId && pagoIAData) {
+        try {
+          const montoPagado = parseFloat(pagoIAData.monto || 0);
+          const datosPago = [
+            'PAGO_REAL: $' + montoPagado.toFixed(2),
+            'FORMA: ' + formaPago,
+            pagoIAData.tipo_comprobante ? 'TIPO_COMP: ' + pagoIAData.tipo_comprobante : null,
+            pagoIAData.num_factura      ? 'COD: ' + pagoIAData.num_factura : null,
+            pagoIAData.nombre_pagador   ? 'PAGADOR: ' + pagoIAData.nombre_pagador : null,
+            pagoIAData.fecha            ? 'FECHA_PAGO: ' + pagoIAData.fecha : null,
+            pagoIAData.notas            ? 'NOTA_COMP: ' + pagoIAData.notas : null,
+          ].filter(Boolean).join(' | ');
+
+          await jsonpGet('actualizarNotasIngreso', {
+            ingreso_id: ingresoId,
+            datos_pago: datosPago,
+          }, 15000);
+          console.log('Notas de pago guardadas en ingreso:', ingresoId);
+        } catch(notasErr) {
+          // Non-blocking: the cycle is already closed, notas are bonus
+          console.warn('No se pudieron guardar notas de pago:', notasErr.message);
+        }
       }
+
+      updateLocalItem(idItem, { estado: 'cerrado', ingreso_id: ingresoId });
+      toast('✅ Pago registrado — Ciclo cerrado');
+      closeModal('modalPago');
+    } else {
+      toast('Error: ' + (result.error || 'Respuesta inválida'), true);
     }
   } catch(e) {
     console.error('submitPago catch:', e);
@@ -1260,7 +1461,7 @@ async function submitPago() {
   }
 
   btn.disabled = false;
-  btn.innerHTML = 'Registrar Pago y Cerrar Ciclo';
+  btn.innerHTML = '✅ Confirmar Pago y Cerrar Ciclo';
 }
 
 // ── Venta Directa ──
@@ -1448,9 +1649,15 @@ function handleFileSelect(input, type) {
       preview.style.display = 'none';
     }
 
-    // Enable submit button
-    const submitBtn = document.getElementById(type + 'SubmitBtn');
-    if (submitBtn) submitBtn.disabled = false;
+    // Enable the right button
+    if (type === 'pago') {
+      // For pago: enable Analyze button (step 1), not submit
+      const analyzeBtn = document.getElementById('pagoAnalyzeBtn');
+      if (analyzeBtn) analyzeBtn.disabled = false;
+    } else {
+      const submitBtn = document.getElementById(type + 'SubmitBtn');
+      if (submitBtn) submitBtn.disabled = false;
+    }
   };
   reader.readAsDataURL(file);
 }
