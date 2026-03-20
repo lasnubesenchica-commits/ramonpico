@@ -784,12 +784,20 @@ function jsonpGet(action, params = {}, timeoutMs = 60000) {
 }
 
 async function postJSON(payload) {
-  const res = await fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify(payload),
-  });
-  return res.json();
+  try {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow',
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  } catch(e) {
+    console.error('postJSON error:', e);
+    // If fetch fails (opaque response), return error object
+    return { success: false, error: 'Error de red: ' + e.message };
+  }
 }
 
 // ════════════════════════════════════════════════════
@@ -1197,7 +1205,7 @@ async function marcarCostoOp(idItem) {
 
 // ── Registrar Pago ──
 function openPagoModal(idItem) {
-  document.getElementById('pagoItemId').value = idItem;
+  document.getElementById('pagoItemId').value = String(idItem).trim();
   fileData.pago = null;
   resetUploadZone('pago');
   openModal('modalPago');
@@ -1208,33 +1216,36 @@ async function submitPago() {
   const formaPago = document.getElementById('pagoForma').value;
   const btn       = document.getElementById('pagoSubmitBtn');
 
+  console.log('submitPago → id_item:', idItem, '| forma_pago:', formaPago, '| hasFile:', !!fileData.pago);
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Procesando...';
 
   try {
-    let driveUrl = '';
-
     // If file attached, upload via doPost
     if (fileData.pago) {
-      toast('Subiendo comprobante...');
+      toast('Subiendo comprobante y cerrando ciclo...');
       const uploadRes = await postJSON({
         action:      'registrarPagoOperacion',
         id_item:     idItem,
         forma_pago:  formaPago,
         imageBase64: fileData.pago.b64,
         imageMime:   fileData.pago.mime,
-        imageName:   fileData.pago.name,
+        imageName:   'pago_' + idItem.replace(/[^a-zA-Z0-9-]/g,'') + '_' + Date.now() + '.jpg',
       });
+      console.log('submitPago response:', uploadRes);
       if (uploadRes.success) {
         updateLocalItem(idItem, { estado: 'cerrado', ingreso_id: uploadRes.ingresoId || '' });
         toast('✅ Pago registrado — Ciclo cerrado');
         closeModal('modalPago');
       } else {
-        toast('Error: ' + (uploadRes.error || ''), true);
+        toast('Error: ' + (uploadRes.error || 'Respuesta inválida'), true);
       }
     } else {
-      // No file, use JSONP
-      const data = await jsonpGet('registrarPagoOperacion', { id_item: idItem, forma_pago: formaPago });
+      // No file, use JSONP GET
+      toast('Registrando pago...');
+      const data = await jsonpGet('registrarPagoOperacion', { id_item: idItem, forma_pago: formaPago }, 90000);
+      console.log('submitPago JSONP response:', data);
       if (data.success) {
         updateLocalItem(idItem, { estado: 'cerrado', ingreso_id: data.ingresoId || '' });
         toast('✅ Pago registrado — Ciclo cerrado');
@@ -1244,7 +1255,8 @@ async function submitPago() {
       }
     }
   } catch(e) {
-    toast('Error de conexión', true);
+    console.error('submitPago catch:', e);
+    toast('Error: ' + e.message, true);
   }
 
   btn.disabled = false;
