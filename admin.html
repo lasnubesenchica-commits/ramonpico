@@ -3074,9 +3074,12 @@ async function guardarVentaDirecta() {
   if (!nombre) { showToast('⚠️ Ingresa el nombre del cliente'); return; }
   if (!total)  { showToast('⚠️ Ingresa el monto de venta');     return; }
 
+  // Guardar referencia antes de cerrar modal
+  const itemRef = currentOpItem;
+
   try {
     const params = {
-      id_item: currentOpItem.id_item,
+      id_item: itemRef.id_item,
       nombre:  nombre,
       ruc:     document.getElementById('opMRucCliente').value,
       dv:      document.getElementById('opMDvCliente').value  || '',
@@ -3088,7 +3091,7 @@ async function guardarVentaDirecta() {
     if (!data.success) throw new Error(data.error || 'Error al guardar');
     showToast('✅ Venta directa registrada');
     closeOpModal();
-    const idx = opItems.findIndex(i => i.id_item === currentOpItem.id_item);
+    const idx = opItems.findIndex(i => i.id_item === itemRef.id_item);
     if (idx !== -1) {
       opItems[idx].estado = 'cerrado';
       opItems[idx].nombre_cliente = params.nombre;
