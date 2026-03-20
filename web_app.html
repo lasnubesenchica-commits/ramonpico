@@ -576,7 +576,7 @@ select.field-input { padding-right:2rem; }
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Toca para subir imagen
           </div>
-          <input type="file" id="pagoFile" accept="image/*,application/pdf" capture="environment" onchange="handleFileSelect(this,'pago')">
+          <input type="file" id="pagoFile" accept="image/*,application/pdf" onchange="handleFileSelect(this,'pago')">
         </div>
         <div class="file-preview" id="pagoPreview" style="display:none"></div>
       </div>
@@ -658,7 +658,7 @@ select.field-input { padding-right:2rem; }
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             Toca para subir PDF de factura
           </div>
-          <input type="file" id="facturaFile" accept="application/pdf,image/*" capture="environment" onchange="handleFileSelect(this,'factura')">
+          <input type="file" id="facturaFile" accept="application/pdf,image/*" onchange="handleFileSelect(this,'factura')">
         </div>
         <div class="file-preview" id="facturaPreview" style="display:none"></div>
       </div>
@@ -687,7 +687,7 @@ select.field-input { padding-right:2rem; }
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Toca para subir nuevo comprobante
           </div>
-          <input type="file" id="corregirFile" accept="image/*,application/pdf" capture="environment" onchange="handleFileSelect(this,'corregir')">
+          <input type="file" id="corregirFile" accept="image/*,application/pdf" onchange="handleFileSelect(this,'corregir')">
         </div>
         <div class="file-preview" id="corregirPreview" style="display:none"></div>
       </div>
@@ -746,15 +746,15 @@ if (sessionStorage.getItem('rp_mobile_auth')) {
 //  JSONP HELPER
 // ════════════════════════════════════════════════════
 
-function jsonpGet(action, params = {}) {
+function jsonpGet(action, params = {}, timeoutMs = 60000) {
   return new Promise((resolve, reject) => {
     const cb = '_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2,8);
     const timeout = setTimeout(() => {
       delete window[cb];
       const el = document.getElementById('_j_' + cb);
       if (el) el.remove();
-      reject(new Error('Timeout'));
-    }, 60000);
+      reject(new Error('Timeout (' + Math.round(timeoutMs/1000) + 's)'));
+    }, timeoutMs);
 
     window[cb] = function(data) {
       clearTimeout(timeout);
@@ -767,12 +767,17 @@ function jsonpGet(action, params = {}) {
     const qs = new URLSearchParams({ action, callback: cb, ...params });
     const s = document.createElement('script');
     s.id = '_j_' + cb;
+    s.async = true;
     s.src = GAS_URL + '?' + qs.toString();
-    s.onerror = () => {
-      clearTimeout(timeout);
-      delete window[cb];
-      s.remove();
-      reject(new Error('Network error'));
+    s.onerror = (e) => {
+      // On iOS, GAS 302 redirects can trigger onerror briefly.
+      // Only reject if the callback hasn't already resolved.
+      if (window[cb]) {
+        clearTimeout(timeout);
+        delete window[cb];
+        s.remove();
+        reject(new Error('Error de red al conectar con GAS'));
+      }
     };
     document.body.appendChild(s);
   });
@@ -819,18 +824,20 @@ function doRefresh() {
 async function doSync() {
   const btn = document.getElementById('btnSync');
   btn.classList.add('syncing');
-  btn.innerHTML = '<span class="spinner"></span> Sync...';
+  btn.innerHTML = '<span class="spinner"></span> Sincronizando...';
+  toast('Sincronizando emails... esto puede tardar hasta 2 min');
   try {
-    const data = await jsonpGet('sincronizarEmails');
+    const data = await jsonpGet('sincronizarEmails', {}, 120000);
     if (data.success) {
       const msg = `✅ ${data.nuevos || 0} nuevos, ${data.vinculados || 0} vinculados`;
       toast(msg);
       await loadData();
     } else {
-      toast('Error: ' + (data.error || ''), true);
+      toast('Error sync: ' + (data.error || ''), true);
     }
   } catch(e) {
-    toast('Error de conexión', true);
+    toast('Error: ' + e.message + '. Intenta de nuevo.', true);
+    console.error('Sync error:', e);
   }
   btn.classList.remove('syncing');
   btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg> Sync`;
