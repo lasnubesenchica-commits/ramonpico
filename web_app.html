@@ -499,6 +499,138 @@ select.field-input { padding-right:2rem; }
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width:0; height:0; }
 
+/* ── VIEW TABS (Operaciones / Dashboard) ── */
+.view-tabs {
+  display:flex; gap:2px;
+  background:rgba(255,255,255,.1);
+  border-radius:8px; padding:2px;
+  margin-top:.45rem;
+}
+.view-tab {
+  flex:1; text-align:center;
+  font-size:.75rem; font-weight:600;
+  color:rgba(255,255,255,.45);
+  padding:.35rem .5rem;
+  border-radius:6px;
+  transition:all .2s;
+}
+.view-tab.active {
+  background:var(--orange);
+  color:#fff;
+}
+
+/* ── DASHBOARD ── */
+#viewDashboard { display:none; }
+
+.dash-period {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:.75rem 1rem;
+  background:var(--white);
+  border-bottom:1px solid var(--border);
+}
+.dash-period-label {
+  font-size:.82rem; font-weight:600;
+}
+.dash-period-nav {
+  display:flex; align-items:center; gap:.5rem;
+}
+.dash-period-btn {
+  width:30px; height:30px; border-radius:50%;
+  background:var(--bg); display:flex; align-items:center; justify-content:center;
+  color:var(--muted); border:1px solid var(--border);
+}
+.dash-period-btn:active { background:var(--bg2); }
+.dash-period-btn svg { width:16px; height:16px; }
+
+.dash-widgets {
+  display:grid; grid-template-columns:1fr 1fr;
+  gap:.5rem; padding:.75rem 1rem;
+}
+.dash-widget {
+  background:var(--white);
+  border:1px solid var(--border);
+  border-radius:var(--r2);
+  padding:.75rem .85rem;
+}
+.dash-widget.full { grid-column:1/-1; }
+.dash-widget-label {
+  font-size:.65rem; font-weight:600; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--chrome);
+  margin-bottom:.25rem;
+}
+.dash-widget-value {
+  font-family:'DM Mono',monospace;
+  font-size:1.3rem; font-weight:700; line-height:1.1;
+}
+.dash-widget-value.green { color:var(--green); }
+.dash-widget-value.red   { color:var(--red); }
+.dash-widget-value.blue  { color:var(--blue); }
+.dash-widget-sub {
+  font-size:.7rem; color:var(--muted); margin-top:.15rem;
+}
+
+.dash-pl-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:.4rem 0;
+  font-size:.82rem;
+}
+.dash-pl-row + .dash-pl-row { border-top:1px solid var(--border); }
+.dash-pl-label { color:var(--muted); }
+.dash-pl-value { font-family:'DM Mono',monospace; font-weight:600; }
+
+/* ── TOGGLE TABLE ── */
+.dash-toggle {
+  display:flex; gap:2px;
+  background:var(--bg2);
+  border-radius:8px; padding:2px;
+  margin:0 1rem .5rem;
+}
+.dash-toggle-btn {
+  flex:1; text-align:center;
+  font-size:.78rem; font-weight:600;
+  color:var(--muted); padding:.4rem;
+  border-radius:6px; transition:all .15s;
+}
+.dash-toggle-btn.active {
+  background:var(--white); color:var(--text);
+  box-shadow:0 1px 3px rgba(0,0,0,0.08);
+}
+
+.dash-table-wrap {
+  padding:0 1rem 2rem;
+}
+.dash-table-item {
+  display:flex; align-items:center; gap:.6rem;
+  padding:.6rem 0;
+  border-bottom:1px solid var(--border);
+  font-size:.82rem;
+}
+.dash-table-dot {
+  width:8px; height:8px; border-radius:50%; flex-shrink:0;
+}
+.dash-table-dot.ingreso { background:var(--green); }
+.dash-table-dot.egreso  { background:var(--red); }
+.dash-table-body { flex:1; min-width:0; }
+.dash-table-desc {
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  font-weight:500;
+}
+.dash-table-meta {
+  font-size:.7rem; color:var(--muted);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.dash-table-amount {
+  font-family:'DM Mono',monospace; font-weight:600;
+  white-space:nowrap; flex-shrink:0;
+}
+.dash-table-amount.green { color:var(--green); }
+.dash-table-amount.red   { color:var(--red); }
+
+.dash-empty {
+  text-align:center; padding:2rem;
+  color:var(--chrome); font-size:.85rem;
+}
+
 /* ── IA RESULTS ── */
 .ia-result-row {
   display:flex; justify-content:space-between; align-items:center;
@@ -566,13 +698,46 @@ select.field-input { padding-right:2rem; }
       </div>
     </div>
     <div class="stats-row" id="statsRow"></div>
+    <div class="view-tabs">
+      <button class="view-tab active" id="tabOps" onclick="switchView('ops')">Operaciones</button>
+      <button class="view-tab" id="tabDash" onclick="switchView('dash')">Dashboard</button>
+    </div>
   </div>
 
-  <!-- FILTER TABS -->
-  <div class="filter-bar" id="filterBar"></div>
+  <!-- ═══ VIEW: OPERACIONES ═══ -->
+  <div id="viewOps">
+    <!-- FILTER TABS -->
+    <div class="filter-bar" id="filterBar"></div>
 
-  <!-- CARD LIST -->
-  <div id="cardList"></div>
+    <!-- CARD LIST -->
+    <div id="cardList"></div>
+  </div>
+
+  <!-- ═══ VIEW: DASHBOARD ═══ -->
+  <div id="viewDashboard">
+    <!-- Period selector -->
+    <div class="dash-period">
+      <button class="dash-period-btn" onclick="changePeriod(-1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="dash-period-label" id="dashPeriodLabel">Marzo 2026</div>
+      <button class="dash-period-btn" onclick="changePeriod(1)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+
+    <!-- Widgets -->
+    <div class="dash-widgets" id="dashWidgets"></div>
+
+    <!-- Toggle: Ingresos / Egresos -->
+    <div class="dash-toggle">
+      <button class="dash-toggle-btn active" id="toggleIng" onclick="setDashTable('ingresos')">Ingresos</button>
+      <button class="dash-toggle-btn" id="toggleEgr" onclick="setDashTable('egresos')">Egresos</button>
+    </div>
+
+    <!-- Table list -->
+    <div class="dash-table-wrap" id="dashTableWrap"></div>
+  </div>
 
   <!-- TOAST -->
   <div class="toast" id="toast"></div>
@@ -1775,6 +1940,254 @@ function adjustFilterPosition() {
 
 window.addEventListener('resize', adjustFilterPosition);
 window.addEventListener('load', adjustFilterPosition);
+
+// ════════════════════════════════════════════════════
+//  VIEW SWITCHING
+// ════════════════════════════════════════════════════
+
+let currentView = 'ops';
+
+function switchView(view) {
+  currentView = view;
+  document.getElementById('tabOps').classList.toggle('active', view === 'ops');
+  document.getElementById('tabDash').classList.toggle('active', view === 'dash');
+  document.getElementById('viewOps').style.display       = view === 'ops' ? 'block' : 'none';
+  document.getElementById('viewDashboard').style.display  = view === 'dash' ? 'block' : 'none';
+  // Hide ops-only elements
+  document.getElementById('statsRow').style.display = view === 'ops' ? 'flex' : 'none';
+  document.getElementById('btnSync').style.display  = view === 'ops' ? 'flex' : 'none';
+
+  if (view === 'dash' && !dashLoaded) {
+    loadDashboard();
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  DASHBOARD — State
+// ════════════════════════════════════════════════════
+
+let dashLoaded     = false;
+let dashIngresos   = [];
+let dashEgresos    = [];
+let dashMonth      = new Date().getMonth() + 1;
+let dashYear       = new Date().getFullYear();
+let dashTableMode  = 'ingresos';
+
+// ════════════════════════════════════════════════════
+//  DASHBOARD — Load Data
+// ════════════════════════════════════════════════════
+
+async function loadDashboard() {
+  document.getElementById('dashWidgets').innerHTML = `
+    <div class="dash-widget full" style="text-align:center;padding:1.5rem">
+      <span class="spinner dark"></span>
+      <div style="font-size:.82rem;color:var(--muted);margin-top:.5rem">Cargando datos...</div>
+    </div>`;
+  document.getElementById('dashTableWrap').innerHTML = '';
+
+  try {
+    const [ingRes, egrRes] = await Promise.all([
+      jsonpGet('getIngresos', {}, 30000),
+      jsonpGet('getEgresos', {}, 30000),
+    ]);
+
+    dashIngresos = (ingRes.success && ingRes.items) ? ingRes.items : [];
+    dashEgresos  = (egrRes.success && egrRes.items) ? egrRes.items : [];
+    dashLoaded = true;
+
+    renderDashboard();
+  } catch(e) {
+    console.error('Dashboard load error:', e);
+    document.getElementById('dashWidgets').innerHTML = `
+      <div class="dash-widget full">
+        <div style="color:var(--red);font-size:.85rem;text-align:center">
+          Error cargando datos. <button class="action-btn secondary small" style="margin-top:.5rem;display:inline-block;width:auto" onclick="loadDashboard()">Reintentar</button>
+        </div>
+      </div>`;
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  DASHBOARD — Period Navigation
+// ════════════════════════════════════════════════════
+
+const MESES = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function changePeriod(delta) {
+  dashMonth += delta;
+  if (dashMonth > 12) { dashMonth = 1; dashYear++; }
+  if (dashMonth < 1)  { dashMonth = 12; dashYear--; }
+  renderDashboard();
+}
+
+// ════════════════════════════════════════════════════
+//  DASHBOARD — Render
+// ════════════════════════════════════════════════════
+
+function renderDashboard() {
+  document.getElementById('dashPeriodLabel').textContent = MESES[dashMonth] + ' ' + dashYear;
+
+  // Filter by month/year
+  const ingMes = dashIngresos.filter(i => {
+    const estado = String(i.estado || '').toLowerCase();
+    if (estado === 'anulado') return false;
+    return monthMatch(i.fecha_ingreso, i.mes, i.anio_fiscal);
+  });
+  const egrMes = dashEgresos.filter(e => {
+    return monthMatch(e.fecha_egreso, e.mes, e.anio);
+  });
+
+  // Totals
+  const totalIng    = ingMes.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+  const totalEgr    = egrMes.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
+  const totalItbmsI = ingMes.reduce((s, i) => s + (parseFloat(i.itbms) || 0), 0);
+  const totalItbmsE = egrMes.reduce((s, e) => s + (parseFloat(e.itbms) || 0), 0);
+  const subtotalIng = ingMes.reduce((s, i) => s + (parseFloat(i.subtotal) || 0), 0);
+  const subtotalEgr = egrMes.reduce((s, e) => s + (parseFloat(e.subtotal) || 0), 0);
+  const profit      = totalIng - totalEgr;
+  const margenPct   = totalIng > 0 ? ((profit / totalIng) * 100).toFixed(1) : '0.0';
+
+  // Count by type
+  const egrCosto = egrMes.filter(e => String(e.tipo_egreso) === 'costo_mercancia');
+  const egrOp    = egrMes.filter(e => String(e.tipo_egreso) !== 'costo_mercancia');
+  const totalCosto = egrCosto.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
+  const totalOp    = egrOp.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
+
+  // Extract PAGO_REAL from ingreso notas for real revenue tracking
+  let totalPagoReal = 0;
+  let countPagoReal = 0;
+  ingMes.forEach(i => {
+    const notas = String(i.notas || '');
+    const m = notas.match(/PAGO_REAL:\s*\$?([\d,.]+)/);
+    if (m) {
+      totalPagoReal += parseFloat(m[1].replace(/,/g, '')) || 0;
+      countPagoReal++;
+    }
+  });
+
+  document.getElementById('dashWidgets').innerHTML = `
+    <div class="dash-widget">
+      <div class="dash-widget-label">Ingresos</div>
+      <div class="dash-widget-value green">$${fmtNum(totalIng)}</div>
+      <div class="dash-widget-sub">${ingMes.length} transacciones</div>
+    </div>
+    <div class="dash-widget">
+      <div class="dash-widget-label">Egresos</div>
+      <div class="dash-widget-value red">$${fmtNum(totalEgr)}</div>
+      <div class="dash-widget-sub">${egrMes.length} transacciones</div>
+    </div>
+    <div class="dash-widget full">
+      <div class="dash-widget-label">Resultado del Mes</div>
+      <div class="dash-widget-value ${profit >= 0 ? 'green' : 'red'}">$${fmtNum(profit)}</div>
+      <div class="dash-widget-sub">Margen: ${margenPct}%</div>
+    </div>
+    <div class="dash-widget">
+      <div class="dash-widget-label">Costo Mercancía</div>
+      <div class="dash-widget-value">$${fmtNum(totalCosto)}</div>
+      <div class="dash-widget-sub">${egrCosto.length} ítems</div>
+    </div>
+    <div class="dash-widget">
+      <div class="dash-widget-label">Gastos Operativos</div>
+      <div class="dash-widget-value">$${fmtNum(totalOp)}</div>
+      <div class="dash-widget-sub">${egrOp.length} ítems</div>
+    </div>
+    <div class="dash-widget">
+      <div class="dash-widget-label">ITBMS Cobrado</div>
+      <div class="dash-widget-value blue">$${fmtNum(totalItbmsI)}</div>
+    </div>
+    <div class="dash-widget">
+      <div class="dash-widget-label">ITBMS Pagado</div>
+      <div class="dash-widget-value">$${fmtNum(totalItbmsE)}</div>
+      <div class="dash-widget-sub">Neto: $${fmtNum(totalItbmsI - totalItbmsE)}</div>
+    </div>
+    ${countPagoReal > 0 ? `
+    <div class="dash-widget full" style="border-color:rgba(224,90,0,.2);background:var(--orange-bg)">
+      <div class="dash-widget-label" style="color:var(--orange)">💰 Cobro Real (comprobantes)</div>
+      <div class="dash-widget-value" style="color:var(--orange)">$${fmtNum(totalPagoReal)}</div>
+      <div class="dash-widget-sub">${countPagoReal} de ${ingMes.length} con comprobante analizado · Diferencia vs facturado: $${fmtNum(totalPagoReal - totalIng)}</div>
+    </div>` : ''}
+  `;
+
+  renderDashTable();
+}
+
+function monthMatch(fechaStr, mes, anio) {
+  // Try explicit mes/anio fields first
+  if (mes && anio) {
+    return parseInt(mes) === dashMonth && parseInt(anio) === dashYear;
+  }
+  // Fallback: parse date string
+  if (!fechaStr) return false;
+  const s = String(fechaStr);
+  const m = s.match(/^(\d{4})-(\d{2})/);
+  if (m) return parseInt(m[1]) === dashYear && parseInt(m[2]) === dashMonth;
+  return false;
+}
+
+// ════════════════════════════════════════════════════
+//  DASHBOARD — Toggle Table
+// ════════════════════════════════════════════════════
+
+function setDashTable(mode) {
+  dashTableMode = mode;
+  document.getElementById('toggleIng').classList.toggle('active', mode === 'ingresos');
+  document.getElementById('toggleEgr').classList.toggle('active', mode === 'egresos');
+  renderDashTable();
+}
+
+function renderDashTable() {
+  const wrap = document.getElementById('dashTableWrap');
+
+  if (dashTableMode === 'ingresos') {
+    const items = dashIngresos.filter(i => {
+      const estado = String(i.estado || '').toLowerCase();
+      if (estado === 'anulado') return false;
+      return monthMatch(i.fecha_ingreso, i.mes, i.anio_fiscal);
+    });
+
+    if (!items.length) {
+      wrap.innerHTML = '<div class="dash-empty">Sin ingresos este mes</div>';
+      return;
+    }
+
+    wrap.innerHTML = items.map(i => `
+      <div class="dash-table-item">
+        <div class="dash-table-dot ingreso"></div>
+        <div class="dash-table-body">
+          <div class="dash-table-desc">${esc(i.nombre_cliente || i.descripcion || '—')}</div>
+          <div class="dash-table-meta">${esc(i.categoria_ingreso || '')} · ${formatDateShort(i.fecha_ingreso)} · ${esc(i.tipo_comprobante || '')}</div>
+        </div>
+        <div class="dash-table-amount green">$${fmtNum(parseFloat(i.total) || 0)}</div>
+      </div>
+    `).join('');
+
+  } else {
+    const items = dashEgresos.filter(e => {
+      return monthMatch(e.fecha_egreso, e.mes, e.anio);
+    });
+
+    if (!items.length) {
+      wrap.innerHTML = '<div class="dash-empty">Sin egresos este mes</div>';
+      return;
+    }
+
+    wrap.innerHTML = items.map(e => `
+      <div class="dash-table-item">
+        <div class="dash-table-dot egreso"></div>
+        <div class="dash-table-body">
+          <div class="dash-table-desc">${esc(e.proveedor || e.descripcion || '—')}</div>
+          <div class="dash-table-meta">${esc(e.categoria || e.tipo_egreso || '')} · ${formatDateShort(e.fecha_egreso)}</div>
+        </div>
+        <div class="dash-table-amount red">$${fmtNum(parseFloat(e.total) || 0)}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function fmtNum(n) {
+  if (isNaN(n)) return '0.00';
+  return Math.abs(n).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
 
 </script>
 </body>
