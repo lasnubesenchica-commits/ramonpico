@@ -1854,6 +1854,7 @@ function updateLocalItem(idItem, updates) {
     Object.assign(allItems[idx], updates);
   }
   expandedId = null;
+  dashLoaded = false; // force P&L reload on next view
   renderAll();
 }
 
@@ -2069,21 +2070,59 @@ function renderDashboard() {
     }
   });
 
+  // ── Previous month comparison ──
+  const prevMonth = dashMonth === 1 ? 12 : dashMonth - 1;
+  const prevYear  = dashMonth === 1 ? dashYear - 1 : dashYear;
+  const ingPrev = dashIngresos.filter(i => {
+    if (String(i.estado || '').toLowerCase() === 'anulado') return false;
+    return monthMatchExact(i.fecha_ingreso, i.mes, i.anio_fiscal, prevMonth, prevYear);
+  });
+  const egrPrev = dashEgresos.filter(e => monthMatchExact(e.fecha_egreso, e.mes, e.anio, prevMonth, prevYear));
+  const totalIngPrev = ingPrev.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
+  const totalEgrPrev = egrPrev.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
+  const profitPrev   = totalIngPrev - totalEgrPrev;
+
+  const ingDelta    = totalIngPrev > 0 ? ((totalIng - totalIngPrev) / totalIngPrev * 100).toFixed(0) : null;
+  const egrDelta    = totalEgrPrev > 0 ? ((totalEgr - totalEgrPrev) / totalEgrPrev * 100).toFixed(0) : null;
+  const profitDelta = profitPrev !== 0 ? ((profit - profitPrev) / Math.abs(profitPrev) * 100).toFixed(0) : null;
+
+  function deltaTag(delta) {
+    if (delta === null) return '<span style="color:var(--chrome);font-size:.72rem">— sin datos prev.</span>';
+    const n = parseInt(delta);
+    const sign  = n > 0 ? '+' : '';
+    const color = n > 0 ? 'var(--green)' : n < 0 ? 'var(--red)' : 'var(--muted)';
+    const arrow = n > 0 ? '↑' : n < 0 ? '↓' : '→';
+    return `<span style="color:${color};font-size:.75rem;font-weight:600">${arrow} ${sign}${delta}%</span>`;
+  }
+
+  const prevLabel = MESES[prevMonth].slice(0,3);
+
   document.getElementById('dashWidgets').innerHTML = `
     <div class="dash-widget">
       <div class="dash-widget-label">Ingresos</div>
       <div class="dash-widget-value green">$${fmtNum(totalIng)}</div>
-      <div class="dash-widget-sub">${ingMes.length} transacciones</div>
+      <div class="dash-widget-sub">${ingMes.length} trans. ${deltaTag(ingDelta)}</div>
     </div>
     <div class="dash-widget">
       <div class="dash-widget-label">Egresos</div>
       <div class="dash-widget-value red">$${fmtNum(totalEgr)}</div>
-      <div class="dash-widget-sub">${egrMes.length} transacciones</div>
+      <div class="dash-widget-sub">${egrMes.length} trans. ${deltaTag(egrDelta)}</div>
     </div>
     <div class="dash-widget full">
-      <div class="dash-widget-label">Resultado del Mes</div>
-      <div class="dash-widget-value ${profit >= 0 ? 'green' : 'red'}">$${fmtNum(profit)}</div>
-      <div class="dash-widget-sub">Margen: ${margenPct}%</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="dash-widget-label">Resultado del Mes</div>
+          <div class="dash-widget-value ${profit >= 0 ? 'green' : 'red'}">$${fmtNum(profit)}</div>
+          <div class="dash-widget-sub">Margen: ${margenPct}% ${deltaTag(profitDelta)}</div>
+        </div>
+        <div style="text-align:right;border-left:1px solid var(--border);padding-left:.85rem;min-width:40%">
+          <div class="dash-widget-label">vs ${prevLabel}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.95rem;font-weight:600;color:${profitPrev >= 0 ? 'var(--green)' : 'var(--red)'}">$${fmtNum(profitPrev)}</div>
+          <div style="font-size:.68rem;color:var(--muted);margin-top:.15rem">
+            Ing $${fmtNum(totalIngPrev)} · Egr $${fmtNum(totalEgrPrev)}
+          </div>
+        </div>
+      </div>
     </div>
     <div class="dash-widget">
       <div class="dash-widget-label">Costo Mercancía</div>
@@ -2125,6 +2164,17 @@ function monthMatch(fechaStr, mes, anio) {
   const s = String(fechaStr);
   const m = s.match(/^(\d{4})-(\d{2})/);
   if (m) return parseInt(m[1]) === dashYear && parseInt(m[2]) === dashMonth;
+  return false;
+}
+
+function monthMatchExact(fechaStr, mes, anio, targetMonth, targetYear) {
+  if (mes && anio) {
+    return parseInt(mes) === targetMonth && parseInt(anio) === targetYear;
+  }
+  if (!fechaStr) return false;
+  const s = String(fechaStr);
+  const m = s.match(/^(\d{4})-(\d{2})/);
+  if (m) return parseInt(m[1]) === targetYear && parseInt(m[2]) === targetMonth;
   return false;
 }
 
