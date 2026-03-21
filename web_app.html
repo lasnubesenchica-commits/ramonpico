@@ -599,6 +599,99 @@ select.field-input { padding-right:2rem; }
 .dash-table-wrap {
   padding:0 1rem 2rem;
 }
+
+/* ── DASH TABLE HEADER ── */
+.dash-table-hdr {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:.5rem 1rem .2rem;
+}
+.dash-table-hdr-label {
+  font-size:.65rem; font-weight:600; letter-spacing:.07em;
+  text-transform:uppercase; color:var(--chrome);
+}
+.dash-add-btn {
+  width:26px; height:26px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.15rem; line-height:1;
+  border:1.5px solid var(--border); color:var(--muted);
+  background:var(--white); transition:all .15s;
+}
+.dash-add-btn:active { transform:scale(.92); }
+.dash-add-btn.ing { border-color:#4CAF50; color:#4CAF50; }
+.dash-add-btn.egr { border-color:#6A1B9A; color:#6A1B9A; }
+
+/* ── MODALS ── */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,.45);
+  display:flex; align-items:flex-end; justify-content:center;
+  opacity:0; pointer-events:none;
+  transition:opacity .2s; z-index:1000;
+}
+.modal-overlay.open { opacity:1; pointer-events:all; }
+.modal-box {
+  background:var(--white); width:100%; max-width:540px;
+  border-radius:16px 16px 0 0;
+  transform:translateY(100%); transition:transform .3s cubic-bezier(.32,0,.67,0);
+  max-height:92vh; overflow-y:auto;
+}
+.modal-overlay.open .modal-box { transform:translateY(0); }
+.modal-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:1rem 1.25rem .75rem; border-bottom:1px solid var(--border);
+  position:sticky; top:0; background:var(--white); z-index:1;
+}
+.modal-title { font-size:1rem; font-weight:700; }
+.modal-close {
+  width:30px; height:30px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  color:var(--muted); font-size:1rem; background:var(--bg);
+}
+.modal-close:hover { background:var(--bg2); }
+.modal-body { padding:1rem 1.25rem; }
+.modal-section { margin-bottom:1rem; }
+.modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; }
+.modal-field { display:flex; flex-direction:column; gap:.2rem; }
+.modal-field label { font-size:.65rem; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+.modal-field input, .modal-field select {
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:6px; padding:.5rem .75rem;
+  font-size:.88rem; outline:none; width:100%; box-sizing:border-box;
+}
+.modal-field input:focus, .modal-field select:focus { border-color:var(--orange); }
+.modal-field.full { grid-column:1/-1; }
+.modal-actions {
+  display:flex; gap:.6rem; padding:1rem 1.25rem;
+  border-top:1px solid var(--border);
+  position:sticky; bottom:0; background:var(--white);
+}
+.modal-actions .btn-primary {
+  flex:1; padding:.65rem; border-radius:8px;
+  color:#fff; font-weight:600; font-size:.88rem;
+}
+.modal-actions .btn-secondary {
+  padding:.65rem 1rem; border-radius:8px;
+  background:var(--bg); color:var(--muted);
+  font-size:.88rem; border:1px solid var(--border);
+}
+
+/* ── P&L MINI STATEMENT ── */
+.pl-stmt-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:.32rem 0; font-size:.82rem;
+  border-bottom:.5px solid var(--border);
+}
+.pl-stmt-row:last-child { border-bottom:none; }
+.pl-stmt-row.indent { padding-left:.75rem; }
+.pl-stmt-row.indent .pl-stmt-lbl { color:var(--muted); font-size:.78rem; }
+.pl-stmt-row.subtotal { font-weight:600; }
+.pl-stmt-row.total-final {
+  padding-top:.4rem; font-weight:700;
+  border-top:1.5px solid var(--border) !important;
+}
+.pl-stmt-lbl { color:var(--text); }
+.pl-stmt-val { font-family:'DM Mono',monospace; font-weight:600; }
+.pl-stmt-pct { font-size:.7rem; font-weight:400; color:var(--muted); margin-left:.3rem; }
+
 .dash-table-item {
   display:flex; align-items:center; gap:.6rem;
   padding:.6rem 0;
@@ -734,6 +827,12 @@ select.field-input { padding-right:2rem; }
       <button class="dash-toggle-btn" id="toggleEgr" onclick="setDashTable('egresos')">Egresos</button>
     </div>
 
+    <!-- Table header con botón + -->
+    <div class="dash-table-hdr" id="dashTableHdr">
+      <div class="dash-table-hdr-label" id="dashTableHdrLabel">Ingresos del mes</div>
+      <button class="dash-add-btn ing" id="dashAddBtn" onclick="dashAddBtnClick()" title="Registrar nuevo">+</button>
+    </div>
+
     <!-- Table list -->
     <div class="dash-table-wrap" id="dashTableWrap"></div>
   </div>
@@ -741,6 +840,201 @@ select.field-input { padding-right:2rem; }
   <!-- TOAST -->
   <div class="toast" id="toast"></div>
 
+</div>
+
+<!-- ════ MODAL: Nuevo Ingreso ════ -->
+<div class="modal-overlay" id="ingresoModalOverlay" onclick="if(event.target===this)closeIngresoModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">💰 Registrar Ingreso</div>
+      <button class="modal-close" onclick="closeIngresoModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-section">
+        <div class="modal-grid">
+          <div class="modal-field full">
+            <label>Categoría</label>
+            <select id="iCategoria" onchange="inferirItbmsIngreso()">
+              <option value="venta_producto_gravado">📦 Venta de producto (con ITBMS)</option>
+              <option value="venta_producto_exento">📦 Venta de producto (exento)</option>
+              <option value="servicio_tecnico_gravado">🔧 Servicio técnico (con ITBMS)</option>
+              <option value="servicio_tecnico_exento">🔧 Servicio técnico (exento)</option>
+              <option value="asesoria_consultoria">💼 Asesoría / Consultoría</option>
+              <option value="comision">💳 Comisión</option>
+              <option value="exportacion">📦 Exportación</option>
+              <option value="otro_gravado">📋 Otro ingreso (con ITBMS)</option>
+              <option value="otro_exento">📋 Otro ingreso (exento)</option>
+            </select>
+          </div>
+          <div class="modal-field full">
+            <label>Descripción</label>
+            <input type="text" id="iDescripcion" placeholder="Opcional">
+          </div>
+          <div class="modal-field">
+            <label>Fecha *</label>
+            <input type="date" id="iFecha">
+          </div>
+          <div class="modal-field">
+            <label>N° Factura</label>
+            <input type="text" id="iNumFac" placeholder="Opcional">
+          </div>
+          <div class="modal-field full">
+            <div style="border:2px dashed var(--border);border-radius:10px;padding:1rem;text-align:center;cursor:pointer;transition:border-color .2s"
+                 id="iDropZone"
+                 ondragover="event.preventDefault();this.style.borderColor='var(--green)'"
+                 ondragleave="this.style.borderColor='var(--border)'"
+                 ondrop="handleIngresoFileDrop(event)"
+                 onclick="document.getElementById('iVoucherInput').click()">
+              <input type="file" id="iVoucherInput" accept="image/*,application/pdf" style="display:none" onchange="handleIngresoFileSelect(event)">
+              <div id="iDropLabel" style="color:var(--muted);font-size:.85rem">📎 Adjuntar comprobante — la IA llenará los campos</div>
+              <div id="iAIStatus" style="display:none;margin-top:.5rem"></div>
+            </div>
+          </div>
+          <div class="modal-field full" style="display:flex;align-items:center;gap:.75rem;padding:.5rem .75rem;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
+            <label style="margin:0;display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;font-weight:500">
+              <input type="checkbox" id="iItbmsCheck" onchange="recalcIngreso()" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer">
+              Aplica ITBMS (7%)
+            </label>
+            <span id="iItbmsTag" style="display:none;font-size:.78rem;background:var(--green);color:#fff;padding:.15rem .5rem;border-radius:4px;font-weight:600">+7%</span>
+          </div>
+          <div class="modal-field full">
+            <label>Total (USD) *</label>
+            <input type="number" id="iTotal" min="0" step="0.01" placeholder="0.00" oninput="recalcIngreso()" style="font-weight:700;font-size:1rem">
+          </div>
+          <div class="modal-field full" id="iDesglose" style="display:none">
+            <div style="background:var(--bg2);border-radius:8px;padding:.6rem .75rem;font-size:.83rem;display:flex;gap:2rem">
+              <div style="display:flex;justify-content:space-between;flex:1"><span style="color:var(--muted)">Subtotal:</span><span id="iSubtotalDisp">$0.00</span></div>
+              <div style="display:flex;justify-content:space-between;flex:1"><span style="color:var(--muted)">ITBMS 7%:</span><span id="iItbmsDisp">$0.00</span></div>
+            </div>
+          </div>
+          <input type="hidden" id="iSubtotal">
+          <input type="hidden" id="iItbms">
+          <div class="modal-field full" style="border-top:1px solid var(--border);padding-top:.75rem;margin-top:.25rem">
+            <label style="color:var(--muted)">CLIENTE</label>
+          </div>
+          <div class="modal-field full">
+            <label>Nombre cliente *</label>
+            <input type="text" id="iNombreCli" placeholder="Nombre completo">
+          </div>
+          <div class="modal-field">
+            <label>RUC cliente</label>
+            <input type="text" id="iRucCli" placeholder="Opcional">
+          </div>
+          <div class="modal-field">
+            <label>DV</label>
+            <input type="text" id="iDvCli" placeholder="Opcional">
+          </div>
+          <div class="modal-field full">
+            <label>Notas internas</label>
+            <input type="text" id="iNotas" placeholder="Opcional">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" style="background:var(--green)" onclick="guardarNuevoIngreso()">💾 Guardar ingreso</button>
+      <button class="btn-secondary" onclick="closeIngresoModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════ MODAL: Nuevo Egreso ════ -->
+<div class="modal-overlay" id="egresoModalOverlay" onclick="if(event.target===this)closeEgresoModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📤 Registrar Egreso</div>
+      <button class="modal-close" onclick="closeEgresoModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="border:2px dashed var(--border);border-radius:10px;padding:1rem;margin-bottom:1rem;text-align:center;cursor:pointer;transition:border-color .2s"
+           id="eDropZone"
+           ondragover="event.preventDefault();this.style.borderColor='var(--orange)'"
+           ondragleave="this.style.borderColor='var(--border)'"
+           ondrop="handleEgresoFileDrop(event)"
+           onclick="document.getElementById('eFacturaInput').click()">
+        <input type="file" id="eFacturaInput" accept="image/*,application/pdf" style="display:none" onchange="handleEgresoFileSelect(event)">
+        <div id="eDropLabel" style="color:var(--muted);font-size:.85rem">📎 Adjuntar factura (imagen o PDF) — la IA llenará los campos</div>
+        <div id="eAIStatus" style="display:none;margin-top:.5rem"></div>
+      </div>
+      <div class="modal-section">
+        <div class="modal-grid">
+          <div class="modal-field full">
+            <label>Categoría</label>
+            <select id="eCategoria" onchange="inferirTipoEgreso()">
+              <option value="costo_mercancia">📦 Costo de mercancía</option>
+              <option value="gastos_personal">👤 Nómina / Personal</option>
+              <option value="alquileres">🏠 Alquileres</option>
+              <option value="servicios_publicos">💡 Servicios públicos</option>
+              <option value="combustible_transporte">⛽ Combustible / Transporte</option>
+              <option value="publicidad_mercadeo">📣 Publicidad / Mercadeo</option>
+              <option value="honorarios_profesionales">📋 Honorarios profesionales</option>
+              <option value="mantenimiento_reparacion">🔧 Mantenimiento / Reparación</option>
+              <option value="seguros">🛡️ Seguros</option>
+              <option value="depreciacion">📉 Depreciación</option>
+              <option value="gastos_financieros">🏦 Gastos financieros</option>
+              <option value="otros_deducibles">📂 Otros deducibles</option>
+            </select>
+          </div>
+          <div class="modal-field full">
+            <label>Descripción</label>
+            <input type="text" id="eDescripcion" placeholder="Ej: Gasolina visita clientes...">
+          </div>
+          <div class="modal-field">
+            <label>Fecha del gasto *</label>
+            <input type="date" id="eFecha">
+          </div>
+          <div class="modal-field full" style="display:flex;align-items:center;gap:.75rem;padding:.5rem .75rem;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
+            <label style="margin:0;display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;font-weight:500">
+              <input type="checkbox" id="eItbmsCheck" onchange="recalcEgreso()" style="width:16px;height:16px;accent-color:var(--orange);cursor:pointer">
+              Aplica ITBMS (7%)
+            </label>
+            <span id="eItbmsTag" style="display:none;font-size:.78rem;background:var(--orange);color:#fff;padding:.15rem .5rem;border-radius:4px;font-weight:600">+7%</span>
+          </div>
+          <div class="modal-field">
+            <label>Total (USD) *</label>
+            <input type="number" id="eTotal" min="0" step="0.01" placeholder="0.00" oninput="recalcEgreso()" style="font-weight:700">
+          </div>
+          <div class="modal-field" id="eDesglose" style="display:none">
+            <div style="background:var(--bg2);border-radius:8px;padding:.6rem .75rem;font-size:.83rem;display:flex;flex-direction:column;gap:.25rem">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">Subtotal:</span><span id="eSubtotalDisp">$0.00</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--muted)">ITBMS 7%:</span><span id="eItbmsDisp">$0.00</span></div>
+            </div>
+          </div>
+          <input type="hidden" id="eTipoHidden" value="costo_operativo">
+          <input type="hidden" id="eSubtotal">
+          <input type="hidden" id="eItbms">
+          <div class="modal-field">
+            <label>N° Factura / Recibo</label>
+            <input type="text" id="eNumFac" placeholder="Opcional">
+          </div>
+          <div class="modal-field full">
+            <label>Proveedor / Beneficiario</label>
+            <input type="text" id="eProveedor" placeholder="Nombre del proveedor">
+          </div>
+          <div class="modal-field">
+            <label>RUC proveedor</label>
+            <input type="text" id="eRucProv" placeholder="Opcional">
+          </div>
+          <div class="modal-field">
+            <label>DV proveedor</label>
+            <input type="text" id="eDvProv" placeholder="Opcional">
+          </div>
+          <div class="modal-field full">
+            <label>Notas internas</label>
+            <input type="text" id="eNotas" placeholder="Opcional">
+          </div>
+          <div class="modal-field full" id="eItemsSection" style="display:none">
+            <label>Ítems detectados por IA</label>
+            <div id="eItemsList" style="background:var(--bg2);border-radius:8px;padding:.75rem;font-size:.82rem;max-height:180px;overflow-y:auto"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" style="background:#6A1B9A" onclick="guardarEgresoOperativo()">💾 Guardar egreso</button>
+      <button class="btn-secondary" onclick="closeEgresoModal()">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <!-- ════ MODAL: Registrar Pago ════ -->
@@ -2067,28 +2361,12 @@ function renderDashboard() {
   const totalEgr    = egrMes.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
   const totalItbmsI = ingMes.reduce((s, i) => s + (parseFloat(i.itbms) || 0), 0);
   const totalItbmsE = egrMes.reduce((s, e) => s + (parseFloat(e.itbms) || 0), 0);
-  const subtotalIng = ingMes.reduce((s, i) => s + (parseFloat(i.subtotal) || 0), 0);
-  const subtotalEgr = egrMes.reduce((s, e) => s + (parseFloat(e.subtotal) || 0), 0);
-  const profit      = totalIng - totalEgr;
-  const margenPct   = totalIng > 0 ? ((profit / totalIng) * 100).toFixed(1) : '0.0';
 
   // Count by type
-  const egrCosto = egrMes.filter(e => String(e.tipo_egreso) === 'costo_mercancia');
-  const egrOp    = egrMes.filter(e => String(e.tipo_egreso) !== 'costo_mercancia');
+  const egrCosto   = egrMes.filter(e => String(e.tipo_egreso) === 'costo_mercancia');
+  const egrOp      = egrMes.filter(e => String(e.tipo_egreso) !== 'costo_mercancia');
   const totalCosto = egrCosto.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
-  const totalOp    = egrOp.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
-
-  // Extract PAGO_REAL from ingreso notas for real revenue tracking
-  let totalPagoReal = 0;
-  let countPagoReal = 0;
-  ingMes.forEach(i => {
-    const notas = String(i.notas || '');
-    const m = notas.match(/PAGO_REAL:\s*\$?([\d,.]+)/);
-    if (m) {
-      totalPagoReal += parseFloat(m[1].replace(/,/g, '')) || 0;
-      countPagoReal++;
-    }
-  });
+  const totalOp    = egrOp.reduce((s, e)    => s + (parseFloat(e.total) || 0), 0);
 
   // ── Previous month comparison ──
   const prevMonth = dashMonth === 1 ? 12 : dashMonth - 1;
@@ -2118,6 +2396,11 @@ function renderDashboard() {
   const prevLabel = MESES[prevMonth].slice(0,3);
   const curLabel  = MESES[dashMonth].slice(0,3);
 
+  const margenBruto    = totalIng - totalCosto;
+  const margenBrutoPct = totalIng > 0 ? ((margenBruto / totalIng) * 100).toFixed(1) : '0.0';
+  const utilidadNeta   = totalIng - totalEgr;
+  const utilidadPct    = totalIng > 0 ? ((utilidadNeta / totalIng) * 100).toFixed(1) : '0.0';
+
   document.getElementById('dashWidgets').innerHTML = `
     <div class="dash-widget">
       <div class="dash-widget-label">Ingresos</div>
@@ -2125,7 +2408,7 @@ function renderDashboard() {
       <div class="dash-widget-sub">${ingMes.length} trans. ${deltaTag(ingDelta)}</div>
     </div>
     <div class="dash-widget">
-      <div class="dash-widget-label">Egresos</div>
+      <div class="dash-widget-label">Egresos totales</div>
       <div class="dash-widget-value red">$${fmtNum(totalEgr)}</div>
       <div class="dash-widget-sub">${egrMes.length} trans. ${deltaTag(egrDelta)}</div>
     </div>
@@ -2133,8 +2416,8 @@ function renderDashboard() {
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
           <div class="dash-widget-label">${curLabel} vs ${prevLabel}</div>
-          <div class="dash-widget-value ${profit >= 0 ? 'green' : 'red'}">$${fmtNum(profit)}</div>
-          <div class="dash-widget-sub">Margen: ${margenPct}% ${deltaTag(profitDelta)}</div>
+          <div class="dash-widget-value ${utilidadNeta >= 0 ? 'green' : 'red'}">$${fmtNum(utilidadNeta)}</div>
+          <div class="dash-widget-sub">Utilidad neta: ${utilidadPct}% ${deltaTag(profitDelta)}</div>
         </div>
         <div style="text-align:right;border-left:1px solid var(--border);padding-left:.85rem;min-width:40%">
           <div class="dash-widget-label">${prevLabel}</div>
@@ -2145,36 +2428,28 @@ function renderDashboard() {
         </div>
       </div>
     </div>
-    <div class="dash-widget full" style="border-color:rgba(224,90,0,.2);background:var(--orange-bg)">
-      <div class="dash-widget-label" style="color:var(--orange)">Facturado vs Cobrado</div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:.35rem">
-        <div>
-          <div style="font-size:.68rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)">Facturado</div>
-          <div style="font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:700;color:var(--green)">$${fmtNum(totalIng)}</div>
-          <div style="font-size:.68rem;color:var(--muted)">${ingMes.length} transacciones</div>
-        </div>
-        <div style="text-align:center;align-self:center;padding:0 .5rem">
-          <div style="font-size:.75rem;color:var(--chrome)">→</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:.68rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)">Cobrado</div>
-          <div style="font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:700;color:var(--orange)">$${fmtNum(countPagoReal > 0 ? totalPagoReal : totalIng)}</div>
-          <div style="font-size:.68rem;color:var(--muted)">${countPagoReal > 0 ? countPagoReal + ' con comprobante' : 'Sin datos de cobro'}</div>
-        </div>
-      </div>${countPagoReal > 0 && Math.abs(totalPagoReal - totalIng) > 0.50 ? `
-      <div style="margin-top:.45rem;padding-top:.4rem;border-top:1px solid rgba(224,90,0,.15);font-size:.78rem;color:var(--orange);font-weight:600">
-        ${totalPagoReal > totalIng ? '↑' : '↓'} Diferencia: $${fmtNum(totalPagoReal - totalIng)} ${totalPagoReal > totalIng ? 'cobrado de más' : 'cobrado de menos'}
-      </div>` : ''}
-    </div>
-    <div class="dash-widget">
-      <div class="dash-widget-label">Costo Mercancía</div>
-      <div class="dash-widget-value">$${fmtNum(totalCosto)}</div>
-      <div class="dash-widget-sub">${egrCosto.length} ítems</div>
-    </div>
-    <div class="dash-widget">
-      <div class="dash-widget-label">Gastos Operativos</div>
-      <div class="dash-widget-value">$${fmtNum(totalOp)}</div>
-      <div class="dash-widget-sub">${egrOp.length} ítems</div>
+    <div class="dash-widget full">
+      <div class="dash-widget-label" style="margin-bottom:.5rem">Resultados del mes</div>
+      <div class="pl-stmt-row">
+        <span class="pl-stmt-lbl">Ingresos</span>
+        <span class="pl-stmt-val green">$${fmtNum(totalIng)}</span>
+      </div>
+      <div class="pl-stmt-row indent">
+        <span class="pl-stmt-lbl">(−) Costo mercancía</span>
+        <span class="pl-stmt-val">$${fmtNum(totalCosto)}</span>
+      </div>
+      <div class="pl-stmt-row subtotal">
+        <span class="pl-stmt-lbl">Margen bruto</span>
+        <span class="pl-stmt-val ${margenBruto >= 0 ? 'green' : 'red'}">$${fmtNum(margenBruto)}<span class="pl-stmt-pct">${margenBrutoPct}%</span></span>
+      </div>
+      <div class="pl-stmt-row indent">
+        <span class="pl-stmt-lbl">(−) Gastos operativos</span>
+        <span class="pl-stmt-val">$${fmtNum(totalOp)}</span>
+      </div>
+      <div class="pl-stmt-row total-final">
+        <span class="pl-stmt-lbl">Utilidad neta</span>
+        <span class="pl-stmt-val ${utilidadNeta >= 0 ? 'green' : 'red'}">$${fmtNum(utilidadNeta)}<span class="pl-stmt-pct">${utilidadPct}%</span></span>
+      </div>
     </div>
     <div class="dash-widget">
       <div class="dash-widget-label">ITBMS Cobrado</div>
@@ -2222,7 +2497,24 @@ function setDashTable(mode) {
   dashTableMode = mode;
   document.getElementById('toggleIng').classList.toggle('active', mode === 'ingresos');
   document.getElementById('toggleEgr').classList.toggle('active', mode === 'egresos');
+  // Sync header label and + button
+  const lbl = document.getElementById('dashTableHdrLabel');
+  const btn = document.getElementById('dashAddBtn');
+  if (mode === 'ingresos') {
+    lbl.textContent = 'Ingresos del mes';
+    btn.className   = 'dash-add-btn ing';
+    btn.title       = 'Registrar ingreso';
+  } else {
+    lbl.textContent = 'Egresos del mes';
+    btn.className   = 'dash-add-btn egr';
+    btn.title       = 'Registrar egreso';
+  }
   renderDashTable();
+}
+
+function dashAddBtnClick() {
+  if (dashTableMode === 'ingresos') abrirModalNuevoIngreso();
+  else                               abrirModalNuevoEgreso();
 }
 
 function renderDashTable() {
@@ -2277,6 +2569,389 @@ function renderDashTable() {
 function fmtNum(n) {
   if (isNaN(n)) return '0.00';
   return Math.abs(n).toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+}
+
+// ════════════════════════════════════════════════════
+//  MODAL NUEVO INGRESO
+// ════════════════════════════════════════════════════
+
+const CATS_GRAVADAS_ING = ['venta_producto_gravado','servicio_tecnico_gravado','asesoria_consultoria','comision','otro_gravado'];
+
+let ingresoFileB64  = null;
+let ingresoFileMime = null;
+
+function abrirModalNuevoIngreso() {
+  document.getElementById('iCategoria').value    = 'venta_producto_gravado';
+  document.getElementById('iDescripcion').value  = '';
+  document.getElementById('iFecha').value        = new Date().toISOString().substring(0,10);
+  document.getElementById('iNumFac').value       = '';
+  document.getElementById('iSubtotal').value     = '';
+  document.getElementById('iItbms').value        = '';
+  document.getElementById('iTotal').value        = '';
+  document.getElementById('iItbmsCheck').checked = true;
+  document.getElementById('iDesglose').style.display = 'none';
+  document.getElementById('iItbmsTag').style.display  = 'none';
+  document.getElementById('iNombreCli').value    = '';
+  document.getElementById('iRucCli').value       = '';
+  document.getElementById('iDvCli').value        = '';
+  document.getElementById('iNotas').value        = '';
+  document.getElementById('iDropLabel').innerHTML = '📎 Adjuntar comprobante — la IA llenará los campos';
+  document.getElementById('iAIStatus').style.display = 'none';
+  document.getElementById('iVoucherInput').value = '';
+  ingresoFileB64 = null; ingresoFileMime = null;
+  document.getElementById('ingresoModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeIngresoModal() {
+  document.getElementById('ingresoModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function inferirItbmsIngreso() {
+  const cat   = document.getElementById('iCategoria').value;
+  const check = document.getElementById('iItbmsCheck');
+  check.checked = CATS_GRAVADAS_ING.includes(cat);
+  recalcIngreso();
+}
+
+function recalcIngreso() {
+  const total    = parseFloat(document.getElementById('iTotal').value) || 0;
+  const aplica   = document.getElementById('iItbmsCheck').checked;
+  const desglose = document.getElementById('iDesglose');
+  const tag      = document.getElementById('iItbmsTag');
+  if (aplica && total > 0) {
+    const subtotal = parseFloat((total / 1.07).toFixed(2));
+    const itbms    = parseFloat((total - subtotal).toFixed(2));
+    document.getElementById('iSubtotal').value           = subtotal;
+    document.getElementById('iItbms').value              = itbms;
+    document.getElementById('iSubtotalDisp').textContent = '$' + subtotal.toFixed(2);
+    document.getElementById('iItbmsDisp').textContent    = '$' + itbms.toFixed(2);
+    desglose.style.display = 'block';
+    tag.style.display      = 'inline';
+  } else {
+    document.getElementById('iSubtotal').value = total > 0 ? total.toFixed(2) : '';
+    document.getElementById('iItbms').value    = '0';
+    desglose.style.display = 'none';
+    tag.style.display      = 'none';
+  }
+}
+
+function handleIngresoFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('iDropZone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) procesarArchivoIngreso(file);
+}
+
+function handleIngresoFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) procesarArchivoIngreso(file);
+}
+
+function procesarArchivoIngreso(file) {
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    let b64  = ev.target.result.split(',')[1];
+    let mime = file.type || 'image/jpeg';
+    if (mime !== 'application/pdf' && ev.target.result.length > 1_000_000) {
+      try { const r = await _comprimirImagen(ev.target.result, 1200); b64 = r.split(',')[1]; mime = 'image/jpeg'; } catch(e) {}
+    }
+    ingresoFileB64  = b64;
+    ingresoFileMime = mime;
+    document.getElementById('iDropLabel').innerHTML = `📎 <strong>${esc(file.name)}</strong> — analizando con IA...`;
+    const status = document.getElementById('iAIStatus');
+    status.style.display = 'block';
+    status.innerHTML = '<span style="color:var(--green)">⏳ Extrayendo datos...</span>';
+    try {
+      const parsed = await analizarComprobanteIngresoConClaude(b64, mime);
+      llenarCamposIngreso(parsed);
+      status.innerHTML = '<span style="color:var(--green)">✅ Datos extraídos — revisa y confirma</span>';
+    } catch(err) {
+      status.innerHTML = '<span style="color:var(--red)">⚠️ ' + esc(err.message) + '</span>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analizarComprobanteIngresoConClaude(b64, mime) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'parseComprobanteIngreso', imageBase64: b64, mimeType: mime }),
+  });
+  if (!res.ok) throw new Error('Servidor respondió ' + res.status);
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'No se pudo analizar el comprobante');
+  return data;
+}
+
+function llenarCamposIngreso(parsed) {
+  if (parsed.monto)        { document.getElementById('iTotal').value = parsed.monto; recalcIngreso(); }
+  if (parsed.fecha)          document.getElementById('iFecha').value      = parsed.fecha;
+  if (parsed.num_factura)    document.getElementById('iNumFac').value     = parsed.num_factura;
+  if (parsed.nombre_pagador) document.getElementById('iNombreCli').value  = parsed.nombre_pagador;
+  if (parsed.ruc_pagador)    document.getElementById('iRucCli').value     = parsed.ruc_pagador;
+  if (parsed.dv_pagador)     document.getElementById('iDvCli').value      = parsed.dv_pagador;
+  if (parsed.descripcion)    document.getElementById('iDescripcion').value = parsed.descripcion;
+  if (parsed.notas)          document.getElementById('iNotas').value      = parsed.notas;
+  const cat = document.getElementById('iCategoria');
+  if (parsed.tipo_comprobante) {
+    if (['yappy','transferencia','efectivo'].includes(parsed.tipo_comprobante)) cat.value = 'venta_producto_gravado';
+    else if (parsed.tipo_comprobante === 'factura') cat.value = parsed.tiene_itbms ? 'venta_producto_gravado' : 'venta_producto_exento';
+  } else if (parsed.tiene_itbms) { cat.value = 'venta_producto_gravado'; }
+  inferirItbmsIngreso();
+}
+
+async function guardarNuevoIngreso() {
+  const total  = parseFloat(document.getElementById('iTotal').value) || 0;
+  const fecha  = document.getElementById('iFecha').value;
+  const nombre = document.getElementById('iNombreCli').value.trim();
+  if (!total)  { toast('⚠️ El total es requerido', true);              return; }
+  if (!fecha)  { toast('⚠️ La fecha es requerida', true);              return; }
+  if (!nombre) { toast('⚠️ El nombre del cliente es requerido', true); return; }
+  const btn = document.querySelector('#ingresoModalOverlay .btn-primary');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+  try {
+    const data = await jsonpGet('registrarIngresoManual', {
+      fecha:       fecha,
+      categoria:   document.getElementById('iCategoria').value,
+      descripcion: document.getElementById('iDescripcion').value.trim(),
+      num_factura: document.getElementById('iNumFac').value.trim(),
+      subtotal:    document.getElementById('iSubtotal').value || '',
+      itbms:       document.getElementById('iItbms').value    || '',
+      total:       total,
+      nombre:      nombre,
+      ruc:         document.getElementById('iRucCli').value.trim(),
+      dv:          document.getElementById('iDvCli').value.trim(),
+      notas:       document.getElementById('iNotas').value.trim(),
+    });
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    toast('✅ Ingreso registrado: ' + data.ingresoId);
+    closeIngresoModal();
+    dashIngresos = []; dashLoaded = false; loadDashboard();
+  } catch(err) { toast('⚠️ ' + err.message, true); }
+  btn.disabled = false; btn.textContent = '💾 Guardar ingreso';
+}
+
+// ════════════════════════════════════════════════════
+//  MODAL NUEVO EGRESO
+// ════════════════════════════════════════════════════
+
+let egresoFileB64  = null;
+let egresoFileMime = null;
+let egresoIAItems  = [];
+
+function abrirModalNuevoEgreso() {
+  document.getElementById('eCategoria').value    = 'otros_deducibles';
+  document.getElementById('eDescripcion').value  = '';
+  document.getElementById('eFecha').value        = new Date().toISOString().substring(0,10);
+  document.getElementById('eSubtotal').value     = '';
+  document.getElementById('eItbms').value        = '';
+  document.getElementById('eTotal').value        = '';
+  document.getElementById('eItbmsCheck').checked = false;
+  document.getElementById('eDesglose').style.display  = 'none';
+  document.getElementById('eItbmsTag').style.display   = 'none';
+  document.getElementById('eNumFac').value       = '';
+  document.getElementById('eProveedor').value    = '';
+  document.getElementById('eRucProv').value      = '';
+  document.getElementById('eDvProv').value       = '';
+  document.getElementById('eNotas').value        = '';
+  document.getElementById('eDropLabel').innerHTML = '📎 Adjuntar factura (imagen o PDF) — la IA llenará los campos';
+  document.getElementById('eAIStatus').style.display      = 'none';
+  document.getElementById('eItemsSection').style.display  = 'none';
+  document.getElementById('eFacturaInput').value = '';
+  egresoFileB64 = null; egresoFileMime = null; egresoIAItems = [];
+  inferirTipoEgreso();
+  document.getElementById('egresoModalOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeEgresoModal() {
+  document.getElementById('egresoModalOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function inferirTipoEgreso() {
+  const mapa = {
+    costo_mercancia:'costo_mercancia', gastos_personal:'nomina',
+    alquileres:'costo_operativo', servicios_publicos:'servicios',
+    combustible_transporte:'costo_operativo', publicidad_mercadeo:'costo_operativo',
+    honorarios_profesionales:'servicios', mantenimiento_reparacion:'costo_operativo',
+    seguros:'costo_operativo', depreciacion:'costo_operativo',
+    gastos_financieros:'servicios', otros_deducibles:'costo_operativo',
+  };
+  const hidden = document.getElementById('eTipoHidden');
+  if (hidden) hidden.value = mapa[document.getElementById('eCategoria').value] || 'costo_operativo';
+}
+
+function recalcEgreso() {
+  const total    = parseFloat(document.getElementById('eTotal').value) || 0;
+  const aplica   = document.getElementById('eItbmsCheck').checked;
+  const desglose = document.getElementById('eDesglose');
+  const tag      = document.getElementById('eItbmsTag');
+  if (aplica && total > 0) {
+    const subtotal = parseFloat((total / 1.07).toFixed(2));
+    const itbms    = parseFloat((total - subtotal).toFixed(2));
+    document.getElementById('eSubtotal').value           = subtotal;
+    document.getElementById('eItbms').value              = itbms;
+    document.getElementById('eSubtotalDisp').textContent = '$' + subtotal.toFixed(2);
+    document.getElementById('eItbmsDisp').textContent    = '$' + itbms.toFixed(2);
+    desglose.style.display = 'block';
+    tag.style.display      = 'inline';
+  } else {
+    document.getElementById('eSubtotal').value = total > 0 ? total.toFixed(2) : '';
+    document.getElementById('eItbms').value    = '0';
+    desglose.style.display = 'none';
+    tag.style.display      = 'none';
+  }
+}
+
+function handleEgresoFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('eDropZone').style.borderColor = 'var(--border)';
+  const file = e.dataTransfer.files[0];
+  if (file) procesarArchivoEgreso(file);
+}
+
+function handleEgresoFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) procesarArchivoEgreso(file);
+}
+
+function _comprimirImagen(dataUrl, maxWidth) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale  = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+function procesarArchivoEgreso(file) {
+  const reader = new FileReader();
+  reader.onload = async function(ev) {
+    let b64  = ev.target.result.split(',')[1];
+    let mime = file.type || 'image/jpeg';
+    if (mime !== 'application/pdf' && ev.target.result.length > 1_000_000) {
+      try { const r = await _comprimirImagen(ev.target.result, 1200); b64 = r.split(',')[1]; mime = 'image/jpeg'; } catch(e) {}
+    }
+    egresoFileB64  = b64;
+    egresoFileMime = mime;
+    document.getElementById('eDropLabel').innerHTML = `📎 <strong>${esc(file.name)}</strong> — analizando con IA...`;
+    const status = document.getElementById('eAIStatus');
+    status.style.display = 'block';
+    status.innerHTML = '<span style="color:var(--orange)">⏳ Extrayendo datos de la factura...</span>';
+    try {
+      const parsed = await analizarFacturaEgresoConClaude(b64, mime);
+      llenarCamposEgreso(parsed);
+      status.innerHTML = '<span style="color:var(--green)">✅ Datos extraídos — revisa y confirma</span>';
+    } catch(err) {
+      status.innerHTML = '<span style="color:var(--red)">⚠️ ' + esc(err.message) + '</span>';
+    }
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analizarFacturaEgresoConClaude(b64, mime) {
+  const res = await fetch(GAS_URL, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'parseFacturaEgreso', imageBase64: b64, mimeType: mime }),
+  });
+  if (!res.ok) throw new Error('Servidor respondió ' + res.status);
+  const data = await res.json();
+  if (!data.success) throw new Error(data.error || 'No se pudo analizar la factura');
+  return { num_factura: data.num_factura||null, fecha: data.fecha||null, proveedor: data.proveedor||null,
+           ruc_proveedor: data.ruc_proveedor||null, dv_proveedor: data.dv_proveedor||null,
+           subtotal: data.subtotal||null, itbms: data.itbms||null, total: data.total||null, items: data.items||[] };
+}
+
+function llenarCamposEgreso(parsed) {
+  if (parsed.num_factura)   document.getElementById('eNumFac').value    = parsed.num_factura;
+  if (parsed.fecha)         document.getElementById('eFecha').value     = parsed.fecha;
+  if (parsed.proveedor)     document.getElementById('eProveedor').value = parsed.proveedor;
+  if (parsed.ruc_proveedor) document.getElementById('eRucProv').value   = parsed.ruc_proveedor;
+  if (parsed.dv_proveedor)  document.getElementById('eDvProv').value    = parsed.dv_proveedor;
+  if (parsed.total) {
+    document.getElementById('eTotal').value = parsed.total;
+    if (parsed.itbms && parseFloat(parsed.itbms) > 0) document.getElementById('eItbmsCheck').checked = true;
+    recalcEgreso();
+  } else if (parsed.subtotal) {
+    const sub = parseFloat(parsed.subtotal) || 0;
+    const itb = parseFloat(parsed.itbms)    || 0;
+    document.getElementById('eTotal').value = (sub + itb).toFixed(2);
+    if (itb > 0) document.getElementById('eItbmsCheck').checked = true;
+    recalcEgreso();
+  }
+  if (parsed.items && parsed.items.length) {
+    egresoIAItems = parsed.items;
+    const descsUnicas = [...new Set(parsed.items.map(i => i.descripcion).filter(Boolean))];
+    const desc = (parsed.proveedor ? parsed.proveedor + ' — ' : '') + descsUnicas.join(', ');
+    if (desc) document.getElementById('eDescripcion').value = desc.substring(0,120);
+    const section = document.getElementById('eItemsSection');
+    const list    = document.getElementById('eItemsList');
+    section.style.display = 'block';
+    list.innerHTML = parsed.items.map(item =>
+      `<div style="display:flex;justify-content:space-between;padding:.3rem 0;border-bottom:1px solid var(--border)">
+        <span>${esc(item.descripcion||'—')} ×${item.cantidad||1}</span>
+        <span style="font-weight:600;color:var(--red)">$${(parseFloat(item.total)||0).toFixed(2)}</span>
+      </div>`
+    ).join('');
+  }
+  _sugerirCategoriaDesdeParsed(parsed);
+}
+
+function _sugerirCategoriaDesdeParsed(parsed) {
+  const texto = ((parsed.proveedor||'') + ' ' + (parsed.items ? parsed.items.map(i => i.descripcion||'').join(' ') : '')).toLowerCase();
+  const cat   = document.getElementById('eCategoria');
+  if      (/carbone|ferreteria|ferretería|herramienta|equipo|maquinaria|repuesto/.test(texto)) cat.value = 'costo_mercancia';
+  else if (/gasolina|combustible|texaco|delta|puma|petro|taxi|uber/.test(texto))               cat.value = 'combustible_transporte';
+  else if (/alquiler|renta|arrendamiento|local|oficina|bodega/.test(texto))                    cat.value = 'alquileres';
+  else if (/cable.*onda|claro|movistar|natcom|internet|telefon|celular|electricidad|ensa|edemet|agua|anam/.test(texto)) cat.value = 'servicios_publicos';
+  else if (/publicidad|meta|facebook|google|instagram|ads|impresion|imprenta|diseño/.test(texto)) cat.value = 'publicidad_mercadeo';
+  else if (/contador|abogado|legal|auditoria|consultor|honorario|asesor/.test(texto))          cat.value = 'honorarios_profesionales';
+  else if (/seguro|assa|mapfre|sura/.test(texto))                                              cat.value = 'seguros';
+  else if (/banco|comision bancaria|financiero|interes/.test(texto))                           cat.value = 'gastos_financieros';
+  else if (/nomina|salario|empleado|planilla|sueldo|css|seguro social/.test(texto))            cat.value = 'gastos_personal';
+  else if (/manten|repara|taller|servicio tecnico/.test(texto))                                cat.value = 'mantenimiento_reparacion';
+  inferirTipoEgreso();
+}
+
+async function guardarEgresoOperativo() {
+  const total = parseFloat(document.getElementById('eTotal').value) || 0;
+  const fecha = document.getElementById('eFecha').value;
+  if (!total) { toast('⚠️ El total es requerido', true); return; }
+  if (!fecha) { toast('⚠️ La fecha es requerida', true); return; }
+  inferirTipoEgreso();
+  const btn = document.querySelector('#egresoModalOverlay .btn-primary');
+  btn.disabled = true; btn.textContent = '⏳ Guardando...';
+  try {
+    const data = await jsonpGet('registrarEgresoOperativo', {
+      fecha:       fecha,
+      tipo:        document.getElementById('eTipoHidden').value,
+      categoria:   document.getElementById('eCategoria').value,
+      proveedor:   document.getElementById('eProveedor').value.trim(),
+      ruc_prov:    document.getElementById('eRucProv').value.trim(),
+      dv_prov:     document.getElementById('eDvProv').value.trim(),
+      num_fac:     document.getElementById('eNumFac').value.trim(),
+      subtotal:    document.getElementById('eSubtotal').value || '',
+      itbms:       document.getElementById('eItbms').value    || '',
+      total:       total,
+      descripcion: document.getElementById('eDescripcion').value.trim(),
+      notas:       document.getElementById('eNotas').value.trim(),
+    });
+    if (!data.success) throw new Error(data.error || 'Error desconocido');
+    toast('✅ Egreso registrado: ' + data.egresoId);
+    closeEgresoModal();
+    dashEgresos = []; dashLoaded = false; loadDashboard();
+  } catch(err) { toast('⚠️ ' + err.message, true); }
+  btn.disabled = false; btn.textContent = '💾 Guardar egreso';
 }
 
 </script>
