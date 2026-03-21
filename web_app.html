@@ -578,6 +578,31 @@ select.field-input { padding-right:2rem; }
 .dash-pl-label { color:var(--muted); }
 .dash-pl-value { font-family:'DM Mono',monospace; font-weight:600; }
 
+/* ── TOGGLE P&L MODE ── */
+.dash-pnl-toggle {
+  display:flex; gap:2px;
+  background:rgba(224,90,0,.1);
+  border-radius:8px; padding:2px;
+  margin:.6rem 1rem .25rem;
+  border:1px solid rgba(224,90,0,.2);
+}
+.dash-pnl-btn {
+  flex:1; text-align:center;
+  font-size:.75rem; font-weight:600;
+  color:var(--orange); padding:.38rem .4rem;
+  border-radius:6px; transition:all .15s;
+  line-height:1.2;
+}
+.dash-pnl-btn.active {
+  background:var(--orange); color:#fff;
+  box-shadow:0 1px 4px rgba(224,90,0,.3);
+}
+.dash-pnl-hint {
+  font-size:.68rem; color:var(--muted);
+  text-align:center; padding:0 1rem .5rem;
+  letter-spacing:.01em;
+}
+
 /* ── TOGGLE TABLE ── */
 .dash-toggle {
   display:flex; gap:2px;
@@ -724,6 +749,13 @@ select.field-input { padding-right:2rem; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
     </div>
+
+    <!-- Toggle: Utilidad Neta / Margen Bruto -->
+    <div class="dash-pnl-toggle">
+      <button class="dash-pnl-btn active" id="pnlBtnNeta" onclick="setPnlMode('neta')">Utilidad Neta</button>
+      <button class="dash-pnl-btn"        id="pnlBtnBruta" onclick="setPnlMode('bruta')">Margen Bruto</button>
+    </div>
+    <div class="dash-pnl-hint" id="dashPnlHint">Todos los egresos</div>
 
     <!-- Widgets -->
     <div class="dash-widgets" id="dashWidgets"></div>
@@ -1997,6 +2029,7 @@ let dashEgresos    = [];
 let dashMonth      = new Date().getMonth() + 1;
 let dashYear       = new Date().getFullYear();
 let dashTableMode  = 'ingresos';
+let dashPnlMode    = 'neta';  // 'neta' = todos los egresos | 'bruta' = solo costo_mercancia
 
 // ════════════════════════════════════════════════════
 //  DASHBOARD — Load Data
@@ -2058,23 +2091,29 @@ function renderDashboard() {
     if (estado === 'anulado') return false;
     return monthMatch(i.fecha_ingreso, i.mes, i.anio_fiscal);
   });
-  const egrMes = dashEgresos.filter(e => {
+  const egrMesAll = dashEgresos.filter(e => {
     return monthMatch(e.fecha_egreso, e.mes, e.anio);
   });
+
+  // P&L mode: neta = todos los egresos | bruta = solo costo_mercancia
+  const egrMes     = dashPnlMode === 'bruta'
+    ? egrMesAll.filter(e => String(e.tipo_egreso) === 'costo_mercancia')
+    : egrMesAll;
+  const pnlLabel   = dashPnlMode === 'bruta' ? 'Margen Bruto' : 'Utilidad Neta';
 
   // Totals
   const totalIng    = ingMes.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
   const totalEgr    = egrMes.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
   const totalItbmsI = ingMes.reduce((s, i) => s + (parseFloat(i.itbms) || 0), 0);
-  const totalItbmsE = egrMes.reduce((s, e) => s + (parseFloat(e.itbms) || 0), 0);
+  const totalItbmsE = egrMesAll.reduce((s, e) => s + (parseFloat(e.itbms) || 0), 0);
   const subtotalIng = ingMes.reduce((s, i) => s + (parseFloat(i.subtotal) || 0), 0);
   const subtotalEgr = egrMes.reduce((s, e) => s + (parseFloat(e.subtotal) || 0), 0);
   const profit      = totalIng - totalEgr;
   const margenPct   = totalIng > 0 ? ((profit / totalIng) * 100).toFixed(1) : '0.0';
 
-  // Count by type
-  const egrCosto = egrMes.filter(e => String(e.tipo_egreso) === 'costo_mercancia');
-  const egrOp    = egrMes.filter(e => String(e.tipo_egreso) !== 'costo_mercancia');
+  // Count by type (always from full egresos for info widgets)
+  const egrCosto = egrMesAll.filter(e => String(e.tipo_egreso) === 'costo_mercancia');
+  const egrOp    = egrMesAll.filter(e => String(e.tipo_egreso) !== 'costo_mercancia');
   const totalCosto = egrCosto.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
   const totalOp    = egrOp.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
 
@@ -2097,7 +2136,10 @@ function renderDashboard() {
     if (String(i.estado || '').toLowerCase() === 'anulado') return false;
     return monthMatchExact(i.fecha_ingreso, i.mes, i.anio_fiscal, prevMonth, prevYear);
   });
-  const egrPrev = dashEgresos.filter(e => monthMatchExact(e.fecha_egreso, e.mes, e.anio, prevMonth, prevYear));
+  const egrPrevAll  = dashEgresos.filter(e => monthMatchExact(e.fecha_egreso, e.mes, e.anio, prevMonth, prevYear));
+  const egrPrev     = dashPnlMode === 'bruta'
+    ? egrPrevAll.filter(e => String(e.tipo_egreso) === 'costo_mercancia')
+    : egrPrevAll;
   const totalIngPrev = ingPrev.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
   const totalEgrPrev = egrPrev.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
   const profitPrev   = totalIngPrev - totalEgrPrev;
@@ -2118,6 +2160,9 @@ function renderDashboard() {
   const prevLabel = MESES[prevMonth].slice(0,3);
   const curLabel  = MESES[dashMonth].slice(0,3);
 
+  // Egresos widget label changes with mode
+  const egrWidgetLabel = dashPnlMode === 'bruta' ? 'Costo Mercancía' : 'Egresos Totales';
+
   document.getElementById('dashWidgets').innerHTML = `
     <div class="dash-widget">
       <div class="dash-widget-label">Ingresos</div>
@@ -2125,14 +2170,14 @@ function renderDashboard() {
       <div class="dash-widget-sub">${ingMes.length} trans. ${deltaTag(ingDelta)}</div>
     </div>
     <div class="dash-widget">
-      <div class="dash-widget-label">Egresos</div>
+      <div class="dash-widget-label">${egrWidgetLabel}</div>
       <div class="dash-widget-value red">$${fmtNum(totalEgr)}</div>
       <div class="dash-widget-sub">${egrMes.length} trans. ${deltaTag(egrDelta)}</div>
     </div>
     <div class="dash-widget full">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div class="dash-widget-label">${curLabel} vs ${prevLabel}</div>
+          <div class="dash-widget-label">${pnlLabel} · ${curLabel} vs ${prevLabel}</div>
           <div class="dash-widget-value ${profit >= 0 ? 'green' : 'red'}">$${fmtNum(profit)}</div>
           <div class="dash-widget-sub">Margen: ${margenPct}% ${deltaTag(profitDelta)}</div>
         </div>
@@ -2217,6 +2262,16 @@ function monthMatchExact(fechaStr, mes, anio, targetMonth, targetYear) {
 // ════════════════════════════════════════════════════
 //  DASHBOARD — Toggle Table
 // ════════════════════════════════════════════════════
+
+function setPnlMode(mode) {
+  dashPnlMode = mode;
+  document.getElementById('pnlBtnNeta').classList.toggle('active',  mode === 'neta');
+  document.getElementById('pnlBtnBruta').classList.toggle('active', mode === 'bruta');
+  document.getElementById('dashPnlHint').textContent = mode === 'bruta'
+    ? 'Solo costo de mercancía'
+    : 'Todos los egresos';
+  renderDashboard();
+}
 
 function setDashTable(mode) {
   dashTableMode = mode;
