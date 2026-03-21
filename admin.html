@@ -2645,78 +2645,6 @@ async function sincronizarEmails() {
 // ══════════════════════════════════════════════════
 //  RENDER TABLA OPERACIONES
 // ══════════════════════════════════════════════════
-// ── Render botones de conflicto (ítem pendiente con múltiples candidatos Carbone) ──
-function _renderBotonesConflicto(item, i) {
-  const facEmitidaMatch = (item.notas||'').match(/fac\.\s*emitida\s+([\w\d]+)/);
-  const facEmitida      = facEmitidaMatch ? facEmitidaMatch[1] : '?';
-  const facCarbone      = esc(item.num_fac_carbone || '—');
-  const driveCarb       = item.drive_url_carb || '#';
-
-  const otroConflicto = opItems.find(x =>
-    x.id_item !== item.id_item &&
-    (x.notas||'').includes('CONFLICTO:') &&
-    (x.notas||'').includes('fac. emitida ' + facEmitida)
-  );
-  const otroLabel = otroConflicto
-    ? `<div style="font-size:.62rem;color:#92400E;margin-top:.2rem;opacity:.8">
-         ⚠ También en conflicto: fac. Carbone ${esc(otroConflicto.num_fac_carbone||'?')}
-       </div>`
-    : '';
-
-  return `
-    <div style="display:flex;flex-direction:column;gap:.2rem;min-width:150px">
-      <div style="font-size:.63rem;color:#92400E;font-weight:600">
-        ⚡ Fac. emitida <strong>${esc(facEmitida)}</strong>
-      </div>
-      <div style="display:flex;align-items:center;gap:.3rem">
-        <a href="${esc(driveCarb)}" target="_blank"
-           style="font-family:'DM Mono',monospace;font-size:.68rem;background:#FEF3C7;
-                  color:#92400E;padding:.18rem .45rem;border-radius:4px;
-                  text-decoration:none;border:1px solid #FDE68A;white-space:nowrap"
-           title="Abrir factura Carbone ${facCarbone}">
-          📄 ${facCarbone}
-        </a>
-        <button class="btn-xs" style="background:#F59E0B;color:#fff;font-size:.68rem;padding:.2rem .5rem"
-                data-op-asignar="${i}" title="Asignar esta factura Carbone a la fac. emitida ${esc(facEmitida)}">
-          ✓
-        </button>
-      </div>
-      ${otroLabel}
-    </div>`;
-}
-
-// ── Confirmar asignación de conflicto ──
-function confirmarAsignacionConflicto(item) {
-  const facEmitidaMatch = (item.notas||'').match(/fac\.\s*emitida\s+([\w\d]+)/);
-  const facEmitida = facEmitidaMatch ? facEmitidaMatch[1] : '?';
-  const facCarbone = item.num_fac_carbone || '?';
-  const producto   = (item.descripcion_prod||'').substring(0, 55);
-  const costo      = parseFloat(item.total_carbone||'0').toFixed(2);
-  const fechaComp  = (item.fecha_compra||'').toString().substring(0,10);
-
-  const otroConflicto = opItems.find(x =>
-    x.id_item !== item.id_item &&
-    (x.notas||'').includes('CONFLICTO:') &&
-    (x.notas||'').includes('fac. emitida ' + facEmitida)
-  );
-  const advertencia = otroConflicto
-    ? `\n⚠ La fac. Carbone ${otroConflicto.num_fac_carbone||'?'} (${(otroConflicto.fecha_compra||'').toString().substring(0,10)}) quedará en Pendiente.`
-    : '';
-
-  const msg =
-    `¿Asignar esta compra Carbone a la factura emitida ${facEmitida}?\n\n` +
-    `Producto:       ${producto}\n` +
-    `Fac. Carbone:   ${facCarbone}\n` +
-    `Fecha compra:   ${fechaComp}\n` +
-    `Costo:          $${costo}\n` +
-    `Fac. emitida:   ${facEmitida}\n` +
-    advertencia +
-    `\n\nEl ítem pasará a estado "Facturado".`;
-
-  if (!confirm(msg)) return;
-  aprobarMatch(item.id_item);
-}
-
 function renderOpTable(items) {
   const tbody = document.getElementById('opBody');
   if (!items.length) {
@@ -2726,15 +2654,11 @@ function renderOpTable(items) {
   // items ya viene ordenado desde applyOpFilters — usar directamente
   tbody.innerHTML = items.map((item, i) => {
     const estado    = item.estado || 'pendiente';
-    const flagRev     = item.flag_revision === true || item.flag_revision === 'TRUE';
-    const esConflicto = flagRev && item.estado === 'pendiente' &&
-                        (item.notas||'').includes('CONFLICTO:');
+    const flagRev   = item.flag_revision === true || item.flag_revision === 'TRUE';
     const conf      = parseInt(item.confianza_match || '0') || 0;
     const cantidad  = parseInt(item.cantidad || '1') || 1;
 
-    const estadoBadge = esConflicto
-      ? '<span class="badge" style="background:#FEF3C7;color:#92400E;border:1px solid #FDE68A">⚡ Conflicto</span>'
-      : flagRev
+    const estadoBadge = flagRev
       ? '<span class="badge badge-revision">⚠ Revisar</span>'
       : {
           pendiente:  '<span class="badge badge-pendiente">● Pendiente</span>',
@@ -2787,11 +2711,7 @@ function renderOpTable(items) {
       <td>
         <div class="action-btns">
           <button class="btn-xs" style="background:var(--bg2);color:var(--text)" title="Ver detalle" data-op-ver="${i}">📄</button>
-          ${esConflicto
-            ? _renderBotonesConflicto(item, i)
-            : flagRev
-            ? `<button class="btn-xs btn-confirm" data-op-aprobar="${i}" title="Aprobar match">✓ Aprobar</button>`
-            : ''}
+          ${flagRev ? `<button class="btn-xs btn-confirm" data-op-aprobar="${i}" title="Aprobar match">✓ Aprobar</button>` : ''}
           ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-vision" data-op-vincular="${i}" title="Subir factura emitida">📋</button>` : ''}
           ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs btn-inventario" data-op-inv="${i}" title="Mover a inventario">📦</button>` : ''}
           ${(estado==='pendiente'&&!item.num_fac_emitida) ? `<button class="btn-xs" style="background:#7B1FA2;color:#fff" data-op-operativo="${i}" title="Registrar como costo operativo">⚙</button>` : ''}
@@ -2804,7 +2724,7 @@ function renderOpTable(items) {
 
 // ── Event delegation para acciones de Operaciones ──
 document.addEventListener('click', function(e) {
-  const btn = e.target.closest('[data-op-ver],[data-op-aprobar],[data-op-vincular],[data-op-inv],[data-op-orden],[data-op-pago],[data-op-operativo],[data-op-asignar]');
+  const btn = e.target.closest('[data-op-ver],[data-op-aprobar],[data-op-vincular],[data-op-inv],[data-op-orden],[data-op-pago],[data-op-operativo]');
   if (!btn) return;
   if (!document.getElementById('opBody').contains(btn)) return;
   e.stopPropagation();
@@ -2818,7 +2738,6 @@ document.addEventListener('click', function(e) {
   if (btn.dataset.opOrden     !== undefined) buscarOrdenWeb(item.id_item);
   if (btn.dataset.opPago      !== undefined) abrirModalPagoOp(item);
   if (btn.dataset.opOperativo !== undefined) abrirModalCostoOperativo(item);
-  if (btn.dataset.opAsignar   !== undefined) confirmarAsignacionConflicto(item);
 });
 
 // ── Sort Operaciones ──
@@ -3190,26 +3109,15 @@ async function aprobarMatch(idItem) {
   try {
     const data = await gasJsonp('aprobarMatch', { id_item: idItem });
     if (!data.success) throw new Error(data.error || 'Error al aprobar');
-
-    showToast('✅ Match aprobado → Facturado');
+    showToast('✅ Match aprobado');
     const idx = opItems.findIndex(i => i.id_item === idItem);
     if (idx !== -1) {
       opItems[idx].flag_revision = false;
-      opItems[idx].estado        = 'facturado';
-      // Limpiar nota de conflicto en memoria → desaparece el badge ⚡
-      opItems[idx].notas = (opItems[idx].notas||'')
-        .replace(/\s*\|\s*CONFLICTO:[^|]*/g, '')
-        .replace(/^CONFLICTO:[^|]*\|\s*/, '')
-        .replace(/^CONFLICTO:.*$/, '')
-        .trim();
+      opItems[idx].estado = 'facturado';
     }
     applyOpFilters();
   } catch(err) {
-    if ((err.message||'').includes('CONFLICTO_DUPLICADO')) {
-      showToast('⛔ ' + err.message.replace('CONFLICTO_DUPLICADO: ', ''));
-    } else {
-      showToast('⚠️ ' + err.message);
-    }
+    showToast('⚠️ ' + err.message);
   }
 }
 
