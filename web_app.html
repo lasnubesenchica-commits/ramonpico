@@ -797,6 +797,14 @@ select.field-input { padding-right:2rem; }
           </select>
         </div>
 
+        <div class="field">
+          <label class="field-label">Monto cobrado ($)</label>
+          <input type="number" class="field-input" id="pagoMontoCobrado" placeholder="0.00" step="0.01" inputmode="decimal">
+          <div style="font-size:.7rem;color:var(--muted);margin-top:.2rem">
+            Monto real cobrado al cliente. Se guarda como referencia interna, no afecta el ingreso fiscal.
+          </div>
+        </div>
+
         <div id="pagoDiscrepancy" style="display:none;
           background:#FFF3E0; border:1px solid #FFB74D;
           border-radius:var(--r); padding:.75rem; margin-bottom:.75rem;
@@ -1495,24 +1503,29 @@ function showPagoStep2(iaData) {
   document.getElementById('pagoStep1').style.display = 'none';
   document.getElementById('pagoStep2').style.display = 'block';
 
-  const resultsEl = document.getElementById('pagoIAResults');
-  const discEl    = document.getElementById('pagoDiscrepancy');
+  const resultsEl     = document.getElementById('pagoIAResults');
+  const discEl        = document.getElementById('pagoDiscrepancy');
+  const montoInput    = document.getElementById('pagoMontoCobrado');
   discEl.style.display = 'none';
+  montoInput.value     = '';
 
   if (iaData) {
     // Auto-select forma de pago based on IA
     const tipo = String(iaData.tipo_comprobante || '').toLowerCase();
     const select = document.getElementById('pagoForma');
-    if (tipo === 'yappy')         select.value = 'Yappy';
+    if (tipo === 'yappy')              select.value = 'Yappy';
     else if (tipo === 'transferencia') select.value = 'Transferencia';
 
-    const monto = iaData.monto || '—';
+    const monto = parseFloat(iaData.monto || 0);
+
+    // Pre-fill monto cobrado from IA
+    if (monto > 0) montoInput.value = monto.toFixed(2);
 
     resultsEl.innerHTML = `
       <div class="ia-result-header">🤖 Datos extraídos por IA</div>
       <div class="ia-result-row">
-        <span class="ia-result-label">Monto pagado</span>
-        <span class="ia-result-value big">$${parseFloat(monto || 0).toFixed(2)}</span>
+        <span class="ia-result-label">Monto detectado</span>
+        <span class="ia-result-value big">$${monto.toFixed(2)}</span>
       </div>
       ${iaData.tipo_comprobante ? `<div class="ia-result-row">
         <span class="ia-result-label">Tipo</span>
@@ -1535,29 +1548,39 @@ function showPagoStep2(iaData) {
         <span class="ia-result-value">${esc(iaData.notas)}</span>
       </div>` : ''}
     `;
-
-    // Check discrepancy with factura amount
-    const idItem  = document.getElementById('pagoItemId').value;
-    const item    = allItems.find(it => it.id_item === idItem);
-    const totalFac = item ? parseFloat(item.total_venta || 0) : 0;
-    const montoPagado = parseFloat(monto || 0);
-
-    if (totalFac > 0 && montoPagado > 0 && Math.abs(totalFac - montoPagado) > 0.50) {
-      const diff = montoPagado - totalFac;
-      discEl.innerHTML = diff > 0
-        ? `⚠️ El cliente pagó <b>$${montoPagado.toFixed(2)}</b> pero la factura es por <b>$${totalFac.toFixed(2)}</b>. Diferencia: +$${diff.toFixed(2)} a favor del cobro real.`
-        : `⚠️ El cliente pagó <b>$${montoPagado.toFixed(2)}</b> pero la factura es por <b>$${totalFac.toFixed(2)}</b>. Diferencia: -$${Math.abs(diff).toFixed(2)}.`;
-      discEl.style.display = 'block';
-    }
   } else {
     resultsEl.innerHTML = `
       <div class="ia-result-header" style="color:var(--muted)">📝 Registro manual</div>
       <div style="font-size:.82rem;color:var(--muted);padding:.25rem 0">
-        Sin análisis IA. El pago se registrará con los datos de la factura.
+        Sin análisis IA. Ingresa el monto cobrado al cliente.
       </div>
     `;
   }
+
+  // Show discrepancy whenever monto cobrado changes
+  updatePagoDiscrepancy();
 }
+
+function updatePagoDiscrepancy() {
+  const discEl    = document.getElementById('pagoDiscrepancy');
+  const idItem    = document.getElementById('pagoItemId').value;
+  const item      = allItems.find(it => it.id_item === idItem);
+  const totalFac  = item ? parseFloat(item.total_venta || 0) : 0;
+  const montoCobrado = parseFloat(document.getElementById('pagoMontoCobrado').value) || 0;
+
+  if (totalFac > 0 && montoCobrado > 0 && Math.abs(totalFac - montoCobrado) > 0.50) {
+    const diff = montoCobrado - totalFac;
+    discEl.innerHTML = diff > 0
+      ? `💡 Cobro real <b>$${montoCobrado.toFixed(2)}</b> vs factura <b>$${totalFac.toFixed(2)}</b> → +$${diff.toFixed(2)} sobre lo facturado`
+      : `⚠️ Cobro real <b>$${montoCobrado.toFixed(2)}</b> vs factura <b>$${totalFac.toFixed(2)}</b> → -$${Math.abs(diff).toFixed(2)} menos de lo facturado`;
+    discEl.style.display = 'block';
+  } else {
+    discEl.style.display = 'none';
+  }
+}
+
+// Wire up live discrepancy check
+document.getElementById('pagoMontoCobrado').addEventListener('input', updatePagoDiscrepancy);
 
 async function submitPago() {
   const idItem    = document.getElementById('pagoItemId').value;
@@ -1592,19 +1615,20 @@ async function submitPago() {
     console.log('submitPago result:', result);
 
     if (result.success) {
-      // Step 2: Append IA comprobante data to Ingreso notas_internas
-      const ingresoId = result.ingresoId || '';
-      if (ingresoId && pagoIAData) {
+      // Append pago data to Ingreso notas_internas
+      const ingresoId    = result.ingresoId || '';
+      const montoCobrado = parseFloat(document.getElementById('pagoMontoCobrado').value) || 0;
+
+      if (ingresoId && montoCobrado > 0) {
         try {
-          const montoPagado = parseFloat(pagoIAData.monto || 0);
           const datosPago = [
-            'PAGO_REAL: $' + montoPagado.toFixed(2),
+            'PAGO_REAL: $' + montoCobrado.toFixed(2),
             'FORMA: ' + formaPago,
-            pagoIAData.tipo_comprobante ? 'TIPO_COMP: ' + pagoIAData.tipo_comprobante : null,
-            pagoIAData.num_factura      ? 'COD: ' + pagoIAData.num_factura : null,
-            pagoIAData.nombre_pagador   ? 'PAGADOR: ' + pagoIAData.nombre_pagador : null,
-            pagoIAData.fecha            ? 'FECHA_PAGO: ' + pagoIAData.fecha : null,
-            pagoIAData.notas            ? 'NOTA_COMP: ' + pagoIAData.notas : null,
+            pagoIAData && pagoIAData.tipo_comprobante ? 'TIPO_COMP: ' + pagoIAData.tipo_comprobante : null,
+            pagoIAData && pagoIAData.num_factura      ? 'COD: ' + pagoIAData.num_factura : null,
+            pagoIAData && pagoIAData.nombre_pagador   ? 'PAGADOR: ' + pagoIAData.nombre_pagador : null,
+            pagoIAData && pagoIAData.fecha            ? 'FECHA_PAGO: ' + pagoIAData.fecha : null,
+            pagoIAData && pagoIAData.notas            ? 'NOTA_COMP: ' + pagoIAData.notas : null,
           ].filter(Boolean).join(' | ');
 
           await jsonpGet('actualizarNotasIngreso', {
@@ -1613,7 +1637,6 @@ async function submitPago() {
           }, 15000);
           console.log('Notas de pago guardadas en ingreso:', ingresoId);
         } catch(notasErr) {
-          // Non-blocking: the cycle is already closed, notas are bonus
           console.warn('No se pudieron guardar notas de pago:', notasErr.message);
         }
       }
@@ -2096,6 +2119,7 @@ function renderDashboard() {
   }
 
   const prevLabel = MESES[prevMonth].slice(0,3);
+  const curLabel  = MESES[dashMonth].slice(0,3);
 
   document.getElementById('dashWidgets').innerHTML = `
     <div class="dash-widget">
@@ -2111,18 +2135,39 @@ function renderDashboard() {
     <div class="dash-widget full">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div>
-          <div class="dash-widget-label">Resultado del Mes</div>
+          <div class="dash-widget-label">${curLabel} vs ${prevLabel}</div>
           <div class="dash-widget-value ${profit >= 0 ? 'green' : 'red'}">$${fmtNum(profit)}</div>
           <div class="dash-widget-sub">Margen: ${margenPct}% ${deltaTag(profitDelta)}</div>
         </div>
         <div style="text-align:right;border-left:1px solid var(--border);padding-left:.85rem;min-width:40%">
-          <div class="dash-widget-label">vs ${prevLabel}</div>
+          <div class="dash-widget-label">${prevLabel}</div>
           <div style="font-family:'DM Mono',monospace;font-size:.95rem;font-weight:600;color:${profitPrev >= 0 ? 'var(--green)' : 'var(--red)'}">$${fmtNum(profitPrev)}</div>
           <div style="font-size:.68rem;color:var(--muted);margin-top:.15rem">
             Ing $${fmtNum(totalIngPrev)} · Egr $${fmtNum(totalEgrPrev)}
           </div>
         </div>
       </div>
+    </div>
+    <div class="dash-widget full" style="border-color:rgba(224,90,0,.2);background:var(--orange-bg)">
+      <div class="dash-widget-label" style="color:var(--orange)">Facturado vs Cobrado</div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-top:.35rem">
+        <div>
+          <div style="font-size:.68rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)">Facturado</div>
+          <div style="font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:700;color:var(--green)">$${fmtNum(totalIng)}</div>
+          <div style="font-size:.68rem;color:var(--muted)">${ingMes.length} transacciones</div>
+        </div>
+        <div style="text-align:center;align-self:center;padding:0 .5rem">
+          <div style="font-size:.75rem;color:var(--chrome)">→</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.68rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)">Cobrado</div>
+          <div style="font-family:'DM Mono',monospace;font-size:1.15rem;font-weight:700;color:var(--orange)">$${fmtNum(countPagoReal > 0 ? totalPagoReal : totalIng)}</div>
+          <div style="font-size:.68rem;color:var(--muted)">${countPagoReal > 0 ? countPagoReal + ' con comprobante' : 'Sin datos de cobro'}</div>
+        </div>
+      </div>${countPagoReal > 0 && Math.abs(totalPagoReal - totalIng) > 0.50 ? `
+      <div style="margin-top:.45rem;padding-top:.4rem;border-top:1px solid rgba(224,90,0,.15);font-size:.78rem;color:var(--orange);font-weight:600">
+        ${totalPagoReal > totalIng ? '↑' : '↓'} Diferencia: $${fmtNum(totalPagoReal - totalIng)} ${totalPagoReal > totalIng ? 'cobrado de más' : 'cobrado de menos'}
+      </div>` : ''}
     </div>
     <div class="dash-widget">
       <div class="dash-widget-label">Costo Mercancía</div>
@@ -2143,12 +2188,6 @@ function renderDashboard() {
       <div class="dash-widget-value">$${fmtNum(totalItbmsE)}</div>
       <div class="dash-widget-sub">Neto: $${fmtNum(totalItbmsI - totalItbmsE)}</div>
     </div>
-    ${countPagoReal > 0 ? `
-    <div class="dash-widget full" style="border-color:rgba(224,90,0,.2);background:var(--orange-bg)">
-      <div class="dash-widget-label" style="color:var(--orange)">💰 Cobro Real (comprobantes)</div>
-      <div class="dash-widget-value" style="color:var(--orange)">$${fmtNum(totalPagoReal)}</div>
-      <div class="dash-widget-sub">${countPagoReal} de ${ingMes.length} con comprobante analizado · Diferencia vs facturado: $${fmtNum(totalPagoReal - totalIng)}</div>
-    </div>` : ''}
   `;
 
   renderDashTable();
