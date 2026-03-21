@@ -666,7 +666,7 @@ select.field-input { padding-right:2rem; }
 <body>
 
 <!-- ════ LOGIN ════ -->
-<div id="loginScreen">
+<div id="loginScreen" style="display:none">
   <div class="login-card">
     <div class="login-logo">RAMON.<span>PICO</span></div>
     <div class="login-sub">Operaciones — Acceso Móvil</div>
@@ -967,12 +967,9 @@ document.getElementById('loginPwd').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
 
-// Auto-login if session
-if (sessionStorage.getItem('rp_mobile_auth')) {
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  loadData();
-}
+// Auto-load (login disabled)
+document.getElementById('app').style.display = 'block';
+loadData();
 
 // ════════════════════════════════════════════════════
 //  JSONP HELPER
