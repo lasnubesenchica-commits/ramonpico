@@ -2615,7 +2615,10 @@ function renderDashTable() {
     }).join('');
 
   } else {
-    const items = dashEgresos.filter(e => monthMatch(e.fecha_egreso, e.mes, e.anio));
+    const items = dashEgresos.filter(e => {
+      if (String(e.estado || '').toLowerCase() === 'anulado') return false;
+      return monthMatch(e.fecha_egreso, e.mes, e.anio);
+    });
 
     if (!items.length) { wrap.innerHTML = '<div class="dash-empty">Sin egresos este mes</div>'; return; }
 
