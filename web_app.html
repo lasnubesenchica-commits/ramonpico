@@ -875,6 +875,18 @@ select.field-input { padding-right:2rem; }
       <div class="modal-section">
         <div class="modal-grid">
           <div class="modal-field full">
+            <div style="border:2px dashed var(--border);border-radius:10px;padding:1rem;text-align:center;cursor:pointer;transition:border-color .2s"
+                 id="iDropZone"
+                 ondragover="event.preventDefault();this.style.borderColor='var(--green)'"
+                 ondragleave="this.style.borderColor='var(--border)'"
+                 ondrop="handleIngresoFileDrop(event)"
+                 onclick="document.getElementById('iVoucherInput').click()">
+              <input type="file" id="iVoucherInput" accept="image/*,application/pdf" style="display:none" onchange="handleIngresoFileSelect(event)">
+              <div id="iDropLabel" style="color:var(--muted);font-size:.85rem">📎 Adjuntar comprobante — la IA llenará los campos</div>
+              <div id="iAIStatus" style="display:none;margin-top:.5rem"></div>
+            </div>
+          </div>
+          <div class="modal-field full">
             <label>Categoría</label>
             <select id="iCategoria" onchange="inferirItbmsIngreso()">
               <option value="venta_producto_gravado">📦 Venta de producto (con ITBMS)</option>
@@ -899,18 +911,6 @@ select.field-input { padding-right:2rem; }
           <div class="modal-field">
             <label>N° Factura</label>
             <input type="text" id="iNumFac" placeholder="Opcional">
-          </div>
-          <div class="modal-field full">
-            <div style="border:2px dashed var(--border);border-radius:10px;padding:1rem;text-align:center;cursor:pointer;transition:border-color .2s"
-                 id="iDropZone"
-                 ondragover="event.preventDefault();this.style.borderColor='var(--green)'"
-                 ondragleave="this.style.borderColor='var(--border)'"
-                 ondrop="handleIngresoFileDrop(event)"
-                 onclick="document.getElementById('iVoucherInput').click()">
-              <input type="file" id="iVoucherInput" accept="image/*,application/pdf" style="display:none" onchange="handleIngresoFileSelect(event)">
-              <div id="iDropLabel" style="color:var(--muted);font-size:.85rem">📎 Adjuntar comprobante — la IA llenará los campos</div>
-              <div id="iAIStatus" style="display:none;margin-top:.5rem"></div>
-            </div>
           </div>
           <div class="modal-field full" style="display:flex;align-items:center;gap:.75rem;padding:.5rem .75rem;background:var(--bg2);border-radius:8px;border:1px solid var(--border)">
             <label style="margin:0;display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;font-weight:500">
@@ -983,7 +983,7 @@ select.field-input { padding-right:2rem; }
           <div class="modal-field full">
             <label>Categoría</label>
             <select id="eCategoria" onchange="inferirTipoEgreso()">
-              <option value="costo_mercancia">📦 Costo de mercancía</option>
+              <option value="costo_mercancia" disabled style="color:var(--muted)">📦 Costo de mercancía (automático)</option>
               <option value="gastos_personal">👤 Nómina / Personal</option>
               <option value="alquileres">🏠 Alquileres</option>
               <option value="servicios_publicos">💡 Servicios públicos</option>
@@ -994,7 +994,7 @@ select.field-input { padding-right:2rem; }
               <option value="seguros">🛡️ Seguros</option>
               <option value="depreciacion">📉 Depreciación</option>
               <option value="gastos_financieros">🏦 Gastos financieros</option>
-              <option value="otros_deducibles">📂 Otros deducibles</option>
+              <option value="otros_deducibles" selected>📂 Otros deducibles</option>
             </select>
           </div>
           <div class="modal-field full">
@@ -2598,8 +2598,8 @@ function renderDashTable() {
 
       const actionsEl = editable
         ? `<div class="dash-table-actions">
-            <div class="dash-table-amount green">$${fmtNum(parseFloat(i.total) || 0)}</div>
             <button class="dash-trash-btn" onclick="dashAnular('ingreso','${esc(i.id_trans)}')" title="Anular ingreso">${trashIcon()}</button>
+            <div class="dash-table-amount green">$${fmtNum(parseFloat(i.total) || 0)}</div>
            </div>`
         : `<div class="dash-table-amount green">$${fmtNum(parseFloat(i.total) || 0)}</div>`;
 
@@ -2631,8 +2631,8 @@ function renderDashTable() {
 
       const actionsEl = editable
         ? `<div class="dash-table-actions">
-            <div class="dash-table-amount red">$${fmtNum(parseFloat(e.total) || 0)}</div>
             <button class="dash-trash-btn" onclick="dashAnular('egreso','${esc(e.id_egreso)}')" title="Anular egreso">${trashIcon()}</button>
+            <div class="dash-table-amount red">$${fmtNum(parseFloat(e.total) || 0)}</div>
            </div>`
         : `<div class="dash-table-amount red">$${fmtNum(parseFloat(e.total) || 0)}</div>`;
 
