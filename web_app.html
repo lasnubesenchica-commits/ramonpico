@@ -2373,6 +2373,7 @@ function renderDashboard() {
     return monthMatch(i.fecha_ingreso, i.mes, i.anio_fiscal);
   });
   const egrMes = dashEgresos.filter(e => {
+    if (String(e.estado || '').toLowerCase() === 'anulado') return false;
     return monthMatch(e.fecha_egreso, e.mes, e.anio);
   });
 
@@ -2395,7 +2396,10 @@ function renderDashboard() {
     if (String(i.estado || '').toLowerCase() === 'anulado') return false;
     return monthMatchExact(i.fecha_ingreso, i.mes, i.anio_fiscal, prevMonth, prevYear);
   });
-  const egrPrev = dashEgresos.filter(e => monthMatchExact(e.fecha_egreso, e.mes, e.anio, prevMonth, prevYear));
+  const egrPrev = dashEgresos.filter(e => {
+    if (String(e.estado || '').toLowerCase() === 'anulado') return false;
+    return monthMatchExact(e.fecha_egreso, e.mes, e.anio, prevMonth, prevYear);
+  });
   const totalIngPrev = ingPrev.reduce((s, i) => s + (parseFloat(i.total) || 0), 0);
   const totalEgrPrev = egrPrev.reduce((s, e) => s + (parseFloat(e.total) || 0), 0);
   const profitPrev   = totalIngPrev - totalEgrPrev;
