@@ -869,7 +869,6 @@ tr:hover td{background:rgba(0,0,0,.015)}
       <span class="search-icon">🔍</span>
       <input type="text" id="searchIng" class="filter-search" placeholder="Buscar cliente, factura...">
     </div>
-    <button class="btn-sync" onclick="abrirModalNuevoIngreso()" style="background:var(--green)">+ Nuevo ingreso</button>
     <button class="btn-sync" onclick="loadIngresos()">↻ Actualizar</button>
   </div>
   <!-- Header tabla con botón + -->
@@ -921,7 +920,6 @@ tr:hover td{background:rgba(0,0,0,.015)}
       <span class="search-icon">🔍</span>
       <input type="text" class="filter-search" id="searchEgr" placeholder="Buscar egreso...">
     </div>
-    <button class="btn-sync" onclick="abrirModalNuevoEgreso()" style="background:#6A1B9A">+ Nuevo egreso</button>
     <button class="btn-sync" onclick="loadEgresos()">↻ Actualizar</button>
   </div>
 
@@ -5179,27 +5177,9 @@ function renderDashboard() {
       </div>
     </div>
     <div class="pl-kpi" style="--kpi-accent:${utilNeta >= 0 ? 'var(--green)' : 'var(--red)'}">
-      <div class="pl-kpi-label">Estado de resultados</div>
-      <div class="pl-stmt-row">
-        <span class="pl-stmt-lbl">Ingresos</span>
-        <span class="pl-stmt-val green">${plFmt(totalIng)}</span>
-      </div>
-      <div class="pl-stmt-row indent">
-        <span class="pl-stmt-lbl">(−) Costo mercancía</span>
-        <span class="pl-stmt-val">${plFmt(cogs)}</span>
-      </div>
-      <div class="pl-stmt-row subtotal">
-        <span class="pl-stmt-lbl">Margen bruto</span>
-        <span class="pl-stmt-val ${utilBruta >= 0 ? 'green' : 'red'}">${pctBadge(margenBruto)}${plFmt(Math.abs(utilBruta))}</span>
-      </div>
-      <div class="pl-stmt-row indent">
-        <span class="pl-stmt-lbl">(−) Gastos operativos</span>
-        <span class="pl-stmt-val">${plFmt(totalEgr - cogs)}</span>
-      </div>
-      <div class="pl-stmt-row total-final">
-        <span class="pl-stmt-lbl">Utilidad neta</span>
-        <span class="pl-stmt-val ${utilNeta >= 0 ? 'green' : 'red'}">${pctBadge(margenNeto)}${plFmt(Math.abs(utilNeta))}</span>
-      </div>
+      <div class="pl-kpi-label">Utilidad neta estimada</div>
+      <div class="pl-kpi-value ${utilNeta >= 0 ? 'green' : 'red'}">${plFmt(utilNeta)}</div>
+      <div class="pl-kpi-sub">Ingresos − todos los egresos</div>
     </div>`;
 
   // Gráfica barras
