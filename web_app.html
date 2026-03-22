@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -754,11 +755,13 @@ select.field-input { padding-right:2rem; }
 }
 .ia-analyzing .spinner { margin:0 auto .5rem; display:block; width:24px; height:24px; }
 </style>
+
 </head>
 
 <body>
 
 <!-- ════ LOGIN ════ -->
+
 <div id="loginScreen" style="display:none">
   <div class="login-card">
     <div class="login-logo">RAMON.<span>PICO</span></div>
@@ -771,9 +774,11 @@ select.field-input { padding-right:2rem; }
 </div>
 
 <!-- ════ APP ════ -->
+
 <div id="app">
 
   <!-- HEADER -->
+
   <div class="header" id="header">
     <div class="header-top">
       <div>
@@ -797,15 +802,20 @@ select.field-input { padding-right:2rem; }
   </div>
 
   <!-- ═══ VIEW: OPERACIONES ═══ -->
+
   <div id="viewOps">
     <!-- FILTER TABS -->
     <div class="filter-bar" id="filterBar"></div>
 
-    <!-- CARD LIST -->
-    <div id="cardList"></div>
+```
+<!-- CARD LIST -->
+<div id="cardList"></div>
+```
+
   </div>
 
   <!-- ═══ VIEW: DASHBOARD ═══ -->
+
   <div id="viewDashboard">
     <!-- Period selector -->
     <div class="dash-period">
@@ -818,31 +828,36 @@ select.field-input { padding-right:2rem; }
       </button>
     </div>
 
-    <!-- Widgets -->
-    <div class="dash-widgets" id="dashWidgets"></div>
+```
+<!-- Widgets -->
+<div class="dash-widgets" id="dashWidgets"></div>
 
-    <!-- Toggle: Ingresos / Egresos -->
-    <div class="dash-toggle">
-      <button class="dash-toggle-btn active" id="toggleIng" onclick="setDashTable('ingresos')">Ingresos</button>
-      <button class="dash-toggle-btn" id="toggleEgr" onclick="setDashTable('egresos')">Egresos</button>
-    </div>
+<!-- Toggle: Ingresos / Egresos -->
+<div class="dash-toggle">
+  <button class="dash-toggle-btn active" id="toggleIng" onclick="setDashTable('ingresos')">Ingresos</button>
+  <button class="dash-toggle-btn" id="toggleEgr" onclick="setDashTable('egresos')">Egresos</button>
+</div>
 
-    <!-- Table header con botón + -->
-    <div class="dash-table-hdr" id="dashTableHdr">
-      <div class="dash-table-hdr-label" id="dashTableHdrLabel">Ingresos del mes</div>
-      <button class="dash-add-btn ing" id="dashAddBtn" onclick="dashAddBtnClick()" title="Registrar nuevo">+</button>
-    </div>
+<!-- Table header con botón + -->
+<div class="dash-table-hdr" id="dashTableHdr">
+  <div class="dash-table-hdr-label" id="dashTableHdrLabel">Ingresos del mes</div>
+  <button class="dash-add-btn ing" id="dashAddBtn" onclick="dashAddBtnClick()" title="Registrar nuevo">+</button>
+</div>
 
-    <!-- Table list -->
-    <div class="dash-table-wrap" id="dashTableWrap"></div>
+<!-- Table list -->
+<div class="dash-table-wrap" id="dashTableWrap"></div>
+```
+
   </div>
 
   <!-- TOAST -->
+
   <div class="toast" id="toast"></div>
 
 </div>
 
 <!-- ════ MODAL: Nuevo Ingreso ════ -->
+
 <div class="modal-overlay" id="ingresoModalOverlay" onclick="if(event.target===this)closeIngresoModal()">
   <div class="modal-box">
     <div class="modal-header">
@@ -939,6 +954,7 @@ select.field-input { padding-right:2rem; }
 </div>
 
 <!-- ════ MODAL: Nuevo Egreso ════ -->
+
 <div class="modal-overlay" id="egresoModalOverlay" onclick="if(event.target===this)closeEgresoModal()">
   <div class="modal-box">
     <div class="modal-header">
@@ -1038,6 +1054,7 @@ select.field-input { padding-right:2rem; }
 </div>
 
 <!-- ════ MODAL: Registrar Pago ════ -->
+
 <div class="modal-overlay" id="modalPago">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -1048,72 +1065,76 @@ select.field-input { padding-right:2rem; }
     <div class="modal-body">
       <input type="hidden" id="pagoItemId">
 
-      <!-- STEP 1: Upload & Analyze -->
-      <div id="pagoStep1">
-        <div class="field">
-          <label class="field-label">Comprobante de pago</label>
-          <div class="upload-zone" id="pagoUploadZone" onclick="document.getElementById('pagoFile').click()">
-            <div class="upload-zone-text">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Toca para subir imagen o PDF
-            </div>
-            <input type="file" id="pagoFile" accept="image/*,application/pdf" onchange="handleFileSelect(this,'pago')">
-          </div>
-          <div class="file-preview" id="pagoPreview" style="display:none"></div>
+```
+  <!-- STEP 1: Upload & Analyze -->
+  <div id="pagoStep1">
+    <div class="field">
+      <label class="field-label">Comprobante de pago</label>
+      <div class="upload-zone" id="pagoUploadZone" onclick="document.getElementById('pagoFile').click()">
+        <div class="upload-zone-text">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Toca para subir imagen o PDF
         </div>
-        <button class="action-btn primary" id="pagoAnalyzeBtn" onclick="analyzePago()" disabled>
-          🤖 Analizar Comprobante con IA
-        </button>
-        <div style="text-align:center;margin-top:.5rem">
-          <button class="action-btn secondary small" style="display:inline-block;width:auto" onclick="skipAnalysis()">
-            Omitir análisis → registro manual
-          </button>
-        </div>
+        <input type="file" id="pagoFile" accept="image/*,application/pdf" onchange="handleFileSelect(this,'pago')">
       </div>
+      <div class="file-preview" id="pagoPreview" style="display:none"></div>
+    </div>
+    <button class="action-btn primary" id="pagoAnalyzeBtn" onclick="analyzePago()" disabled>
+      🤖 Analizar Comprobante con IA
+    </button>
+    <div style="text-align:center;margin-top:.5rem">
+      <button class="action-btn secondary small" style="display:inline-block;width:auto" onclick="skipAnalysis()">
+        Omitir análisis → registro manual
+      </button>
+    </div>
+  </div>
 
-      <!-- STEP 2: Review IA results & Confirm -->
-      <div id="pagoStep2" style="display:none">
-        <div id="pagoIAResults" style="
-          background:var(--bg); border:1px solid var(--border);
-          border-radius:var(--r); padding:.85rem; margin-bottom:.75rem;
-        ">
-          <!-- Populated by JS -->
-        </div>
+  <!-- STEP 2: Review IA results & Confirm -->
+  <div id="pagoStep2" style="display:none">
+    <div id="pagoIAResults" style="
+      background:var(--bg); border:1px solid var(--border);
+      border-radius:var(--r); padding:.85rem; margin-bottom:.75rem;
+    ">
+      <!-- Populated by JS -->
+    </div>
 
-        <div class="field">
-          <label class="field-label">Forma de pago</label>
-          <select class="field-input" id="pagoForma">
-            <option value="Yappy">Yappy</option>
-            <option value="Transferencia">Transferencia</option>
-            <option value="Efectivo">Efectivo</option>
-            <option value="Cheque">Cheque</option>
-            <option value="ACH">ACH</option>
-          </select>
-        </div>
+    <div class="field">
+      <label class="field-label">Forma de pago</label>
+      <select class="field-input" id="pagoForma">
+        <option value="Yappy">Yappy</option>
+        <option value="Transferencia">Transferencia</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Cheque">Cheque</option>
+        <option value="ACH">ACH</option>
+      </select>
+    </div>
 
-        <div class="field">
-          <label class="field-label">Monto cobrado ($)</label>
-          <input type="number" class="field-input" id="pagoMontoCobrado" placeholder="0.00" step="0.01" inputmode="decimal">
-          <div style="font-size:.7rem;color:var(--muted);margin-top:.2rem">
-            Monto real cobrado al cliente. Se guarda como referencia interna, no afecta el ingreso fiscal.
-          </div>
-        </div>
-
-        <div id="pagoDiscrepancy" style="display:none;
-          background:#FFF3E0; border:1px solid #FFB74D;
-          border-radius:var(--r); padding:.75rem; margin-bottom:.75rem;
-          font-size:.82rem; color:#E65100;
-        "></div>
-
-        <button class="action-btn success" id="pagoSubmitBtn" onclick="submitPago()">
-          ✅ Confirmar Pago y Cerrar Ciclo
-        </button>
+    <div class="field">
+      <label class="field-label">Monto cobrado ($)</label>
+      <input type="number" class="field-input" id="pagoMontoCobrado" placeholder="0.00" step="0.01" inputmode="decimal">
+      <div style="font-size:.7rem;color:var(--muted);margin-top:.2rem">
+        Monto real cobrado al cliente. Se guarda como referencia interna, no afecta el ingreso fiscal.
       </div>
     </div>
+
+    <div id="pagoDiscrepancy" style="display:none;
+      background:#FFF3E0; border:1px solid #FFB74D;
+      border-radius:var(--r); padding:.75rem; margin-bottom:.75rem;
+      font-size:.82rem; color:#E65100;
+    "></div>
+
+    <button class="action-btn success" id="pagoSubmitBtn" onclick="submitPago()">
+      ✅ Confirmar Pago y Cerrar Ciclo
+    </button>
+  </div>
+</div>
+```
+
   </div>
 </div>
 
 <!-- ════ MODAL: Venta Directa ════ -->
+
 <div class="modal-overlay" id="modalVenta">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -1168,6 +1189,7 @@ select.field-input { padding-right:2rem; }
 </div>
 
 <!-- ════ MODAL: Subir Factura Emitida ════ -->
+
 <div class="modal-overlay" id="modalFactura">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -1196,6 +1218,7 @@ select.field-input { padding-right:2rem; }
 </div>
 
 <!-- ════ MODAL: Corregir Comprobante ════ -->
+
 <div class="modal-overlay" id="modalCorregir">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -1223,7 +1246,6 @@ select.field-input { padding-right:2rem; }
     </div>
   </div>
 </div>
-
 
 <script>
 /* ════════════════════════════════════════════════════
@@ -2397,9 +2419,16 @@ function renderDashboard() {
   const curLabel  = MESES[dashMonth].slice(0,3);
 
   const margenBruto    = totalIng - totalCosto;
-  const margenBrutoPct = totalIng > 0 ? ((margenBruto / totalIng) * 100).toFixed(1) : '0.0';
+  const margenBrutoPct = totalIng > 0 ? (margenBruto / totalIng * 100) : 0;
   const utilidadNeta   = totalIng - totalEgr;
-  const utilidadPct    = totalIng > 0 ? ((utilidadNeta / totalIng) * 100).toFixed(1) : '0.0';
+  const utilidadPct    = totalIng > 0 ? (utilidadNeta / totalIng * 100) : 0;
+
+  function pctBadge(pct) {
+    const val   = parseFloat(pct);
+    const color = val >= 0 ? 'var(--green)' : 'var(--red)';
+    const sign  = val >= 0 ? '+' : '';
+    return `<span class="pl-stmt-pct" style="color:${color};background:${val >= 0 ? 'rgba(76,175,80,.1)' : 'rgba(244,67,54,.1)'};border-radius:4px;padding:.05rem .3rem;margin-right:.4rem">(${sign}${val.toFixed(1)}%)</span>`;
+  }
 
   document.getElementById('dashWidgets').innerHTML = `
     <div class="dash-widget">
@@ -2417,7 +2446,7 @@ function renderDashboard() {
         <div>
           <div class="dash-widget-label">${curLabel} vs ${prevLabel}</div>
           <div class="dash-widget-value ${utilidadNeta >= 0 ? 'green' : 'red'}">$${fmtNum(utilidadNeta)}</div>
-          <div class="dash-widget-sub">Utilidad neta: ${utilidadPct}% ${deltaTag(profitDelta)}</div>
+          <div class="dash-widget-sub">Utilidad neta: ${utilidadPct.toFixed(1)}% ${deltaTag(profitDelta)}</div>
         </div>
         <div style="text-align:right;border-left:1px solid var(--border);padding-left:.85rem;min-width:40%">
           <div class="dash-widget-label">${prevLabel}</div>
@@ -2440,7 +2469,7 @@ function renderDashboard() {
       </div>
       <div class="pl-stmt-row subtotal">
         <span class="pl-stmt-lbl">Margen bruto</span>
-        <span class="pl-stmt-val ${margenBruto >= 0 ? 'green' : 'red'}">$${fmtNum(margenBruto)}<span class="pl-stmt-pct">${margenBrutoPct}%</span></span>
+        <span class="pl-stmt-val ${margenBruto >= 0 ? 'green' : 'red'}">${pctBadge(margenBrutoPct)}$${fmtNum(Math.abs(margenBruto))}</span>
       </div>
       <div class="pl-stmt-row indent">
         <span class="pl-stmt-lbl">(−) Gastos operativos</span>
@@ -2448,7 +2477,7 @@ function renderDashboard() {
       </div>
       <div class="pl-stmt-row total-final">
         <span class="pl-stmt-lbl">Utilidad neta</span>
-        <span class="pl-stmt-val ${utilidadNeta >= 0 ? 'green' : 'red'}">$${fmtNum(utilidadNeta)}<span class="pl-stmt-pct">${utilidadPct}%</span></span>
+        <span class="pl-stmt-val ${utilidadNeta >= 0 ? 'green' : 'red'}">${pctBadge(utilidadPct)}$${fmtNum(Math.abs(utilidadNeta))}</span>
       </div>
     </div>
     <div class="dash-widget">
@@ -2955,5 +2984,6 @@ async function guardarEgresoOperativo() {
 }
 
 </script>
+
 </body>
 </html>
