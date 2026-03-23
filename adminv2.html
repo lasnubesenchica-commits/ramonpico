@@ -1877,13 +1877,19 @@ let currentOrden  = null;
 // ══════════════════════════════════════════════════
 //  LOGIN
 // ══════════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  LOGIN — DESHABILITADO (modo desarrollo)
+//  Para re-habilitar: cambiar autoLogin = false
+// ══════════════════════════════════════════════════
+const AUTO_LOGIN = true;  // ← false para volver a pedir contraseña
+
 function doLogin() {
   const pwd = document.getElementById('loginPwd').value;
-  if (pwd === ADMIN_PASSWORD) {
+  if (AUTO_LOGIN || pwd === ADMIN_PASSWORD) {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     loadOrdenes();
-    loadOperaciones();  // tab default al login
+    loadOperaciones();
   } else {
     document.getElementById('loginError').style.display = 'block';
     document.getElementById('loginPwd').value = '';
@@ -1897,6 +1903,9 @@ function logout() {
 document.getElementById('loginPwd').addEventListener('keydown', e => {
   if (e.key === 'Enter') doLogin();
 });
+
+// Auto-login en modo desarrollo
+if (AUTO_LOGIN) doLogin();
 
 // ══════════════════════════════════════════════════
 //  CARGAR ÓRDENES DESDE CSV
@@ -5281,7 +5290,22 @@ function plRenderBarChart(year) {
       datasets: [
         { label: 'Ingresos', data: ingData,  backgroundColor: ingColors,  borderRadius: 3 },
         { label: 'COGS',     data: cogsData, backgroundColor: cogsColors, borderRadius: 3 },
-        { label: 'Utilidad', data: utilData, backgroundColor: utilColors, borderRadius: 3 },
+        {
+          label: 'Utilidad',
+          data: utilData,
+          type: 'line',
+          borderColor: utilData.reduce((s,v) => s + v, 0) >= 0 ? '#2E7D32' : '#C62828',
+          backgroundColor: 'transparent',
+          pointBackgroundColor: utilData.map(v => v >= 0 ? '#2E7D32' : '#C62828'),
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          borderWidth: 2.5,
+          tension: 0.3,
+          fill: false,
+          yAxisID: 'y',
+        },
       ]
     },
     options: {
