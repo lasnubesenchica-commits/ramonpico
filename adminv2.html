@@ -5052,8 +5052,8 @@ function initPlYearSelector() {
   years.add(now);
   plIngresos.forEach(i => { if (i.anio_fiscal) years.add(parseInt(i.anio_fiscal)); });
   plEgresos.forEach(e => {
-    const y = e.fecha_egreso ? new Date(e.fecha_egreso + 'T12:00:00').getFullYear() : null;
-    if (y && !isNaN(y)) years.add(y);
+    const y = parseInt(e.anio) || _anioDesfecha(e.fecha_egreso);
+    if (y && y > 2000) years.add(y);
   });
   const sorted = [...years].filter(y => y > 2000 && y <= now + 1).sort((a,b) => b - a);
   const sel = document.getElementById('plYear');
@@ -5118,12 +5118,12 @@ function plFiltrarIngresos() {
 function plFiltrarEgresos() {
   return plEgresos.filter(e => {
     if (String(e.estado || '').toLowerCase() === 'anulado') return false;
-    if (!e.fecha_egreso) return false;
-    // Excluir egresos de inventario pendiente — no son COGS realizados hasta que se venda
-    if ((e.categoria || '').toLowerCase() === 'inventario') return false;
-    const d = new Date(e.fecha_egreso + 'T12:00:00');
-    if (d.getFullYear() !== plYear) return false;
-    if (plMonth !== 'ytd' && d.getMonth() + 1 !== plMonth) return false;
+    // Usar mes/anio explícitos (igual que web app) — más confiable que re-parsear fecha string
+    const eMes  = parseInt(e.mes)  || _mesDesfecha(e.fecha_egreso);
+    const eAnio = parseInt(e.anio) || _anioDesfecha(e.fecha_egreso);
+    if (!eAnio || eAnio !== plYear) return false;
+    if (plMonth !== 'ytd' && eMes !== plMonth) return false;
+    // NO excluir 'Inventario' — son costos reales aunque el ítem esté en stock
     if (plTipo !== 'todos' && plTipo !== 'venta_producto') {
       if ((e.tipo_egreso || '') === 'costo_mercancia') return false;
     }
@@ -5219,6 +5219,7 @@ function plRenderBarChart(year) {
   const utilData= new Array(12).fill(0);
 
   const ingYear = plIngresos.filter(i => {
+    if (String(i.estado || '').toLowerCase() === 'anulado') return false;
     if (parseInt(i.anio_fiscal) !== year) return false;
     if (plTipo === 'todos') return true;
     const t = (i.tipo_ingreso || '').toLowerCase();
@@ -5232,10 +5233,11 @@ function plRenderBarChart(year) {
   });
 
   const egrYear = plEgresos.filter(e => {
-    if (!e.fecha_egreso) return false;
-    // Excluir inventario pendiente de venta
-    if ((e.categoria || '').toLowerCase() === 'inventario') return false;
-    if (new Date(e.fecha_egreso + 'T12:00:00').getFullYear() !== year) return false;
+    if (String(e.estado || '').toLowerCase() === 'anulado') return false;
+    // Usar mes/anio explícitos — igual que plFiltrarEgresos
+    const eAnio = parseInt(e.anio) || _anioDesfecha(e.fecha_egreso);
+    if (!eAnio || eAnio !== year) return false;
+    // NO excluir 'Inventario'
     if (plTipo !== 'todos' && plTipo !== 'venta_producto') {
       if ((e.tipo_egreso || '') === 'costo_mercancia') return false;
     }
@@ -5249,13 +5251,13 @@ function plRenderBarChart(year) {
 
   const egrByMes = new Array(12).fill(0);
   egrYear.forEach(e => {
-    const m = new Date(e.fecha_egreso + 'T12:00:00').getMonth();
+    const m = (parseInt(e.mes) || _mesDesfecha(e.fecha_egreso)) - 1;
     if (m >= 0 && m < 12) egrByMes[m] += parseFloat(e.total) || 0;
   });
 
   const cogsData = new Array(12).fill(0);
   egrYear.filter(e => e.tipo_egreso === 'costo_mercancia').forEach(e => {
-    const m = new Date(e.fecha_egreso + 'T12:00:00').getMonth();
+    const m = (parseInt(e.mes) || _mesDesfecha(e.fecha_egreso)) - 1;
     if (m >= 0 && m < 12) cogsData[m] += parseFloat(e.total) || 0;
   });
 
@@ -5422,6 +5424,18 @@ function plRenderGap() {
       </tbody>
     </table>
     </div>`;
+}
+
+// Helpers para extraer mes/anio desde string de fecha cuando los campos explícitos fallan
+function _mesDesfecha(f) {
+  if (!f) return 0;
+  const m = String(f).match(/^(\d{4})-(\d{2})/);
+  return m ? parseInt(m[2]) : 0;
+}
+function _anioDesfecha(f) {
+  if (!f) return 0;
+  const m = String(f).match(/^(\d{4})/);
+  return m ? parseInt(m[1]) : 0;
 }
 
 function plFmt(n) {
