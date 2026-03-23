@@ -143,7 +143,10 @@
 
   /* ── Modal de egreso ──────────────────────────────────────── */
   .st-modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9000; display:flex; align-items:center; justify-content:center; padding:16px; }
-  .st-modal { background:#fff; border-radius:14px; padding:24px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+  .st-modal { background:#fff; border-radius:14px; padding:24px; width:100%; max-width:520px; max-height:90vh; overflow-y:auto; overflow-x:hidden; box-shadow:0 20px 60px rgba(0,0,0,.2); box-sizing:border-box; }
+  .st-modal * { box-sizing:border-box; }
+  .st-modal .st-form-grid { grid-template-columns:1fr 1fr; width:100%; }
+  @media(max-width:560px) { .st-modal .st-form-grid { grid-template-columns:1fr; } }
   .st-modal h3 { margin:0 0 16px; font-size:1rem; color:#1a2535; }
   .st-modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:14px; border-top:1px solid #e2e8f0; }
 
@@ -641,7 +644,8 @@
     items.forEach(function(st, idx) {
       var estadoCls = 'st-card s-' + st.estado;
       var acciones  = st_buildCardAcciones(st, idx);
-      var utilidad  = (st.precio_venta||0) - (st.total_costo_cotizado||0);
+      var totalCostoCot = parseFloat(st.total_costo_cotizado) || 0;
+      var utilidad  = (st.precio_venta||0) - totalCostoCot;
       var cotActivo = st.estado === 'cotizado' || st.estado === 'aprobado';
 
       html += '<div class="' + estadoCls + '" style="cursor:default">' +
@@ -655,7 +659,7 @@
           '<span class="st-badge s-' + st.estado + '">' + (ESTADO_LABEL[st.estado]||st.estado) + '</span>' +
         '</div>' +
         '<div class="st-card-nums">' +
-          '<div class="st-card-num"><div class="st-card-num-label">Costo cotizado</div><div class="st-card-num-value" style="color:#E65100">' + st_fmt(st.total_costo_cotizado) + '</div></div>' +
+          '<div class="st-card-num"><div class="st-card-num-label">Costo cotizado</div><div class="st-card-num-value" style="color:#E65100">' + st_fmt(totalCostoCot) + '</div></div>' +
           '<div class="st-card-num"><div class="st-card-num-label">Precio venta</div><div class="st-card-num-value" style="color:#1A237E">' + st_fmt(st.precio_venta) + '</div></div>' +
           '<div class="st-card-num"><div class="st-card-num-label">Utilidad est.</div><div class="st-card-num-value" style="color:' + (utilidad>=0?'#15803d':'#dc2626') + '">' + st_fmt(utilidad) + '</div></div>' +
           (st.total_costo_real > 0 ? '<div class="st-card-num"><div class="st-card-num-label">Costo real</div><div class="st-card-num-value" style="color:#8b5cf6">' + st_fmt(st.total_costo_real) + '</div></div>' : '') +
